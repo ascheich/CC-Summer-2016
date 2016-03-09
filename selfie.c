@@ -91,8 +91,11 @@ int twoToThePowerOf(int p);
 int leftShift(int n, int b);
 int rightShift(int n, int b);
 
-int shiftLeftImmediate(int n, int b);
-int shiftRightImmediate(int n, int b);
+int shiftLeftLogicalImmediate(int n, int b);
+int shiftRightLogicalImmediate(int n, int b);
+
+int shiftLeftLogicalVariable(int n, int *b);
+int shiftRightLogicalVariable(int n, int *b);
 
 int  loadCharacter(int *s, int i);
 int* storeCharacter(int *s, int i, int c);
@@ -1174,7 +1177,7 @@ int leftShift(int n, int b) {
         return n * twoToThePowerOf(b);
 }
 
-int shiftLeftImmediate(int n, int b) {
+int shiftLeftLogicalImmediate(int n, int b) {
     // assert: b >= 0;
 
     if (b > 30)
@@ -1183,7 +1186,25 @@ int shiftLeftImmediate(int n, int b) {
         return n * twoToThePowerOf(b);
 }
 
-int shiftRightImmediate(int n, int b) {
+int shiftRightLogicalImmediate(int n, int b) {
+    // assert: b >= 0;
+
+    if (b < 30)
+        return 0;
+    else
+        return n / twoToThePowerOf(b);
+}
+
+int shiftLeftLogicalVariable(int n, int *b) {
+    // assert: b >= 0;
+
+    if (b > 30)
+        return 0;
+    else
+        return n * twoToThePowerOf(b);
+}
+
+int shiftRightLogicalVariable(int n, int *b) {
     // assert: b >= 0;
 
     if (b < 30)
