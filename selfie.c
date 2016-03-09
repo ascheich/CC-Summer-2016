@@ -1198,13 +1198,13 @@ int shiftRightLogicalImmediate(int n, int b) {
 int shiftLeftLogicalVariable(int n, int *b) {
     // assert: b >= 0;
 
-    return n * twoToThePowerOf(b);
+    return n * twoToThePowerOf(*b);
 }
 
 int shiftRightLogicalVariable(int n, int *b) {
     // assert: b >= 0;
 
-    return n / twoToThePowerOf(b);
+    return n / twoToThePowerOf(*b);
 }
 
 int rightShift(int n, int b) {
