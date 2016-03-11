@@ -5470,7 +5470,7 @@ void fct_sll() {
     }
 
     if (interpret) {
-        *(registers+rd) = leftShift(registers+rt);
+        *(registers+rd) = leftShift(registers+immediate);
 
         pc = pc + WORDSIZE;
     }
