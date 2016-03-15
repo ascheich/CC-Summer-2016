@@ -5480,7 +5480,7 @@ void fct_sll() {
     }
 
     if (interpret) {
-        *(registers+rd) = leftShift(registers+rt, immediate);
+        *(registers+rd) = leftShift(*(registers+rt), immediate);
 
         pc = pc + WORDSIZE;
     }
@@ -5522,7 +5522,7 @@ void fct_sllv() {
         }
     }
     if (interpret) {
-        *(registers+rd) = leftShift(registers+rt, registers+rs);
+        *(registers+rd) = leftShift(*(registers+rt), *(registers+rs));
 
         pc = pc + WORDSIZE;
     }
@@ -5558,7 +5558,7 @@ void fct_srl() {
     }
 
     if (interpret) {
-        *(registers+rd) = rightShift(registers+rt, immediate);
+        *(registers+rd) = rightShift(*(registers+rt), immediate);
 
         pc = pc + WORDSIZE;
     }
@@ -5600,7 +5600,7 @@ void fct_srlv() {
         }
     }
     if (interpret) {
-        *(registers+rd) = rightShift (registers+rt, registers+rs);
+        *(registers+rd) = rightShift(*(registers+rt), *(registers+rs));
 
         pc = pc + WORDSIZE;
     }
