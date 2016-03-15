@@ -5538,7 +5538,7 @@ void fct_sllv() {
     }
 }
 
-void fct_sll() {
+void fct_srl() {
     if (debug) {
         printFunction(function);
         print((int*) " ");
