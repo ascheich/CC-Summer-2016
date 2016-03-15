@@ -5456,18 +5456,12 @@ void fct_sll() {
         print((int*) " ");
         printRegister(rd);
         print((int*) ",");
-        printRegister(rs);
-        print((int*) ",");
         printRegister(rt);
         if (interpret) {
             print((int*) ": ");
             printRegister(rd);
             print((int*) "=");
             print(itoa(*(registers+rd), string_buffer, 10, 0, 0));
-            print((int*) ",");
-            printRegister(rs);
-            print((int*) "=");
-            print(itoa(*(registers+rs), string_buffer, 10, 0, 0));
             print((int*) ",");
             printRegister(rt);
             print((int*) "=");
@@ -5476,7 +5470,7 @@ void fct_sll() {
     }
 
     if (interpret) {
-        *(registers+rd) = leftShift(registers+rs);
+        *(registers+rd) = leftShift(registers+rt);
 
         pc = pc + WORDSIZE;
     }
