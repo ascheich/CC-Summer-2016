@@ -2859,7 +2859,7 @@ int gr_shift() {
             } else if (operatorSymbol == SYM_SRLV) {
                 emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), FCT_SRLV);
             }
-            tfree(1);
+            tfree(2);
 
         }
     }
