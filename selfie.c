@@ -275,8 +275,8 @@ int SYM_MOD          = 25; // %
 int SYM_CHARACTER    = 26; // character
 int SYM_STRING       = 27; // string
 
-int SYM_SLL          = 28; // <<
-int SYM_SRL          = 29; // >>
+int SYM_SLLV          = 28; // <<
+int SYM_SRLV          = 29; // >>
 
 
 
@@ -341,8 +341,8 @@ void initScanner () {
     *(SYMBOLS + SYM_CHARACTER)    = (int) "character";
     *(SYMBOLS + SYM_STRING)       = (int) "string";
     
-    *(SYMBOLS + SYM_SLL)          = (int) "<<";
-    *(SYMBOLS + SYM_SRL)          = (int) ">>";
+    *(SYMBOLS + SYM_SLLV)          = (int) "<<";
+    *(SYMBOLS + SYM_SRLV)          = (int) ">>";
 
     character = CHAR_EOF;
     symbol    = SYM_EOF;
@@ -466,6 +466,7 @@ int  gr_call(int *procedure);
 int  gr_factor();
 int  gr_term();
 int  gr_simpleExpression();
+int  gr_shift();
 int  gr_expression();
 void gr_while();
 void gr_if();
@@ -1925,7 +1926,7 @@ int getSymbol() {
         } else if (character == CHAR_LT) {   
             getCharacter();
             
-            symbol = SYM_SLL;
+            symbol = SYM_SLLV;
         } else
             symbol = SYM_LT;
 
@@ -1939,7 +1940,7 @@ int getSymbol() {
         } else if (character == CHAR_GT) {   
             getCharacter();
             
-            symbol = SYM_SRL;
+            symbol = SYM_SRLV;
         } else
             symbol = SYM_GT;
 
@@ -2154,9 +2155,9 @@ int isComparison() {
 }
 
 int isShift() {
-    if (symbol == SYM_SLL)
+    if (symbol == SYM_SLLV)
         return 1;
-    else if (symbol == SYM_SRL)
+    else if (symbol == SYM_SRLV)
         return 1;
     else
         return 0;
@@ -2825,6 +2826,39 @@ int gr_simpleExpression() {
         }
 
         tfree(1);
+    }
+
+    // assert: allocatedTemporaries == n + 1
+
+    return ltype;
+}
+
+int gr_shift() {
+    int ltype;
+    int operatorSymbol;
+    int rtype;
+
+    if (symbol == SYM_IDENTIFIER) {
+        ltype = symbol;
+
+        getSymbol();
+
+        if (isShift()) {
+            operatorSymbol = symbol;
+
+            getSymbol();
+
+            rtype = symbol;
+
+            if (operatorSymbol == SYM_SLLV) {
+                emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), FCT_SLLV);
+
+            } else if (operatorSymbol == SYM_SRLV) {
+                emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), FCT_SRLV);
+            }
+
+            tfree(1);
+        }
     }
 
     // assert: allocatedTemporaries == n + 1
