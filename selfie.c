@@ -694,6 +694,10 @@ void initDecoder() {
     *(FUNCTIONS + FCT_ADDU)    = (int) "addu";
     *(FUNCTIONS + FCT_SUBU)    = (int) "subu";
     *(FUNCTIONS + FCT_SLT)     = (int) "slt";
+    *(FUNCTIONS + FCT_SLL)     = (int) "sll";
+    *(FUNCTIONS + FCT_SLLV)    = (int) "sllv";
+    *(FUNCTIONS + FCT_SRL)     = (int) "srl";
+    *(FUNCTIONS + FCT_SRLV)    = (int) "srll";
 }
 
 // -----------------------------------------------------------------
