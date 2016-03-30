@@ -1922,6 +1922,10 @@ int getSymbol() {
             getCharacter();
 
             symbol = SYM_LEQ;
+        } else if (character == CHAR_LT) {   
+            getCharacter();
+            
+            symbol = SYM_SLL;
         } else
             symbol = SYM_LT;
 
@@ -1932,6 +1936,10 @@ int getSymbol() {
             getCharacter();
 
             symbol = SYM_GEQ;
+        } else if (character == CHAR_GT) {   
+            getCharacter();
+            
+            symbol = SYM_SRL;
         } else
             symbol = SYM_GT;
 
