@@ -275,6 +275,11 @@ int SYM_MOD          = 25; // %
 int SYM_CHARACTER    = 26; // character
 int SYM_STRING       = 27; // string
 
+int SYM_SLL          = 28; // <<
+int SYM_SRL          = 29; // >>
+
+
+
 int *SYMBOLS; // array of strings representing symbols
 
 int maxIdentifierLength = 64; // maximum number of characters in an identifier
@@ -335,6 +340,8 @@ void initScanner () {
     *(SYMBOLS + SYM_MOD)          = (int) "%";
     *(SYMBOLS + SYM_CHARACTER)    = (int) "character";
     *(SYMBOLS + SYM_STRING)       = (int) "string";
+    
+    
 
     character = CHAR_EOF;
     symbol    = SYM_EOF;
