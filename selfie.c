@@ -2834,12 +2834,11 @@ int gr_simpleExpression() {
 }
 
 int gr_shift() {
-    int ltype;
+    int shiftMe;
     int operatorSymbol;
-    int rtype;
 
     if (symbol == SYM_IDENTIFIER) {
-        ltype = load_variable(identifier);
+        shiftMe = load_variable(identifier);
 
         getSymbol();
 
@@ -2848,22 +2847,22 @@ int gr_shift() {
 
             getSymbol();
 
-            rtype = load_variable(identifier);
-
+            load_variable(identifier);
+            
             if (operatorSymbol == SYM_SLLV) {
                 emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), FCT_SLLV);
 
             } else if (operatorSymbol == SYM_SRLV) {
                 emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), FCT_SRLV);
             }
-
             tfree(1);
+
         }
     }
 
     // assert: allocatedTemporaries == n + 1
 
-    return ltype;
+    return shiftMe;
 }
 
 int gr_expression() {
