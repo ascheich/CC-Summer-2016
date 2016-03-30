@@ -5963,6 +5963,14 @@ void execute() {
     if (opcode == OP_SPECIAL) {
         if (function == FCT_NOP)
             fct_nop();
+        else if (function == FCT_SLL)
+            fct_sll();
+        else if (function == FCT_SLLV)
+            fct_sllv();
+        else if (function == FCT_SRL)
+            fct_srl();
+        else if (function == FCT_SRLV)
+            fct_srlv();
         else if (function == FCT_ADDU)
             fct_addu();
         else if (function == FCT_SUBU)
