@@ -27,6 +27,8 @@ call             = identifier "(" [ expression { "," expression } ] ")" .
 
 constant         = integer | "'" ascii_character "'" .
 
+shift            = identifier "<<" | ">>" identifier .
+
 factor           = [ cast ] 
                     ( [ "*" ] ( identifier | "(" expression ")" ) |
                       call |
