@@ -27,8 +27,6 @@ call             = identifier "(" [ expression { "," expression } ] ")" .
 
 constant         = integer | "'" ascii_character "'" .
 
-shift            = identifier "<<" | ">>" identifier .
-
 factor           = [ cast ] 
                     ( [ "*" ] ( identifier | "(" expression ")" ) |
                       call |
@@ -38,6 +36,8 @@ factor           = [ cast ]
 term             = factor { ( "*" | "/" | "%" ) factor } .
 
 simpleExpression = [ "-" ] term { ( "+" | "-" ) term } .
+
+shift            = identifier "<<" | ">>" identifier .
 
 expression       = simpleExpression [ ( "==" | "!=" | "<" | ">" | "<=" | ">=" ) simpleExpression ] .
 
