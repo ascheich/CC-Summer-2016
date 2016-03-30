@@ -2839,7 +2839,7 @@ int gr_shift() {
     int rtype;
 
     if (symbol == SYM_IDENTIFIER) {
-        ltype = symbol;
+        ltype = load_variable(identifier);
 
         getSymbol();
 
@@ -2848,7 +2848,7 @@ int gr_shift() {
 
             getSymbol();
 
-            rtype = symbol;
+            rtype = load_variable(identifier);
 
             if (operatorSymbol == SYM_SLLV) {
                 emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), FCT_SLLV);
