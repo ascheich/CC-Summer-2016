@@ -6722,6 +6722,14 @@ int main(int argc, int *argv) {
     print((int*)"Shifted Left: ");
     print(itoa(a,string_buffer,10,0,0));
     println();
+    a = a << 1 << 6;
+    print((int*)"Shifted left twice: ");
+    print(itoa(a,string_buffer,10,0,0));
+    println();
+    a = a >> 2 >> 4;
+    print((int*)"Shifted right twice: ");
+    print(itoa(a,string_buffer,10,0,0));
+    println();
     print((int*)"Test executed");
     println();
     
