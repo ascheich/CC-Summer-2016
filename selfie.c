@@ -684,7 +684,6 @@ void initDecoder() {
     FUNCTIONS = malloc(43 * SIZEOFINTSTAR);
 
     *(FUNCTIONS + FCT_NOP)     = (int) "nop";
-    *(FUNCTIONS + FCT_SLL)     = (int) "sll";
     *(FUNCTIONS + FCT_JR)      = (int) "jr";
     *(FUNCTIONS + FCT_SYSCALL) = (int) "syscall";
     *(FUNCTIONS + FCT_MFHI)    = (int) "mfhi";
@@ -6712,9 +6711,18 @@ int main(int argc, int *argv) {
     
     int a;
     a = 10;
+    if(a==10){
+        print((int*)"created variable a = 10");
+        println();
+    }
 
     a << 2;
+    print((int*)"trying to shift left (2 digits), a should be 1000");
+    println();
+    
     a >> 1;
+    print((int*)"trying to shift right (1 digits), a should be 100");
+    println();
     
     if(a==10){
         print((int*)"a = 10 (unchanged)");
