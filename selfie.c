@@ -174,6 +174,8 @@ int S_IRUSR_IWUSR_IRGRP_IROTH = 420; // flags for rw-r--r-- file permissions
 
 int *outputName = (int*) 0;
 int outputFD    = 1;
+// Variable for Testing Purposes
+int prolog_Test = 0;
 
 // ------------------------- INITIALIZATION ------------------------
 
@@ -6709,26 +6711,26 @@ int main(int argc, int *argv) {
     print((int*)"Executing Testfile");
     println();
     
-    int a;
-    a = 20;
+// prolog_Test global definiert
+    prolog_Test = 20;
     print((int*)"Original: ");
-    print(itoa(a,string_buffer,10,0,0));
-    a = a >> 2;   
+    print(itoa(prolog_Test,string_buffer,10,0,0));
+    prolog_Test = prolog_Test >> 2;   
     println();
     print((int*)"Shifted Right: ");
-    print(itoa(a,string_buffer,10,0,0));
+    print(itoa(prolog_Test,string_buffer,10,0,0));
     println();
-    a = a << 1;
+    prolog_Test = prolog_Test << 1;
     print((int*)"Shifted Left: ");
-    print(itoa(a,string_buffer,10,0,0));
+    print(itoa(prolog_Test,string_buffer,10,0,0));
     println();
-    a = a << 1 << 6;
+    prolog_Test = prolog_Test << 1 << 6;
     print((int*)"Shifted left twice: ");
-    print(itoa(a,string_buffer,10,0,0));
+    print(itoa(prolog_Test,string_buffer,10,0,0));
     println();
-    a = a >> 2 >> 4;
+    prolog_Test = prolog_Test >> 2 >> 4;
     print((int*)"Shifted right twice: ");
-    print(itoa(a,string_buffer,10,0,0));
+    print(itoa(prolog_Test,string_buffer,10,0,0));
     println();
     print((int*)"Test executed");
     println();
