@@ -6710,34 +6710,18 @@ int main(int argc, int *argv) {
     println();
     
     int a;
-    a = 10;
-    if(a==10){
-        print((int*)"created variable a = 10");
-        println();
-    }
-
-    a << 2;
-    print((int*)"trying to shift left (2 digits), a should be 1000");
+    a = 20;
+    print((int*)"Original: ");
+    print(itoa(a,string_buffer,10,0,0));
+    a = a >> 2;   
     println();
-    
-    a >> 1;
-    print((int*)"trying to shift right (1 digits), a should be 100");
+    print((int*)"Shifted Right: ");
+    print(itoa(a,string_buffer,10,0,0));
     println();
-    
-    if(a==10){
-        print((int*)"a = 10 (unchanged)");
-        println();
-    }else if(a>10){
-        print((int*)"a increased");
-        println();
-    }else if(a<10){
-        print((int*)"a decreased");
-        println();
-    }else{
-        print((int*)"this should never happen");
-        println();
-    }
-
+    a = a << 1;
+    print((int*)"Shifted Left: ");
+    print(itoa(a,string_buffer,10,0,0));
+    println();
     print((int*)"Test executed");
     println();
     
