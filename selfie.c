@@ -6706,6 +6706,35 @@ int main(int argc, int *argv) {
     print((int*)"This is Prolog Selfie.");
     println();
     
+//  TEST ENVIRONMENT    
+    print((int*)"Executing Testfile");
+    println();
+    
+    int a;
+    a = 10;
+
+    a << 2;
+    a >> 1;
+    
+    if(a==10){
+        print((int*)"a = 10 (unchanged)");
+        println();
+    }else if(a>10){
+        print((int*)"a increased");
+        println();
+    }else if(a<10){
+        print((int*)"a decreased");
+        println();
+    }else{
+        print((int*)"this should never happen");
+        println();
+    }
+
+    print((int*)"Test executed");
+    println();
+    
+//  END OF TEST ENVIRONMENT
+
     if (selfie(argc, (int*) argv) != 0) {
         print(selfieName);
         print((int*) ": usage: selfie { -c source | -o binary | -s assembly | -l binary } [ -m size ... | -d size ... | -y size ... ] ");
