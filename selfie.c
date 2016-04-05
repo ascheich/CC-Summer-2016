@@ -466,7 +466,7 @@ int  gr_call(int *procedure);
 int  gr_factor();
 int  gr_term();
 int  gr_simpleExpression();
-int  gr_shift();
+int  gr_shiftExpression();
 int  gr_expression();
 void gr_while();
 void gr_if();
@@ -2836,36 +2836,34 @@ int gr_simpleExpression() {
     return ltype;
 }
 
-int gr_shift() {
-    int shiftMe;
+int gr_shiftExpression() {
+    int ltype;
+    int rtype;
     int operatorSymbol;
 
-    if (symbol == SYM_IDENTIFIER) {
-        shiftMe = load_variable(identifier);
+    ltype = gr_simpleExpression();
+
+    while(isShift()) {
+        operatorSymbol = symbol;
 
         getSymbol();
 
-        if (isShift()) {
-            operatorSymbol = symbol;
+        rtype = gr_simpleExpression();
 
-            getSymbol();
+        if (ltype != rtype)
+            typeWarning(ltype, rtype);
 
-            load_variable(identifier);
-            
-            if (operatorSymbol == SYM_SLLV) {
-                emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), FCT_SLLV);
-
-            } else if (operatorSymbol == SYM_SRLV) {
-                emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), FCT_SRLV);
-            }
-            tfree(2);
-
+        if (operatorSymbol == SYM_SLLV) {
+            emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), FCT_SLLV);
+        } else if (operatorSymbol == SYM_SRLV) {
+            emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), FCT_SRLV);
         }
+        tfree(1);
     }
 
     // assert: allocatedTemporaries == n + 1
 
-    return shiftMe;
+    return ltype;
 }
 
 int gr_expression() {
@@ -2875,7 +2873,7 @@ int gr_expression() {
 
     // assert: n = allocatedTemporaries
 
-    ltype = gr_simpleExpression();
+    ltype = gr_shiftExpression();
 
     // assert: allocatedTemporaries == n + 1
 
@@ -2885,7 +2883,7 @@ int gr_expression() {
 
         getSymbol();
 
-        rtype = gr_simpleExpression();
+        rtype = gr_shiftExpression();
 
         // assert: allocatedTemporaries == n + 2
 
@@ -6688,6 +6686,8 @@ int selfie(int argc, int* argv) {
 }
 
 int main(int argc, int *argv) {
+    int a;
+
     initLibrary();
 
     initScanner();
@@ -6709,13 +6709,12 @@ int main(int argc, int *argv) {
     print((int*)"Executing Testfile");
     println();
     
-    int a;
     a = 20;
     print((int*)"Original: ");
     print(itoa(a,string_buffer,10,0,0));
     a = a >> 2;   
     println();
-    print((int*)"Shifted Right: ");
+    print((int*)"Shifted Right twice: ");
     print(itoa(a,string_buffer,10,0,0));
     println();
     a = a << 1;
