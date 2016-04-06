@@ -5583,7 +5583,7 @@ void fct_sllv() {
         }
     }
     if (interpret) {
-        *(registers+rd) = leftShift(*(registers+rt), *(registers+rs));
+        *(registers+rd) = leftShift(*(registers+rs), *(registers+rt));
 
         pc = pc + WORDSIZE;
     }
@@ -5661,7 +5661,7 @@ void fct_srlv() {
         }
     }
     if (interpret) {
-        *(registers+rd) = rightShift(*(registers+rt), *(registers+rs));
+        *(registers+rd) = rightShift(*(registers+rs), *(registers+rt));
 
         pc = pc + WORDSIZE;
     }
@@ -6714,23 +6714,38 @@ int main(int argc, int *argv) {
     prolog_Test = 20;
     print((int*)"Original: ");
     print(itoa(prolog_Test,string_buffer,10,0,0));
-    prolog_Test = prolog_Test >> 2;   
     println();
-    print((int*)"Shifted Right (2): ");
-    print(itoa(prolog_Test,string_buffer,10,0,0));
-    println();
+
     prolog_Test = prolog_Test << 1;
     print((int*)"Shifted Left (1): ");
     print(itoa(prolog_Test,string_buffer,10,0,0));
     println();
-    prolog_Test = prolog_Test << 1 << 6;
-    print((int*)"Shifted left twice (1, 6): ");
+
+    prolog_Test = prolog_Test << 1;
+    print((int*)"Shifted Left (1): ");
     print(itoa(prolog_Test,string_buffer,10,0,0));
     println();
-    prolog_Test = prolog_Test >> 2 >> 4;
-    print((int*)"Shifted right twice (2, 4): ");
+
+    prolog_Test = prolog_Test >> 1;   
+    print((int*)"Shifted Right (1): ");
     print(itoa(prolog_Test,string_buffer,10,0,0));
     println();
+
+    prolog_Test = prolog_Test >> 1;   
+    print((int*)"Shifted Right (1): ");
+    print(itoa(prolog_Test,string_buffer,10,0,0));
+    println();
+
+    prolog_Test = prolog_Test << 2 << 4;
+    print((int*)"Shifted left twice (2, 4): ");
+    print(itoa(prolog_Test,string_buffer,10,0,0));
+    println();
+
+    prolog_Test = prolog_Test >> 3 >> 1;
+    print((int*)"Shifted right twice (3, 1): ");
+    print(itoa(prolog_Test,string_buffer,10,0,0));
+    println();
+
     print((int*)"Test executed");
     println();
     
