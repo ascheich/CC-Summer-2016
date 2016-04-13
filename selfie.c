@@ -91,10 +91,7 @@ int twoToThePowerOf(int p);
 int leftShift(int n, int b);
 int rightShift(int n, int b);
 
-int shiftRightLogicalImmediate(int n, int b);
 
-int shiftLeftLogicalVariable(int n, int *b);
-int shiftRightLogicalVariable(int n, int *b);
 
 int  loadCharacter(int *s, int i);
 int* storeCharacter(int *s, int i, int c);
@@ -1209,43 +1206,22 @@ int leftShift(int n, int b) {
         return 0;
 }
 
-int shiftRightLogicalImmediate(int n, int b) {
-    // assert: b >= 0;
-
-    if (b > 31)
-        return 0;
-    else
-        return (n >> b);
-}
-
-int shiftLeftLogicalVariable(int n, int *b) {
-    // assert: b >= 0;
-
-    return (n << *(b));
-}
-
-int shiftRightLogicalVariable(int n, int *b) {
-    // assert: b >= 0;
-
-    return (n >> *(b));
-}
-
 int rightShift(int n, int b) {
     // assert: b >= 0
 
-    if (b > 30)
-        return 0;
-    else if (n >= 0)
+     if (n >= 0) {
         if (b < 31)
-            return (n >> b);
-    else
+            return n >> b;
+        else
+            return 0;
+    } else if (b < 31)
         // works even if n == INT_MIN:
         // shift right n with msb reset and then restore msb
-        return ((((n + 1) + INT_MAX) >> b) +
+        return ((((n + 1) + INT_MAX) >> b ) +
             ((INT_MAX >> b) + 1));
     else if (b == 31)
         return 1;
-    else 
+    else
         return 0;
 }
 
@@ -5542,7 +5518,7 @@ void fct_sll() {
     }
 
     if (interpret) {
-        *(registers+rd) = leftShift(*(registers+rt), immediate);
+        *(registers+rd) = leftShift(*(registers+rs), immediate);
 
         pc = pc + WORDSIZE;
     }
@@ -5584,7 +5560,7 @@ void fct_sllv() {
         }
     }
     if (interpret) {
-        *(registers+rd) = leftShift(*(registers+rs), *(registers+rt));
+        *(registers+rd) = *(registers+rt) << *(registers+rs);
 
         pc = pc + WORDSIZE;
     }
@@ -5620,7 +5596,7 @@ void fct_srl() {
     }
 
     if (interpret) {
-        *(registers+rd) = rightShift(*(registers+rt), immediate);
+        *(registers+rd) = rightShift(*(registers+rs), immediate);
 
         pc = pc + WORDSIZE;
     }
@@ -5662,7 +5638,7 @@ void fct_srlv() {
         }
     }
     if (interpret) {
-        *(registers+rd) = rightShift(*(registers+rs), *(registers+rt));
+        *(registers+rd) = *(registers+rt) >> *(registers+rs);
 
         pc = pc + WORDSIZE;
     }
