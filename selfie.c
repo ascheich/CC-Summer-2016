@@ -1209,16 +1209,16 @@ int leftShift(int n, int b) {
 int rightShift(int n, int b) {
     // assert: b >= 0
 
-    if (b < 0)
+    if (b == 31)
+        return 1;
+    else if (b < 0)
         return 0;
-    
-    if (b > 30)
+    else if (b > 30)
         return 0;
-    
-    if (n >= 0)
+    else if (n >= 0)
         return (n >> b);
     else
-        return ((((n + 1) + INT_MAX) >> b) + ((INT_MAX >> b) + 1));
+        return (((n + 1) + INT_MAX) >> b) + ((INT_MAX >> b) + 1);
 }
 
 
