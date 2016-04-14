@@ -92,7 +92,6 @@ int leftShift(int n, int b);
 int rightShift(int n, int b);
 
 
-
 int  loadCharacter(int *s, int i);
 int* storeCharacter(int *s, int i, int c);
 
@@ -645,7 +644,6 @@ int OP_SW      = 43;
     
 int *OPCODES; // array of strings representing MIPS opcodes
 
-int FCT_NOP     = 0;
 int FCT_SLL     = 0;
 int FCT_SRL     = 2;
 int FCT_SLLV    = 4;
@@ -677,7 +675,7 @@ int instr_index = 0;
 void initDecoder() {
     OPCODES = malloc(44 * SIZEOFINTSTAR);
 
-    *(OPCODES + OP_SPECIAL) = (int) "nop";
+    *(OPCODES + OP_SPECIAL) = (int) "sll";
     *(OPCODES + OP_J)       = (int) "j";
     *(OPCODES + OP_JAL)     = (int) "jal";
     *(OPCODES + OP_BEQ)     = (int) "beq";
@@ -688,7 +686,7 @@ void initDecoder() {
 
     FUNCTIONS = malloc(43 * SIZEOFINTSTAR);
 
-    *(FUNCTIONS + FCT_NOP)     = (int) "nop";
+    *(FUNCTIONS + FCT_SLL)     = (int) "nop";
     *(FUNCTIONS + FCT_JR)      = (int) "jr";
     *(FUNCTIONS + FCT_SYSCALL) = (int) "syscall";
     *(FUNCTIONS + FCT_MFHI)    = (int) "mfhi";
@@ -3607,7 +3605,7 @@ void emitMainEntry() {
     // since we load positive integers < 2^28 which take
     // no more than 8 instructions each, see load_integer
     while (i < 16) {
-        emitRFormat(OP_SPECIAL, 0, 0, 0, FCT_NOP);
+        emitRFormat(OP_SPECIAL, 0, 0, 0, FCT_SLL);
 
         i = i + 1;
     }
@@ -3947,15 +3945,15 @@ void emitRFormat(int opcode, int rs, int rt, int rd, int function) {
 
     if (opcode == OP_SPECIAL) {
         if (function == FCT_JR)
-            emitRFormat(OP_SPECIAL, 0, 0, 0, FCT_NOP); // delay slot
+            emitRFormat(OP_SPECIAL, 0, 0, 0, FCT_SLL); // delay slot
         else if (function == FCT_MFLO) {
             // In MIPS I-III two instructions after MFLO/MFHI
             // must not modify the LO/HI registers
-            emitRFormat(OP_SPECIAL, 0, 0, 0, FCT_NOP); // pipeline delay
-            emitRFormat(OP_SPECIAL, 0, 0, 0, FCT_NOP); // pipeline delay
+            emitRFormat(OP_SPECIAL, 0, 0, 0, FCT_SLL); // pipeline delay
+            emitRFormat(OP_SPECIAL, 0, 0, 0, FCT_SLL); // pipeline delay
         } else if (function == FCT_MFHI) {
-            emitRFormat(OP_SPECIAL, 0, 0, 0, FCT_NOP); // pipeline delay
-            emitRFormat(OP_SPECIAL, 0, 0, 0, FCT_NOP); // pipeline delay
+            emitRFormat(OP_SPECIAL, 0, 0, 0, FCT_SLL); // pipeline delay
+            emitRFormat(OP_SPECIAL, 0, 0, 0, FCT_SLL); // pipeline delay
         }
     }
 }
@@ -3964,15 +3962,15 @@ void emitIFormat(int opcode, int rs, int rt, int immediate) {
     emitInstruction(encodeIFormat(opcode, rs, rt, immediate));
 
     if (opcode == OP_BEQ)
-        emitRFormat(OP_SPECIAL, 0, 0, 0, FCT_NOP); // delay slot
+        emitRFormat(OP_SPECIAL, 0, 0, 0, FCT_SLL); // delay slot
     else if (opcode == OP_BNE)
-        emitRFormat(OP_SPECIAL, 0, 0, 0, FCT_NOP); // delay slot
+        emitRFormat(OP_SPECIAL, 0, 0, 0, FCT_SLL); // delay slot
 }
 
 void emitJFormat(int opcode, int instr_index) {
     emitInstruction(encodeJFormat(opcode, instr_index));
 
-    emitRFormat(OP_SPECIAL, 0, 0, 0, FCT_NOP); // delay slot
+    emitRFormat(OP_SPECIAL, 0, 0, 0, FCT_SLL); // delay slot
 }
 
 void fixup_relative(int fromAddress) {
@@ -5557,7 +5555,7 @@ void fct_sllv() {
         }
     }
     if (interpret) {
-        *(registers+rd) = *(registers+rt) << *(registers+rs);
+        *(registers+rd) = *(registers + rt) << *(registers + rs);
 
         pc = pc + WORDSIZE;
     }
@@ -5635,8 +5633,7 @@ void fct_srlv() {
         }
     }
     if (interpret) {
-        *(registers+rd) = *(registers+rt) >> *(registers+rs);
-
+        *(registers+rd) = *(registers + rt) >> *(registers + rs);
         pc = pc + WORDSIZE;
     }
 
@@ -5940,9 +5937,7 @@ void execute() {
     }
 
     if (opcode == OP_SPECIAL) {
-        if (function == FCT_NOP)
-            fct_nop();
-        else if (function == FCT_SLL)
+        if (function == FCT_SLL)
             fct_sll();
         else if (function == FCT_SLLV)
             fct_sllv();
@@ -6692,19 +6687,19 @@ int main(int argc, int *argv) {
     print(itoa(prolog_Test,string_buffer,10,0,0));
     prolog_Test = prolog_Test >> 2;
     println();
-    print((int*)"Shifted Right (2): ");
+    print((int*)"Shifted Right (2) should be 5: ");
     print(itoa(prolog_Test,string_buffer,10,0,0));
     println();
     prolog_Test = prolog_Test << 1;
-    print((int*)"Shifted Left (1): ");
+    print((int*)"Shifted Left (1) should be 10: ");
     print(itoa(prolog_Test,string_buffer,10,0,0));
     println();
     prolog_Test = prolog_Test << 1 << 6;
-    print((int*)"Shifted left twice (1, 6): ");
+    print((int*)"Shifted left twice (1, 6) should be 1280: ");
     print(itoa(prolog_Test,string_buffer,10,0,0));
     println();
     prolog_Test = prolog_Test >> 2 >> 4;
-    print((int*)"Shifted right twice (2, 4): ");
+    print((int*)"Shifted right twice (2, 4) should be 20: ");
     print(itoa(prolog_Test,string_buffer,10,0,0));
     println();
     print((int*)"Test with negative numbers: ");
@@ -6715,19 +6710,19 @@ int main(int argc, int *argv) {
     print(itoa(prolog_Test,string_buffer,10,0,0));
     prolog_Test = prolog_Test >> 2;
     println();
-    print((int*)"Shifted Right (2): ");
+    print((int*)"Shifted Right (2). should be -5: ");
     print(itoa(prolog_Test,string_buffer,10,0,0));
     println();
     prolog_Test = prolog_Test << 1;
-    print((int*)"Shifted Left (1): ");
+    print((int*)"Shifted Left (1) should be -10: ");
     print(itoa(prolog_Test,string_buffer,10,0,0));
     println();
     prolog_Test = prolog_Test << 1 << 6;
-    print((int*)"Shifted left twice (1, 6): ");
+    print((int*)"Shifted left twice (1, 6) should be -1280: ");
     print(itoa(prolog_Test,string_buffer,10,0,0));
     println();
     prolog_Test = prolog_Test >> 2 >> 4;
-    print((int*)"Shifted right twice (2, 4): ");
+    print((int*)"Shifted right twice (2, 4) should be -20: ");
     print(itoa(prolog_Test,string_buffer,10,0,0));
     println();
     print((int*)"Test executed");
