@@ -2732,11 +2732,11 @@ int gr_term(int* tempValue) {
         if (foldable == 1){
             if (*(tempValue + 1) == 1){
               if (operatorSymbol == SYM_ASTERISK) {
-                tempValue = literal * tempValue;
+                *tempValue = literal * *tempValue;
               } else if (operatorSymbol == SYM_DIV) {
-                tempValue = literal / tempValue;
+                *tempValue = literal / *tempValue;
               } else if (operatorSymbol == SYM_MOD) {
-                tempValue = literal % tempValue;
+                *tempValue = literal % *tempValue;
               }
               return ltype;
             } else
