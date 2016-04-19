@@ -2702,8 +2702,8 @@ int gr_term(int* tempValue) {
     int ltype;
     int operatorSymbol;
     int rtype;
-    int foldable = 0;
-    int prevTemp = 0;
+    int foldable;
+    int prevTemp;
 
     // assert: n = allocatedTemporaries
 
@@ -2711,7 +2711,7 @@ int gr_term(int* tempValue) {
 
     if (*(tempValue + 1) == 1){
       foldable = 1;
-      prevTemp *tempValue;
+      prevTemp = *tempValue;
     }
 
     // assert: allocatedTemporaries == n + 1
