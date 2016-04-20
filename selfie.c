@@ -2825,9 +2825,9 @@ int gr_simpleExpression(int* tempValue) {
     if (foldable == 1){
       if (*(tempValue + 1) == 1){
         if (operatorSymbol == SYM_PLUS) {
-          *tempValue = prevTemp * literal;
+          *tempValue = prevTemp + literal;
         } else if (operatorSymbol == SYM_MINUS) {
-          *tempValue = prevTemp / literal;
+          *tempValue = prevTemp - literal;
         }
         return ltype;
       } else
@@ -2865,8 +2865,15 @@ int gr_shiftExpression(int* tempValue) {
   int ltype;
   int rtype;
   int operatorSymbol;
+  int foldable;
+  int prevTemp;
 
   ltype = gr_simpleExpression(tempValue);
+
+  if (*(tempValue + 1) == 1){
+    foldable = 1;
+    prevTemp = *tempValue;
+  }
 
   while(isShift()) {
     operatorSymbol = symbol;
@@ -2877,6 +2884,18 @@ int gr_shiftExpression(int* tempValue) {
 
     if (ltype != rtype)
       typeWarning(ltype, rtype);
+
+      if (foldable == 1){
+          if (*(tempValue + 1) == 1){
+            if (operatorSymbol == SYM_SLLV) {
+              *tempValue = prevTemp << literal;
+            } else if (operatorSymbol == SYM_SRLV) {
+              *tempValue = prevTemp >> literal;
+            }
+            return ltype;
+          } else
+            foldable = 0;
+      }
 
       if (operatorSymbol == SYM_SLLV) {
         emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary(), previousTemporary(), FCT_SLLV);
@@ -2895,6 +2914,8 @@ int gr_expression() {
   int ltype;
   int operatorSymbol;
   int rtype;
+  int foldable;
+  int prevTemp;
 
   // tempValue: 2 Byte field for constant folding
   //1st is for value
@@ -2906,6 +2927,11 @@ int gr_expression() {
   // assert: n = allocatedTemporaries
 
   ltype = gr_shiftExpression(tempValue);
+
+  if (*(tempValue + 1) == 1){
+    foldable = 1;
+    prevTemp = *tempValue;
+  }
 
   // assert: allocatedTemporaries == n + 1
 
@@ -2920,6 +2946,26 @@ int gr_expression() {
 
     if (ltype != rtype)
       typeWarning(ltype, rtype);
+
+    if (foldable == 1){
+        if (*(tempValue + 1) == 1){
+          if (operatorSymbol == SYM_EQUALITY) {
+            *tempValue = prevTemp == literal;
+          } else if (operatorSymbol == SYM_NOTEQ) {
+            *tempValue = prevTemp != literal;
+          } else if (operatorSymbol == SYM_LT) {
+            *tempValue = prevTemp < literal;
+          } else if (operatorSymbol == SYM_GT) {
+            *tempValue = prevTemp > literal;
+          } else if (operatorSymbol == SYM_LEQ) {
+            *tempValue = prevTemp <= literal;
+          } else if (operatorSymbol == SYM_GEQ) {
+            *tempValue = prevTemp >= literal;
+          }
+          return ltype;
+        } else
+          foldable = 0;
+    }
 
     if (operatorSymbol == SYM_EQUALITY) {
       // subtract, if result = 0 then 1, else 0
