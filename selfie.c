@@ -176,15 +176,10 @@ int S_IRUSR_IWUSR_IRGRP_IROTH = 420; // flags for rw-r--r-- file permissions
 
 // ------------------------ GLOBAL VARIABLES -----------------------
 
-<<<<<<< HEAD
 int *outputName = (int*) 0;
 int outputFD    = 1;
 // Variable for Testing Purposes
 int prolog_Test = 0;
-=======
-int* outputName = (int*) 0;
-int  outputFD   = 1;
->>>>>>> refs/remotes/cksystemsteaching/selfie-master
 
 // ------------------------- INITIALIZATION ------------------------
 
@@ -289,16 +284,12 @@ int SYM_MOD          = 25; // %
 int SYM_CHARACTER    = 26; // character
 int SYM_STRING       = 27; // string
 
-<<<<<<< HEAD
 int SYM_SLLV          = 28; // <<
 int SYM_SRLV          = 29; // >>
 
 
 
 int *SYMBOLS; // array of strings representing symbols
-=======
-int* SYMBOLS; // array of strings representing symbols
->>>>>>> refs/remotes/cksystemsteaching/selfie-master
 
 int maxIdentifierLength = 64; // maximum number of characters in an identifier
 int maxIntegerLength    = 10; // maximum number of characters in an integer
@@ -365,41 +356,6 @@ void initScanner () {
 
     character = CHAR_EOF;
     symbol    = SYM_EOF;
-=======
-  SYMBOLS = malloc(28 * SIZEOFINTSTAR);
-
-  *(SYMBOLS + SYM_IDENTIFIER)   = (int) "identifier";
-  *(SYMBOLS + SYM_INTEGER)      = (int) "integer";
-  *(SYMBOLS + SYM_VOID)         = (int) "void";
-  *(SYMBOLS + SYM_INT)          = (int) "int";
-  *(SYMBOLS + SYM_SEMICOLON)    = (int) ";";
-  *(SYMBOLS + SYM_IF)           = (int) "if";
-  *(SYMBOLS + SYM_ELSE)         = (int) "else";
-  *(SYMBOLS + SYM_PLUS)         = (int) "+";
-  *(SYMBOLS + SYM_MINUS)        = (int) "-";
-  *(SYMBOLS + SYM_ASTERISK)     = (int) "*";
-  *(SYMBOLS + SYM_DIV)          = (int) "/";
-  *(SYMBOLS + SYM_EQUALITY)     = (int) "==";
-  *(SYMBOLS + SYM_ASSIGN)       = (int) "=";
-  *(SYMBOLS + SYM_LPARENTHESIS) = (int) "(";
-  *(SYMBOLS + SYM_RPARENTHESIS) = (int) ")";
-  *(SYMBOLS + SYM_LBRACE)       = (int) "{";
-  *(SYMBOLS + SYM_RBRACE)       = (int) "}";
-  *(SYMBOLS + SYM_WHILE)        = (int) "while";
-  *(SYMBOLS + SYM_RETURN)       = (int) "return";
-  *(SYMBOLS + SYM_COMMA)        = (int) ",";
-  *(SYMBOLS + SYM_LT)           = (int) "<";
-  *(SYMBOLS + SYM_LEQ)          = (int) "<=";
-  *(SYMBOLS + SYM_GT)           = (int) ">";
-  *(SYMBOLS + SYM_GEQ)          = (int) ">=";
-  *(SYMBOLS + SYM_NOTEQ)        = (int) "!=";
-  *(SYMBOLS + SYM_MOD)          = (int) "%";
-  *(SYMBOLS + SYM_CHARACTER)    = (int) "character";
-  *(SYMBOLS + SYM_STRING)       = (int) "string";
-
-  character = CHAR_EOF;
-  symbol  = SYM_EOF;
->>>>>>> refs/remotes/cksystemsteaching/selfie-master
 }
 
 void resetScanner() {
@@ -516,18 +472,12 @@ int  help_call_codegen(int* entry, int* procedure);
 void help_procedure_prologue(int localVariables);
 void help_procedure_epilogue(int parameters);
 
-<<<<<<< HEAD
 int  gr_call(int *procedure);
 int  gr_factor(int* tempValue);
 int  gr_term(int* tempValue);
 int  gr_simpleExpression(int* tempValue);
 int  gr_shiftExpression(int* tempValue);
-=======
-int  gr_call(int* procedure);
-int  gr_factor();
-int  gr_term();
-int  gr_simpleExpression();
->>>>>>> refs/remotes/cksystemsteaching/selfie-master
+
 int  gr_expression();
 void gr_while();
 void gr_if();
@@ -699,11 +649,7 @@ int OP_ADDIU   = 9;
 int OP_LW      = 35;
 int OP_SW      = 43;
 
-<<<<<<< HEAD
 int *OPCODES; // array of strings representing MIPS opcodes
-=======
-int* OPCODES; // array of strings representing MIPS opcodes
->>>>>>> refs/remotes/cksystemsteaching/selfie-master
 
 int FCT_SLL     = 0;
 int FCT_SRL     = 2;
@@ -734,7 +680,6 @@ int instr_index = 0;
 // ------------------------- INITIALIZATION ------------------------
 
 void initDecoder() {
-<<<<<<< HEAD
     OPCODES = malloc(44 * SIZEOFINTSTAR);
 
     *(OPCODES + OP_SPECIAL) = (int) "sll";
@@ -762,31 +707,6 @@ void initDecoder() {
     *(FUNCTIONS + FCT_SLLV)    = (int) "sllv";
     *(FUNCTIONS + FCT_SRL)     = (int) "srl";
     *(FUNCTIONS + FCT_SRLV)    = (int) "srlv";
-=======
-  OPCODES = malloc(44 * SIZEOFINTSTAR);
-
-  *(OPCODES + OP_SPECIAL) = (int) "nop";
-  *(OPCODES + OP_J)       = (int) "j";
-  *(OPCODES + OP_JAL)     = (int) "jal";
-  *(OPCODES + OP_BEQ)     = (int) "beq";
-  *(OPCODES + OP_BNE)     = (int) "bne";
-  *(OPCODES + OP_ADDIU)   = (int) "addiu";
-  *(OPCODES + OP_LW)      = (int) "lw";
-  *(OPCODES + OP_SW)      = (int) "sw";
-
-  FUNCTIONS = malloc(43 * SIZEOFINTSTAR);
-
-  *(FUNCTIONS + FCT_NOP)     = (int) "nop";
-  *(FUNCTIONS + FCT_JR)      = (int) "jr";
-  *(FUNCTIONS + FCT_SYSCALL) = (int) "syscall";
-  *(FUNCTIONS + FCT_MFHI)    = (int) "mfhi";
-  *(FUNCTIONS + FCT_MFLO)    = (int) "mflo";
-  *(FUNCTIONS + FCT_MULTU)   = (int) "multu";
-  *(FUNCTIONS + FCT_DIVU)    = (int) "divu";
-  *(FUNCTIONS + FCT_ADDU)    = (int) "addu";
-  *(FUNCTIONS + FCT_SUBU)    = (int) "subu";
-  *(FUNCTIONS + FCT_SLT)     = (int) "slt";
->>>>>>> refs/remotes/cksystemsteaching/selfie-master
 }
 
 // -----------------------------------------------------------------
@@ -1283,27 +1203,17 @@ int twoToThePowerOf(int p) {
 int leftShift(int n, int b) {
   // assert: b >= 0;
 
-<<<<<<< HEAD
-     if (b < 31)
+    if (b < 31)
         return n << b;
     else if (b == 31)
         return (n << 30) * 2;
     else
         return 0;
-=======
-  if (b < 31)
-    return n * twoToThePowerOf(b);
-  else if (b == 31)
-    return n * twoToThePowerOf(30) * 2;
-  else
-    return 0;
->>>>>>> refs/remotes/cksystemsteaching/selfie-master
 }
 
 int rightShift(int n, int b) {
   // assert: b >= 0
 
-<<<<<<< HEAD
     if (b == 31)
         return 1;
     else if (b < 0)
@@ -1317,30 +1227,9 @@ int rightShift(int n, int b) {
 }
 
 
-int loadCharacter(int *s, int i) {
-    // assert: i >= 0
-    int a;
-=======
-  if (n >= 0) {
-    if (b < 31)
-      return n / twoToThePowerOf(b);
-    else
-      return 0;
-  } else if (b < 31)
-    // works even if n == INT_MIN:
-    // shift right n with msb reset and then restore msb
-    return ((n + 1) + INT_MAX) / twoToThePowerOf(b) +
-      (INT_MAX / twoToThePowerOf(b) + 1);
-  else if (b == 31)
-    return 1;
-  else
-    return 0;
-}
-
 int loadCharacter(int* s, int i) {
   // assert: i >= 0
   int a;
->>>>>>> refs/remotes/cksystemsteaching/selfie-master
 
   a = i / SIZEOFINT;
 
@@ -1353,15 +1242,10 @@ int* storeCharacter(int* s, int i, int c) {
 
   a = i / SIZEOFINT;
 
-<<<<<<< HEAD
     *(s + a) = (*(s + a) - leftShift(loadCharacter(s, i), (i % SIZEOFINT) * 8)) + leftShift(c, (i % SIZEOFINT) * 8);
 
-    return s;
-=======
-  *(s + a) = (*(s + a) - leftShift(loadCharacter(s, i), (i % SIZEOFINT) * 8)) + leftShift(c, (i % SIZEOFINT) * 8);
-
   return s;
->>>>>>> refs/remotes/cksystemsteaching/selfie-master
+
 }
 
 int stringLength(int* s) {
@@ -1383,16 +1267,11 @@ void stringReverse(int* s) {
   i = 0;
   j = stringLength(s) - 1;
 
-<<<<<<< HEAD
-    while (i < j) {
-        tmp = loadCharacter(s, i);
-
-        storeCharacter(s, i, loadCharacter(s, j));
-        storeCharacter(s, j, tmp);
-=======
   while (i < j) {
     tmp = loadCharacter(s, i);
->>>>>>> refs/remotes/cksystemsteaching/selfie-master
+
+    storeCharacter(s, i, loadCharacter(s, j));
+    storeCharacter(s, j, tmp);
 
     storeCharacter(s, i, loadCharacter(s, j));
     storeCharacter(s, j, tmp);
@@ -1437,17 +1316,9 @@ int atoi(int* s) {
       return -1;
     else if (c > 9)
       return -1;
-
-<<<<<<< HEAD
-        n = n * 10 + c;
-
-        i = i + 1;
-=======
+    
     n = n * 10 + c;
->>>>>>> refs/remotes/cksystemsteaching/selfie-master
-
     i = i + 1;
-
     c = loadCharacter(s, i);
 
     if (n < 0) {
@@ -1577,12 +1448,6 @@ int* itoa(int n, int* s, int b, int a, int p) {
 
       i = i + 2;
     }
-<<<<<<< HEAD
-
-    storeCharacter(s, i, 0); // null terminated string
-=======
-  }
->>>>>>> refs/remotes/cksystemsteaching/selfie-master
 
   storeCharacter(s, i, 0); // null terminated string
 
@@ -1648,13 +1513,7 @@ void printString(int* s) {
 
   print(s);
 
-<<<<<<< HEAD
-    print(s);
-
-    putCharacter(CHAR_DOUBLEQUOTE);
-=======
   putCharacter(CHAR_DOUBLEQUOTE);
->>>>>>> refs/remotes/cksystemsteaching/selfie-master
 }
 
 int roundUp(int n, int m) {
@@ -1701,15 +1560,9 @@ void printLineNumber(int* message, int line) {
 void syntaxErrorMessage(int* message) {
   printLineNumber((int*) "error", lineNumber);
 
-<<<<<<< HEAD
-    print(message);
-
-    println();
-=======
   print(message);
 
   println();
->>>>>>> refs/remotes/cksystemsteaching/selfie-master
 }
 
 void syntaxErrorCharacter(int expected) {
@@ -1907,47 +1760,12 @@ int getSymbol() {
 
     i = 0;
 
-<<<<<<< HEAD
-        while (isCharacterDigit()) {
-            if (i >= maxIntegerLength) {
-                syntaxErrorMessage((int*) "integer out of bound");
-
-                exit(-1);
-            }
-=======
     while (isCharacterDigit()) {
       if (i >= maxIntegerLength) {
         syntaxErrorMessage((int*) "integer out of bound");
->>>>>>> refs/remotes/cksystemsteaching/selfie-master
-
         exit(-1);
       }
 
-<<<<<<< HEAD
-            i = i + 1;
-
-            getCharacter();
-        }
-
-        storeCharacter(integer, i, 0); // null terminated string
-
-        literal = atoi(integer);
-
-        if (literal < 0) {
-            if (literal == INT_MIN) {
-                if (mayBeINTMIN)
-                    isINTMIN = 1;
-                else {
-                    syntaxErrorMessage((int*) "integer out of bound");
-
-                    exit(-1);
-                }
-            } else {
-                syntaxErrorMessage((int*) "integer out of bound");
-
-                exit(-1);
-            }
-=======
       storeCharacter(integer, i, character);
 
       i = i + 1;
@@ -1967,7 +1785,6 @@ int getSymbol() {
           syntaxErrorMessage((int*) "integer out of bound");
 
           exit(-1);
->>>>>>> refs/remotes/cksystemsteaching/selfie-master
         }
       } else {
         syntaxErrorMessage((int*) "integer out of bound");
@@ -2008,30 +1825,14 @@ int getSymbol() {
 
     string = malloc(maxStringLength + 1);
 
-<<<<<<< HEAD
-        while (isNotDoubleQuoteOrEOF()) {
-            if (i >= maxStringLength) {
-                syntaxErrorMessage((int*) "string too long");
-
-                exit(-1);
-            }
-=======
     i = 0;
->>>>>>> refs/remotes/cksystemsteaching/selfie-master
 
     while (isNotDoubleQuoteOrEOF()) {
       if (i >= maxStringLength) {
         syntaxErrorMessage((int*) "string too long");
 
-<<<<<<< HEAD
-            i = i + 1;
-
-            getCharacter();
-        }
-=======
         exit(-1);
       }
->>>>>>> refs/remotes/cksystemsteaching/selfie-master
 
       storeCharacter(string, i, character);
 
@@ -2107,38 +1908,26 @@ int getSymbol() {
 
     symbol = SYM_COMMA;
 
-<<<<<<< HEAD
-            symbol = SYM_LEQ;
-        } else if (character == CHAR_LT) {
-            getCharacter();
-
-            symbol = SYM_SLLV;
-        } else
-            symbol = SYM_LT;
-=======
   } else if (character == CHAR_LT) {
-    getCharacter();
->>>>>>> refs/remotes/cksystemsteaching/selfie-master
-
-    if (character == CHAR_EQUAL) {
       getCharacter();
 
-      symbol = SYM_LEQ;
+      if (character == CHAR_EQUAL) {
+        getCharacter();
+
+        symbol = SYM_LEQ;
+      } else if (character == CHAR_LT) {
+        getCharacter();
+
+        symbol = SYM_SLLV;
+      } else
+        symbol = SYM_LT;
+
+    } else if (character == CHAR_GT) {
+        getCharacter();
+
+        symbol = SYM_SRLV;
     } else
-      symbol = SYM_LT;
-
-<<<<<<< HEAD
-            symbol = SYM_GEQ;
-        } else if (character == CHAR_GT) {
-            getCharacter();
-
-            symbol = SYM_SRLV;
-        } else
-            symbol = SYM_GT;
-=======
-  } else if (character == CHAR_GT) {
-    getCharacter();
->>>>>>> refs/remotes/cksystemsteaching/selfie-master
+        symbol = SYM_GT;
 
     if (character == CHAR_EQUAL) {
       getCharacter();
@@ -2160,16 +1949,7 @@ int getSymbol() {
   } else if (character == CHAR_PERCENTAGE) {
     getCharacter();
 
-<<<<<<< HEAD
-    } else {
-        printLineNumber((int*) "error", lineNumber);
-        print((int*) "found unknown character ");
-        printCharacter(character);
-
-        println();
-=======
     symbol = SYM_MOD;
->>>>>>> refs/remotes/cksystemsteaching/selfie-master
 
   } else {
     printLineNumber((int*) "error", lineNumber);
@@ -2188,46 +1968,6 @@ int getSymbol() {
 // ------------------------- SYMBOL TABLE --------------------------
 // -----------------------------------------------------------------
 
-<<<<<<< HEAD
-void createSymbolTableEntry(int whichTable, int *string, int line, int class, int type, int value, int address) {
-    int *newEntry;
-
-    newEntry = malloc(2 * SIZEOFINTSTAR + 6 * SIZEOFINT);
-
-    setString(newEntry, string);
-    setLineNumber(newEntry, line);
-    setClass(newEntry, class);
-    setType(newEntry, type);
-    setValue(newEntry, value);
-    setAddress(newEntry, address);
-
-    // create entry at head of symbol table
-    if (whichTable == GLOBAL_TABLE) {
-        setScope(newEntry, REG_GP);
-        setNextEntry(newEntry, global_symbol_table);
-        global_symbol_table = newEntry;
-    } else if (whichTable == LOCAL_TABLE) {
-        setScope(newEntry, REG_FP);
-        setNextEntry(newEntry, local_symbol_table);
-        local_symbol_table = newEntry;
-    } else {
-        // library procedures
-        setScope(newEntry, REG_GP);
-        setNextEntry(newEntry, library_symbol_table);
-        library_symbol_table = newEntry;
-    }
-}
-
-int* searchSymbolTable(int *entry, int *string, int class) {
-    while (entry != (int*) 0) {
-        if (stringCompare(string, getString(entry)))
-            if (class == getClass(entry))
-                return entry;
-
-        // keep looking
-        entry = getNextEntry(entry);
-    }
-=======
 void createSymbolTableEntry(int whichTable, int* string, int line, int class, int type, int value, int address) {
   int* newEntry;
 
@@ -2262,7 +2002,6 @@ int* searchSymbolTable(int* entry, int* string, int class) {
     if (stringCompare(string, getString(entry)))
       if (class == getClass(entry))
         return entry;
->>>>>>> refs/remotes/cksystemsteaching/selfie-master
 
     // keep looking
     entry = getNextEntry(entry);
@@ -2278,19 +2017,12 @@ int* getSymbolTableEntry(int* string, int class) {
     // local variables override global variables
     entry = searchSymbolTable(local_symbol_table, string, class);
 
-<<<<<<< HEAD
-        if (entry != (int*) 0)
-            return entry;
-    }
-
-    return searchSymbolTable(global_symbol_table, string, class);
-=======
     if (entry != (int*) 0)
       return entry;
   }
 
   return searchSymbolTable(global_symbol_table, string, class);
->>>>>>> refs/remotes/cksystemsteaching/selfie-master
+
 }
 
 int isUndefinedProcedure(int* entry) {
@@ -2303,15 +2035,6 @@ int isUndefinedProcedure(int* entry) {
     if (libraryEntry != (int*) 0)
       entry = libraryEntry;
 
-<<<<<<< HEAD
-        if (getAddress(entry) == 0)
-            return 1;
-        else if (getOpcode(loadBinary(getAddress(entry))) == OP_JAL)
-            return 1;
-    }
-
-    return 0;
-=======
     if (getAddress(entry) == 0)
       return 1;
     else if (getOpcode(loadBinary(getAddress(entry))) == OP_JAL)
@@ -2319,7 +2042,6 @@ int isUndefinedProcedure(int* entry) {
   }
 
   return 0;
->>>>>>> refs/remotes/cksystemsteaching/selfie-master
 }
 
 int reportUndefinedProcedures() {
