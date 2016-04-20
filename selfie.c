@@ -2786,6 +2786,8 @@ int gr_simpleExpression(int* tempValue) {
   int ltype;
   int operatorSymbol;
   int rtype;
+  int foldable;
+  int prevTemp;
 
   // assert: n = allocatedTemporaries
 
@@ -2812,6 +2814,11 @@ int gr_simpleExpression(int* tempValue) {
 
   ltype = gr_term(tempValue);
 
+  if (*(tempValue + 1) == 1){
+    foldable = 1;
+    prevTemp = *tempValue;
+  }
+
   // assert: allocatedTemporaries == n + 1
 
   if (sign) {
@@ -2832,6 +2839,17 @@ int gr_simpleExpression(int* tempValue) {
 
     rtype = gr_term(tempValue);
 
+    if (foldable == 1){
+      if (*(tempValue + 1) == 1){
+        if (operatorSymbol == SYM_PLUS) {
+          *tempValue = prevTemp * literal;
+        } else if (operatorSymbol == SYM_MINUS) {
+          *tempValue = prevTemp / literal;
+        }
+        return ltype;
+      } else
+      foldable = 0;
+    }
 
     // assert: allocatedTemporaries == n + 2
 
@@ -2894,6 +2912,10 @@ int gr_expression() {
   int ltype;
   int operatorSymbol;
   int rtype;
+
+  // tempValue: 2 Byte field for constant folding
+  //1st is for value
+  //2nd is the constant folding flag
   int* tempValue = malloc(8);
   *tempValue = 0;
   *(tempValue + 1) = 0;
