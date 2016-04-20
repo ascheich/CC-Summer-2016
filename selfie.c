@@ -2551,7 +2551,6 @@ int gr_factor(int* tempValue) {
   // assert: n = allocatedTemporaries
 
   hasCast = 0;
-  *(tempValue + 1) = 0;
 
   type = INT_T;
 
@@ -2656,7 +2655,7 @@ int gr_factor(int* tempValue) {
   load_integer(literal);
 
   *tempValue = literal;
-  *(tempValue + 1) = 1;
+  *(tempValue + 1) = 0;
 
   getSymbol();
 
@@ -2733,21 +2732,19 @@ int gr_term(int* tempValue) {
   if (ltype != rtype)
     typeWarning(ltype, rtype);
 
-    if (foldable == 1){
-        if (*(tempValue + 1) == 1){
-          tfree(1);
-          if (operatorSymbol == SYM_ASTERISK) {
-            *tempValue = prevTemp * literal;
-          } else if (operatorSymbol == SYM_DIV) {
-            *tempValue = prevTemp / literal;
-          } else if (operatorSymbol == SYM_MOD) {
-            *tempValue = prevTemp % literal;
-          }
-          load_integer(*tempValue);
-          return ltype;
-        } else
-          foldable = 0;
-    }
+  if (foldable == 1){
+    if (*(tempValue + 1) == 1){
+      if (operatorSymbol == SYM_ASTERISK) {
+      *tempValue = prevTemp * literal;
+      } else if (operatorSymbol == SYM_DIV) {
+      *tempValue = prevTemp / literal;
+      } else if (operatorSymbol == SYM_MOD) {
+      *tempValue = prevTemp % literal;
+      }
+      return ltype;
+    } else
+      foldable = 0;
+  }
 
   if (operatorSymbol == SYM_ASTERISK) {
     emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), 0, FCT_MULTU);
@@ -2822,19 +2819,7 @@ int gr_simpleExpression(int* tempValue) {
 
   rtype = gr_term(tempValue);
 
-    if (foldable == 1){
-      if (*(tempValue + 1) == 1){
-        tfree(1);
-        if (operatorSymbol == SYM_PLUS) {
-          *tempValue = prevTemp + literal;
-        } else if (operatorSymbol == SYM_MINUS) {
-          *tempValue = prevTemp - literal;
-        }
-        load_integer(*tempValue);
-        return ltype;
-      } else
-      foldable = 0;
-    }
+  // assert: allocatedTemporaries == n + 2
 
   if (operatorSymbol == SYM_PLUS) {
     if (ltype == INTSTAR_T) {
@@ -2875,22 +2860,8 @@ int gr_shiftExpression(int* tempValue) {
 
   rtype = gr_simpleExpression(tempValue);
 
-    if (ltype != rtype)
-      typeWarning(ltype, rtype);
-
-      if (foldable == 1){
-        tfree(1);
-          if (*(tempValue + 1) == 1){
-            if (operatorSymbol == SYM_SLLV) {
-              *tempValue = prevTemp << literal;
-            } else if (operatorSymbol == SYM_SRLV) {
-              *tempValue = prevTemp >> literal;
-            }
-            load_integer(*tempValue);
-            return ltype;
-          } else
-            foldable = 0;
-      }
+  if (ltype != rtype)
+    typeWarning(ltype, rtype);
 
     if (operatorSymbol == SYM_SLLV) {
     emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary(), previousTemporary(), FCT_SLLV);
@@ -2909,19 +2880,8 @@ int gr_expression() {
   int ltype;
   int operatorSymbol;
   int rtype;
-<<<<<<< HEAD
-  int foldable;
-  int prevTemp;
-
-  // tempValue: 2 Byte field for constant folding
-  //1st is for value
-  //2nd is the constant folding flag
-  int* tempValue;
-  tempValue = malloc(2 * SIZEOFINT);
-=======
   int* tempValue;
   tempValue = malloc(8);
->>>>>>> refs/remotes/origin/selfie-master
   *tempValue = 0;
   *(tempValue + 1) = 0;
 
@@ -2940,35 +2900,8 @@ int gr_expression() {
 
   // assert: allocatedTemporaries == n + 2
 
-<<<<<<< HEAD
-    if (ltype != rtype)
-      typeWarning(ltype, rtype);
-
-    if (foldable == 1){
-        if (*(tempValue + 1) == 1){
-          tfree(1);
-          if (operatorSymbol == SYM_EQUALITY) {
-            *tempValue = prevTemp == literal;
-          } else if (operatorSymbol == SYM_NOTEQ) {
-            *tempValue = prevTemp != literal;
-          } else if (operatorSymbol == SYM_LT) {
-            *tempValue = prevTemp < literal;
-          } else if (operatorSymbol == SYM_GT) {
-            *tempValue = prevTemp > literal;
-          } else if (operatorSymbol == SYM_LEQ) {
-            *tempValue = prevTemp <= literal;
-          } else if (operatorSymbol == SYM_GEQ) {
-            *tempValue = prevTemp >= literal;
-          }
-          load_integer(*tempValue);
-          return ltype;
-        } else
-          foldable = 0;
-    }
-=======
   if (ltype != rtype)
     typeWarning(ltype, rtype);
->>>>>>> refs/remotes/origin/selfie-master
 
   if (operatorSymbol == SYM_EQUALITY) {
     // subtract, if result = 0 then 1, else 0
@@ -6624,7 +6557,6 @@ int selfie(int argc, int* argv) {
   else {
     while (argc >= 2) {
       if (stringCompare((int*) *argv, (int*) "-c")) {
-
         sourceName = (int*) *(argv+1);
         binaryName = sourceName;
 
