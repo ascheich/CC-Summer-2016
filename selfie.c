@@ -2657,7 +2657,7 @@ int gr_factor(int* tempValue) {
   load_integer(literal);
 
   *tempValue = literal;
-  *(tempValue + 1) = 1;
+  *(tempValue + 1) = 0;
 
   getSymbol();
 
@@ -2845,6 +2845,8 @@ int gr_simpleExpression(int* tempValue) {
       foldable = 0;
     }
 
+  // assert: allocatedTemporaries == n + 2
+
   if (operatorSymbol == SYM_PLUS) {
     if (ltype == INTSTAR_T) {
     if (rtype == INT_T)
@@ -2956,7 +2958,6 @@ int gr_expression() {
       typeWarning(ltype, rtype);
 
     if (foldable == 1){
-      //*(tempValue + 1) = 0;
         if (*(tempValue + 1) == 1){
           tfree(2);
           if (operatorSymbol == SYM_EQUALITY) {
@@ -6632,7 +6633,6 @@ int selfie(int argc, int* argv) {
   else {
     while (argc >= 2) {
       if (stringCompare((int*) *argv, (int*) "-c")) {
-
         sourceName = (int*) *(argv+1);
         binaryName = sourceName;
 
