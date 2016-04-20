@@ -685,7 +685,6 @@ void initDecoder() {
 
   FUNCTIONS = malloc(43 * SIZEOFINTSTAR);
 
-  *(FUNCTIONS + FCT_SLL)     = (int) "nop";
   *(FUNCTIONS + FCT_JR)      = (int) "jr";
   *(FUNCTIONS + FCT_SYSCALL) = (int) "syscall";
   *(FUNCTIONS + FCT_MFHI)    = (int) "mfhi";
@@ -899,7 +898,6 @@ void initMemory(int bytes) {
 // -----------------------------------------------------------------
 
 void fct_syscall();
-void fct_nop();
 
 void fct_sll();
 void fct_sllv();
@@ -3633,7 +3631,7 @@ void emitMainEntry() {
   // since we load positive integers < 2^28 which take
   // no more than 8 instructions each, see load_integer
   while (i < 16) {
-    emitRFormat(OP_SPECIAL, 0, 0, 0, FCT_NOP);
+    emitRFormat(OP_SPECIAL, 0, 0, 0, FCT_SLL);
 
     i = i + 1;
   }
@@ -3974,15 +3972,15 @@ void emitRFormat(int opcode, int rs, int rt, int rd, int function) {
 
   if (opcode == OP_SPECIAL) {
     if (function == FCT_JR)
-      emitRFormat(OP_SPECIAL, 0, 0, 0, FCT_NOP); // delay slot
+      emitRFormat(OP_SPECIAL, 0, 0, 0, FCT_SLL); // delay slot
     else if (function == FCT_MFLO) {
       // In MIPS I-III two instructions after MFLO/MFHI
       // must not modify the LO/HI registers
-      emitRFormat(OP_SPECIAL, 0, 0, 0, FCT_NOP); // pipeline delay
-      emitRFormat(OP_SPECIAL, 0, 0, 0, FCT_NOP); // pipeline delay
+      emitRFormat(OP_SPECIAL, 0, 0, 0, FCT_SLL); // pipeline delay
+      emitRFormat(OP_SPECIAL, 0, 0, 0, FCT_SLL); // pipeline delay
     } else if (function == FCT_MFHI) {
-      emitRFormat(OP_SPECIAL, 0, 0, 0, FCT_NOP); // pipeline delay
-      emitRFormat(OP_SPECIAL, 0, 0, 0, FCT_NOP); // pipeline delay
+      emitRFormat(OP_SPECIAL, 0, 0, 0, FCT_SLL); // pipeline delay
+      emitRFormat(OP_SPECIAL, 0, 0, 0, FCT_SLL); // pipeline delay
     }
   }
 }
@@ -3991,15 +3989,15 @@ void emitIFormat(int opcode, int rs, int rt, int immediate) {
   emitInstruction(encodeIFormat(opcode, rs, rt, immediate));
 
   if (opcode == OP_BEQ)
-    emitRFormat(OP_SPECIAL, 0, 0, 0, FCT_NOP); // delay slot
+    emitRFormat(OP_SPECIAL, 0, 0, 0, FCT_SLL); // delay slot
   else if (opcode == OP_BNE)
-    emitRFormat(OP_SPECIAL, 0, 0, 0, FCT_NOP); // delay slot
+    emitRFormat(OP_SPECIAL, 0, 0, 0, FCT_SLL); // delay slot
 }
 
 void emitJFormat(int opcode, int instr_index) {
   emitInstruction(encodeJFormat(opcode, instr_index));
 
-  emitRFormat(OP_SPECIAL, 0, 0, 0, FCT_NOP); // delay slot
+  emitRFormat(OP_SPECIAL, 0, 0, 0, FCT_SLL); // delay slot
 }
 
 void fixup_relative(int fromAddress) {
@@ -5105,15 +5103,6 @@ void fct_syscall() {
   }
 }
 
-void fct_nop() {
-  if (debug) {
-    printFunction(function);
-    println();
-  }
-
-  if (interpret)
-    pc = pc + WORDSIZE;
-}
 
 void op_jal() {
   if (debug) {
