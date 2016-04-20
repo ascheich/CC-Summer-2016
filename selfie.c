@@ -2552,6 +2552,7 @@ int gr_factor(int* tempValue) {
 
   hasCast = 0;
   *(tempValue + 1) = 0;
+  *tempValue = 0;
 
   type = INT_T;
 
@@ -2708,6 +2709,9 @@ int gr_term(int* tempValue) {
   int foldable;
   int prevTemp;
 
+  foldable = 0;
+  prevTemp = 0;
+
   // assert: n = allocatedTemporaries
 
 
@@ -2735,7 +2739,7 @@ int gr_term(int* tempValue) {
 
     if (foldable == 1){
         if (*(tempValue + 1) == 1){
-          tfree(1);
+          tfree(2);
           if (operatorSymbol == SYM_ASTERISK) {
             *tempValue = prevTemp * literal;
           } else if (operatorSymbol == SYM_DIV) {
@@ -2776,6 +2780,11 @@ int gr_simpleExpression(int* tempValue) {
   int ltype;
   int operatorSymbol;
   int rtype;
+  int foldable;
+  int prevTemp;
+
+  foldable = 0;
+  prevTemp = 0;
 
   // assert: n = allocatedTemporaries
 
@@ -2824,7 +2833,7 @@ int gr_simpleExpression(int* tempValue) {
 
     if (foldable == 1){
       if (*(tempValue + 1) == 1){
-        tfree(1);
+        tfree(2);
         if (operatorSymbol == SYM_PLUS) {
           *tempValue = prevTemp + literal;
         } else if (operatorSymbol == SYM_MINUS) {
@@ -2865,6 +2874,11 @@ int gr_shiftExpression(int* tempValue) {
   int ltype;
   int rtype;
   int operatorSymbol;
+  int foldable;
+  int prevTemp;
+
+  foldable = 0;
+  prevTemp = 0;
 
   ltype = gr_simpleExpression(tempValue);
 
@@ -2879,12 +2893,12 @@ int gr_shiftExpression(int* tempValue) {
       typeWarning(ltype, rtype);
 
       if (foldable == 1){
-        tfree(1);
+        tfree(2);
           if (*(tempValue + 1) == 1){
             if (operatorSymbol == SYM_SLLV) {
-              *tempValue = prevTemp << literal;
+              *tempValue = (prevTemp << literal);
             } else if (operatorSymbol == SYM_SRLV) {
-              *tempValue = prevTemp >> literal;
+              *tempValue = (prevTemp >> literal);
             }
             load_integer(*tempValue);
             return ltype;
@@ -2909,7 +2923,6 @@ int gr_expression() {
   int ltype;
   int operatorSymbol;
   int rtype;
-<<<<<<< HEAD
   int foldable;
   int prevTemp;
 
@@ -2918,12 +2931,11 @@ int gr_expression() {
   //2nd is the constant folding flag
   int* tempValue;
   tempValue = malloc(2 * SIZEOFINT);
-=======
-  int* tempValue;
-  tempValue = malloc(8);
->>>>>>> refs/remotes/origin/selfie-master
   *tempValue = 0;
   *(tempValue + 1) = 0;
+
+  foldable = 0;
+  prevTemp = 0;
 
   // assert: n = allocatedTemporaries
 
@@ -2940,35 +2952,31 @@ int gr_expression() {
 
   // assert: allocatedTemporaries == n + 2
 
-<<<<<<< HEAD
     if (ltype != rtype)
       typeWarning(ltype, rtype);
 
     if (foldable == 1){
+      //*(tempValue + 1) = 0;
         if (*(tempValue + 1) == 1){
-          tfree(1);
+          tfree(2);
           if (operatorSymbol == SYM_EQUALITY) {
-            *tempValue = prevTemp == literal;
+            *tempValue = (prevTemp == literal);
           } else if (operatorSymbol == SYM_NOTEQ) {
-            *tempValue = prevTemp != literal;
+            *tempValue = (prevTemp != literal);
           } else if (operatorSymbol == SYM_LT) {
-            *tempValue = prevTemp < literal;
+            *tempValue = (prevTemp < literal);
           } else if (operatorSymbol == SYM_GT) {
-            *tempValue = prevTemp > literal;
+            *tempValue = (prevTemp > literal);
           } else if (operatorSymbol == SYM_LEQ) {
-            *tempValue = prevTemp <= literal;
+            *tempValue = (prevTemp <= literal);
           } else if (operatorSymbol == SYM_GEQ) {
-            *tempValue = prevTemp >= literal;
+            *tempValue = (prevTemp >= literal);
           }
           load_integer(*tempValue);
           return ltype;
         } else
           foldable = 0;
     }
-=======
-  if (ltype != rtype)
-    typeWarning(ltype, rtype);
->>>>>>> refs/remotes/origin/selfie-master
 
   if (operatorSymbol == SYM_EQUALITY) {
     // subtract, if result = 0 then 1, else 0
