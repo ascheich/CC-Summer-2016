@@ -2766,7 +2766,6 @@ int gr_term(int* tempValue) {
 	return ltype;
 }
 
-<<<<<<< HEAD
 int gr_simpleExpression(int* tempValue) {
   int sign;
   int ltype;
@@ -2774,14 +2773,6 @@ int gr_simpleExpression(int* tempValue) {
   int rtype;
   int foldable;
   int prevTemp;
-=======
->>>>>>> 044d41598f7b5108830e4a21ac3810f5057730f4
-
-int gr_simpleExpression(int* tempValue) {
-	int sign;
-	int ltype;
-	int operatorSymbol;
-	int rtype;
 
 	// assert: n = allocatedTemporaries
 
@@ -2806,16 +2797,12 @@ int gr_simpleExpression(int* tempValue) {
 	} else
 		sign = 0;
 
-<<<<<<< HEAD
+  ltype = gr_term(tempValue);
+
   if (*(tempValue + 1) == 1){
     foldable = 1;
     prevTemp = *tempValue;
   }
-
-  // assert: allocatedTemporaries == n + 1
-=======
-	ltype = gr_term(tempValue);
->>>>>>> 044d41598f7b5108830e4a21ac3810f5057730f4
 
 	// assert: allocatedTemporaries == n + 1
 
@@ -2835,7 +2822,8 @@ int gr_simpleExpression(int* tempValue) {
 
 		getSymbol();
 
-<<<<<<< HEAD
+		rtype = gr_term(tempValue);
+
     if (foldable == 1){
       if (*(tempValue + 1) == 1){
         if (operatorSymbol == SYM_PLUS) {
@@ -2847,9 +2835,6 @@ int gr_simpleExpression(int* tempValue) {
       } else
       foldable = 0;
     }
-=======
-		rtype = gr_term(tempValue);
->>>>>>> 044d41598f7b5108830e4a21ac3810f5057730f4
 
 		// assert: allocatedTemporaries == n + 2
 
@@ -2909,7 +2894,6 @@ int gr_shiftExpression(int* tempValue) {
 }
 
 int gr_expression() {
-<<<<<<< HEAD
   int ltype;
   int operatorSymbol;
   int rtype;
@@ -2920,16 +2904,6 @@ int gr_expression() {
   int* tempValue = malloc(8);
   *tempValue = 0;
   *(tempValue + 1) = 0;
-
-  // assert: n = allocatedTemporaries
-=======
-	int ltype;
-	int operatorSymbol;
-	int rtype;
-	int* tempValue = malloc(8);
-	*tempValue = 0;
-	*(tempValue + 1) = 0;
->>>>>>> 044d41598f7b5108830e4a21ac3810f5057730f4
 
 	// assert: n = allocatedTemporaries
 
