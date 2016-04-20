@@ -2551,6 +2551,7 @@ int gr_factor(int* tempValue) {
   // assert: n = allocatedTemporaries
 
   hasCast = 0;
+  *(tempValue + 1) = 0;
 
   type = INT_T;
 
@@ -2731,6 +2732,7 @@ int gr_term(int* tempValue) {
 
     if (foldable == 1){
         if (*(tempValue + 1) == 1){
+          tfree(1);
           if (operatorSymbol == SYM_ASTERISK) {
             *tempValue = prevTemp * literal;
           } else if (operatorSymbol == SYM_DIV) {
@@ -2738,6 +2740,7 @@ int gr_term(int* tempValue) {
           } else if (operatorSymbol == SYM_MOD) {
             *tempValue = prevTemp % literal;
           }
+          load_integer(*tempValue);
           return ltype;
         } else
           foldable = 0;
@@ -2824,11 +2827,13 @@ int gr_simpleExpression(int* tempValue) {
 
     if (foldable == 1){
       if (*(tempValue + 1) == 1){
+        tfree(1);
         if (operatorSymbol == SYM_PLUS) {
           *tempValue = prevTemp + literal;
         } else if (operatorSymbol == SYM_MINUS) {
           *tempValue = prevTemp - literal;
         }
+        load_integer(*tempValue);
         return ltype;
       } else
       foldable = 0;
@@ -2886,12 +2891,14 @@ int gr_shiftExpression(int* tempValue) {
       typeWarning(ltype, rtype);
 
       if (foldable == 1){
+        tfree(1);
           if (*(tempValue + 1) == 1){
             if (operatorSymbol == SYM_SLLV) {
               *tempValue = prevTemp << literal;
             } else if (operatorSymbol == SYM_SRLV) {
               *tempValue = prevTemp >> literal;
             }
+            load_integer(*tempValue);
             return ltype;
           } else
             foldable = 0;
@@ -2920,7 +2927,8 @@ int gr_expression() {
   // tempValue: 2 Byte field for constant folding
   //1st is for value
   //2nd is the constant folding flag
-  int* tempValue = malloc(8);
+  int* tempValue;
+  tempValue = malloc(2 * SIZEOFINT);
   *tempValue = 0;
   *(tempValue + 1) = 0;
 
@@ -2949,6 +2957,7 @@ int gr_expression() {
 
     if (foldable == 1){
         if (*(tempValue + 1) == 1){
+          tfree(1);
           if (operatorSymbol == SYM_EQUALITY) {
             *tempValue = prevTemp == literal;
           } else if (operatorSymbol == SYM_NOTEQ) {
@@ -2962,6 +2971,7 @@ int gr_expression() {
           } else if (operatorSymbol == SYM_GEQ) {
             *tempValue = prevTemp >= literal;
           }
+          load_integer(*tempValue);
           return ltype;
         } else
           foldable = 0;
@@ -6624,6 +6634,7 @@ int selfie(int argc, int* argv) {
   else {
     while (argc >= 2) {
       if (stringCompare((int*) *argv, (int*) "-c")) {
+
         sourceName = (int*) *(argv+1);
         binaryName = sourceName;
 
