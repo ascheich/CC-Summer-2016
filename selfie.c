@@ -468,10 +468,10 @@ void help_procedure_prologue(int localVariables);
 void help_procedure_epilogue(int parameters);
 
 int  gr_call(int* procedure);
-int  gr_factor(int* tempValue);
-int  gr_term(int* tempValue);
-int  gr_simpleExpression(int* tempValue);
-int  gr_shiftExpression(int* tempValue);
+int  gr_factor(int* constantVal);
+int  gr_term(int* constantVal);
+int  gr_simpleExpression(int* constantVal);
+int  gr_shiftExpression(int* constantVal);
 int  gr_expression();
 void gr_while();
 void gr_if();
@@ -2541,7 +2541,7 @@ int gr_call(int* procedure) {
   return type;
 }
 
-int gr_factor(int* tempValue) {
+int gr_factor(int* constantVal) {
   int hasCast;
   int cast;
   int type;
@@ -2551,8 +2551,8 @@ int gr_factor(int* tempValue) {
   // assert: n = allocatedTemporaries
 
   hasCast = 0;
-  *(tempValue + 1) = 0;
-  *tempValue = 0;
+  *constantVal = 0;
+  *(constantVal + 1) = 0;
 
   type = INT_T;
 
@@ -2649,15 +2649,12 @@ int gr_factor(int* tempValue) {
     // variable access: identifier
     type = load_variable(variableOrProcedureName);
 
-    *tempValue = (int)identifier;
-    *(tempValue + 1) = 0;
-
   // integer?
   } else if (symbol == SYM_INTEGER) {
   load_integer(literal);
 
-  *tempValue = literal;
-  *(tempValue + 1) = 0;
+  *constantVal = literal;
+  *(constantVal + 1) = 1;
 
   getSymbol();
 
@@ -2702,24 +2699,30 @@ int gr_factor(int* tempValue) {
   return type;
 }
 
-int gr_term(int* tempValue) {
+int gr_term(int* constantVal) {
   int ltype;
   int operatorSymbol;
   int rtype;
-  int foldable;
-  int prevTemp;
-
-  foldable = 0;
-  prevTemp = 0;
+  int leftFoldable;
+  int leftVal;
 
   // assert: n = allocatedTemporaries
 
 
-  ltype = gr_factor(tempValue);
+  ltype = gr_factor(constantVal);
 
-  if (*(tempValue + 1) == 1){
-  foldable = 1;
-  prevTemp = *tempValue;
+  if (*(constantVal + 1) == 1){
+    leftFoldable = 1;
+    leftVal = *constantVal;
+    print((int*)" val:");
+    print(itoa(leftVal, string_buffer,10,0,0));
+    print((int*)"__fold(");
+    print(itoa(leftFoldable, string_buffer,10,0,0));
+    print((int*)") || ");
+  } else {
+    leftFoldable = 0;
+    leftVal = 0;
+    print((int*)"   __X__   ");
   }
 
   // assert: allocatedTemporaries == n + 1
@@ -2730,27 +2733,32 @@ int gr_term(int* tempValue) {
 
   getSymbol();
 
-  rtype = gr_factor(tempValue);
+  rtype = gr_factor(constantVal);
 
   // assert: allocatedTemporaries == n + 2
 
   if (ltype != rtype)
     typeWarning(ltype, rtype);
 
-    if (foldable == 1){
-        if (*(tempValue + 1) == 1){
+    if (leftFoldable == 1){
+        if (*(constantVal + 1) == 1){
           tfree(2);
+          print((int*)"___DIV/MULT___");
           if (operatorSymbol == SYM_ASTERISK) {
-            *tempValue = prevTemp * literal;
+            *constantVal = leftVal * literal;
           } else if (operatorSymbol == SYM_DIV) {
-            *tempValue = prevTemp / literal;
+            *constantVal = leftVal / literal;
           } else if (operatorSymbol == SYM_MOD) {
-            *tempValue = prevTemp % literal;
+            *constantVal = leftVal % literal;
           }
-          load_integer(*tempValue);
+          load_integer(*constantVal);
+          print((int*)" VAL:");
+          print(itoa(*constantVal, string_buffer,10,0,0));
+          print((int*)"__FOLD(");
+          print(itoa(*(constantVal + 1), string_buffer,10,0,0));
+          print((int*)") || ");
           return ltype;
-        } else
-          foldable = 0;
+        }
     }
 
   if (operatorSymbol == SYM_ASTERISK) {
@@ -2775,16 +2783,13 @@ int gr_term(int* tempValue) {
 }
 
 
-int gr_simpleExpression(int* tempValue) {
+int gr_simpleExpression(int* constantVal) {
   int sign;
   int ltype;
   int operatorSymbol;
   int rtype;
-  int foldable;
-  int prevTemp;
-
-  foldable = 0;
-  prevTemp = 0;
+  int leftFoldable;
+  int leftVal;
 
   // assert: n = allocatedTemporaries
 
@@ -2809,7 +2814,15 @@ int gr_simpleExpression(int* tempValue) {
   } else
   sign = 0;
 
-  ltype = gr_term(tempValue);
+  ltype = gr_term(constantVal);
+
+  if(*(constantVal + 1) == 1){
+    leftFoldable = 1;
+    leftVal = *constantVal;
+  } else {
+    leftFoldable = 0;
+    leftVal = 0;
+  }
 
   // assert: allocatedTemporaries == n + 1
 
@@ -2829,20 +2842,26 @@ int gr_simpleExpression(int* tempValue) {
 
   getSymbol();
 
-  rtype = gr_term(tempValue);
+  rtype = gr_term(constantVal);
 
-    if (foldable == 1){
-      if (*(tempValue + 1) == 1){
+    if (leftFoldable == 1){
+      if (*(constantVal + 1) == 1){
         tfree(2);
+        print((int*)"___ADD/SUB___");
+        print(itoa(lineNumber,string_buffer,10,0,0));
         if (operatorSymbol == SYM_PLUS) {
-          *tempValue = prevTemp + literal;
+          *constantVal = leftVal + literal;
         } else if (operatorSymbol == SYM_MINUS) {
-          *tempValue = prevTemp - literal;
+          *constantVal = leftVal - literal;
         }
-        load_integer(*tempValue);
+        load_integer(*constantVal);
+        print((int*)" VAL:");
+        print(itoa(*constantVal, string_buffer,10,0,0));
+        print((int*)"__FOLD(");
+        print(itoa(*(constantVal + 1), string_buffer,10,0,0));
+        print((int*)") || ");
         return ltype;
-      } else
-      foldable = 0;
+      }
     }
 
   // assert: allocatedTemporaries == n + 2
@@ -2872,41 +2891,49 @@ int gr_simpleExpression(int* tempValue) {
   return ltype;
 }
 
-int gr_shiftExpression(int* tempValue) {
+int gr_shiftExpression(int* constantVal) {
   int ltype;
   int rtype;
   int operatorSymbol;
-  int foldable;
-  int prevTemp;
+  int leftFoldable;
+  int leftVal;
 
-  foldable = 0;
-  prevTemp = 0;
+  leftFoldable = 0;
+  leftVal = 0;
 
-  ltype = gr_simpleExpression(tempValue);
+  ltype = gr_simpleExpression(constantVal);
+
+  if(*(constantVal + 1) == 1){
+    leftFoldable = 1;
+    leftVal = *constantVal;
+  } else {
+    leftFoldable = 0;
+    leftVal = 0;
+  }
 
   while(isShift()) {
   operatorSymbol = symbol;
 
   getSymbol();
 
-  rtype = gr_simpleExpression(tempValue);
+  rtype = gr_simpleExpression(constantVal);
 
     if (ltype != rtype)
       typeWarning(ltype, rtype);
 
-      if (foldable == 1){
-        tfree(2);
-          if (*(tempValue + 1) == 1){
+      if (leftFoldable == 1){
+          if (*(constantVal + 1) == 1){
+            tfree(2);
+            print((int*)"___SHIFT_EXPRESSION___");
             if (operatorSymbol == SYM_SLLV) {
-              *tempValue = (prevTemp << literal);
+              *constantVal = leftVal << literal;
             } else if (operatorSymbol == SYM_SRLV) {
-              *tempValue = (prevTemp >> literal);
+              *constantVal = leftVal >> literal;
             }
-            load_integer(*tempValue);
+            load_integer(*constantVal);
             return ltype;
-          } else
-            foldable = 0;
-      }
+          }
+        }
 
     if (operatorSymbol == SYM_SLLV) {
     emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary(), previousTemporary(), FCT_SLLV);
@@ -2925,23 +2952,23 @@ int gr_expression() {
   int ltype;
   int operatorSymbol;
   int rtype;
-  int foldable;
-  int prevTemp;
+  int leftFoldable;
+  int leftVal;
 
-  // tempValue: 2 Byte field for constant folding
+  // constantVal: 2 Byte field for constant folding
   //1st is for value
   //2nd is the constant folding flag
-  int* tempValue;
-  tempValue = malloc(2 * SIZEOFINT);
-  *tempValue = 0;
-  *(tempValue + 1) = 0;
+  int* constantVal;
+  constantVal = malloc(2 * SIZEOFINT);
+  *constantVal = 0;
+  *(constantVal + 1) = 0;
 
-  foldable = 0;
-  prevTemp = 0;
+  leftFoldable = 0;
+  leftVal = 0;
 
   // assert: n = allocatedTemporaries
 
-  ltype = gr_shiftExpression(tempValue);
+  ltype = gr_shiftExpression(constantVal);
 
   // assert: allocatedTemporaries == n + 1
 
@@ -2950,33 +2977,33 @@ int gr_expression() {
   operatorSymbol = symbol;
 
   getSymbol();
-  rtype = gr_shiftExpression(tempValue);
+  rtype = gr_shiftExpression(constantVal);
 
   // assert: allocatedTemporaries == n + 2
 
     if (ltype != rtype)
       typeWarning(ltype, rtype);
 
-    if (foldable == 1){
-        if (*(tempValue + 1) == 1){
+    if (leftFoldable == 1){
+        if (*(constantVal + 1) == 1){
           tfree(2);
+          print((int*)"__EXPRESSION_");
           if (operatorSymbol == SYM_EQUALITY) {
-            *tempValue = (prevTemp == literal);
+            *constantVal = (leftVal == literal);
           } else if (operatorSymbol == SYM_NOTEQ) {
-            *tempValue = (prevTemp != literal);
+            *constantVal = (leftVal != literal);
           } else if (operatorSymbol == SYM_LT) {
-            *tempValue = (prevTemp < literal);
+            *constantVal = (leftVal < literal);
           } else if (operatorSymbol == SYM_GT) {
-            *tempValue = (prevTemp > literal);
+            *constantVal = (leftVal > literal);
           } else if (operatorSymbol == SYM_LEQ) {
-            *tempValue = (prevTemp <= literal);
+            *constantVal = (leftVal <= literal);
           } else if (operatorSymbol == SYM_GEQ) {
-            *tempValue = (prevTemp >= literal);
+            *constantVal = (leftVal >= literal);
           }
-          load_integer(*tempValue);
+          load_integer(*constantVal);
           return ltype;
-        } else
-          foldable = 0;
+        }
     }
 
   if (operatorSymbol == SYM_EQUALITY) {
@@ -6799,10 +6826,20 @@ int main(int argc, int* argv) {
   print((int*)"Substracted (5) should be 20: ");
   print(itoa(prolog_Test,string_buffer,10,0,0));
   println();
+  prolog_Test = 8;
+  print((int*)"trying to compute 8+8 with(/out) constant folding");
+  prolog_Test = 8 + 8;
+  prolog_Test = prolog_Test + 8;
   println();
-
-
+  print((int*)"computed: ");
+  print(itoa(prolog_Test,string_buffer,10,0,0));
+  println();
+  print((int*) "End of Test.");
+  println();
+  println();
 //  END OF TEST ENVIRONMENT
+
+
   if (selfie(argc, (int*) argv) != 0) {
     print(selfieName);
     print((int*) ": usage: selfie { -c source | -o binary | -s assembly | -l binary } [ -m size ... | -d size ... | -y size ... ] ");
