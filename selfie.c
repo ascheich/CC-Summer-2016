@@ -2711,21 +2711,15 @@ int gr_term(int* constantVal) {
 
   ltype = gr_factor(constantVal);
 
+  // assert: allocatedTemporaries == n + 1
+
   if (*(constantVal + 1) == 1){
     leftFoldable = 1;
     leftVal = *constantVal;
-    print((int*)" val:");
-    print(itoa(leftVal, string_buffer,10,0,0));
-    print((int*)"__fold(");
-    print(itoa(leftFoldable, string_buffer,10,0,0));
-    print((int*)") || ");
   } else {
     leftFoldable = 0;
     leftVal = 0;
-    print((int*)"   __X__   ");
   }
-
-  // assert: allocatedTemporaries == n + 1
 
   // * / or % ?
   while (isStarOrDivOrModulo()) {
@@ -2743,7 +2737,7 @@ int gr_term(int* constantVal) {
     if (leftFoldable == 1){
         if (*(constantVal + 1) == 1){
           tfree(2);
-          print((int*)"___DIV/MULT___");
+          print((int*)"_____DIV/MULT__  ");
           if (operatorSymbol == SYM_ASTERISK) {
             *constantVal = leftVal * literal;
           } else if (operatorSymbol == SYM_DIV) {
@@ -2752,11 +2746,6 @@ int gr_term(int* constantVal) {
             *constantVal = leftVal % literal;
           }
           load_integer(*constantVal);
-          print((int*)" VAL:");
-          print(itoa(*constantVal, string_buffer,10,0,0));
-          print((int*)"__FOLD(");
-          print(itoa(*(constantVal + 1), string_buffer,10,0,0));
-          print((int*)") || ");
           return ltype;
         }
     }
@@ -2816,6 +2805,8 @@ int gr_simpleExpression(int* constantVal) {
 
   ltype = gr_term(constantVal);
 
+  // assert: allocatedTemporaries == n + 1
+
   if(*(constantVal + 1) == 1){
     leftFoldable = 1;
     leftVal = *constantVal;
@@ -2823,8 +2814,6 @@ int gr_simpleExpression(int* constantVal) {
     leftFoldable = 0;
     leftVal = 0;
   }
-
-  // assert: allocatedTemporaries == n + 1
 
   if (sign) {
   if (ltype != INT_T) {
@@ -2847,19 +2836,13 @@ int gr_simpleExpression(int* constantVal) {
     if (leftFoldable == 1){
       if (*(constantVal + 1) == 1){
         tfree(2);
-        print((int*)"___ADD/SUB___");
-        print(itoa(lineNumber,string_buffer,10,0,0));
+        print((int*)"_____ADD/SUB__  ");
         if (operatorSymbol == SYM_PLUS) {
           *constantVal = leftVal + literal;
         } else if (operatorSymbol == SYM_MINUS) {
           *constantVal = leftVal - literal;
         }
         load_integer(*constantVal);
-        print((int*)" VAL:");
-        print(itoa(*constantVal, string_buffer,10,0,0));
-        print((int*)"__FOLD(");
-        print(itoa(*(constantVal + 1), string_buffer,10,0,0));
-        print((int*)") || ");
         return ltype;
       }
     }
@@ -2898,10 +2881,9 @@ int gr_shiftExpression(int* constantVal) {
   int leftFoldable;
   int leftVal;
 
-  leftFoldable = 0;
-  leftVal = 0;
-
   ltype = gr_simpleExpression(constantVal);
+
+  //assert: allocatedTemporaries == n + 1
 
   if(*(constantVal + 1) == 1){
     leftFoldable = 1;
@@ -2924,7 +2906,7 @@ int gr_shiftExpression(int* constantVal) {
       if (leftFoldable == 1){
           if (*(constantVal + 1) == 1){
             tfree(2);
-            print((int*)"___SHIFT_EXPRESSION___");
+            print((int*)"_____SHIFT__  ");
             if (operatorSymbol == SYM_SLLV) {
               *constantVal = leftVal << literal;
             } else if (operatorSymbol == SYM_SRLV) {
@@ -2963,14 +2945,19 @@ int gr_expression() {
   *constantVal = 0;
   *(constantVal + 1) = 0;
 
-  leftFoldable = 0;
-  leftVal = 0;
-
   // assert: n = allocatedTemporaries
 
   ltype = gr_shiftExpression(constantVal);
 
   // assert: allocatedTemporaries == n + 1
+
+  if (*(constantVal + 1) == 1){
+    leftFoldable = 1;
+    leftVal = *constantVal;
+  } else {
+    leftFoldable = 0;
+    leftVal = 0;
+  }
 
   //optional: ==, !=, <, >, <=, >= simpleExpression
   if (isComparison()) {
@@ -2987,7 +2974,7 @@ int gr_expression() {
     if (leftFoldable == 1){
         if (*(constantVal + 1) == 1){
           tfree(2);
-          print((int*)"__EXPRESSION_");
+          print((int*)"_____EXPRESSION__  ");
           if (operatorSymbol == SYM_EQUALITY) {
             *constantVal = (leftVal == literal);
           } else if (operatorSymbol == SYM_NOTEQ) {
