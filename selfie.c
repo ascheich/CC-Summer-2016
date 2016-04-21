@@ -2737,7 +2737,7 @@ int gr_term(int* constantVal) {
     if (leftFoldable == 1){
         if (*(constantVal + 1) == 1){
           tfree(2);
-          print((int*)"_____DIV/MULT__  ");
+          //print((int*)"_____DIV/MULT__  ");
           if (operatorSymbol == SYM_ASTERISK) {
             *constantVal = leftVal * literal;
           } else if (operatorSymbol == SYM_DIV) {
@@ -2748,6 +2748,9 @@ int gr_term(int* constantVal) {
           load_integer(*constantVal);
           return ltype;
         }
+    } else {
+      *constantVal = 0;
+      *(constantVal + 1) = 0;
     }
 
   if (operatorSymbol == SYM_ASTERISK) {
@@ -2836,7 +2839,7 @@ int gr_simpleExpression(int* constantVal) {
     if (leftFoldable == 1){
       if (*(constantVal + 1) == 1){
         tfree(2);
-        print((int*)"_____ADD/SUB__  ");
+        //print((int*)"_____ADD/SUB__  ");
         if (operatorSymbol == SYM_PLUS) {
           *constantVal = leftVal + literal;
         } else if (operatorSymbol == SYM_MINUS) {
@@ -2906,7 +2909,7 @@ int gr_shiftExpression(int* constantVal) {
       if (leftFoldable == 1){
           if (*(constantVal + 1) == 1){
             tfree(2);
-            print((int*)"_____SHIFT__  ");
+            //print((int*)"_____SHIFT__  ");
             if (operatorSymbol == SYM_SLLV) {
               *constantVal = leftVal << literal;
             } else if (operatorSymbol == SYM_SRLV) {
@@ -2974,7 +2977,7 @@ int gr_expression() {
     if (leftFoldable == 1){
         if (*(constantVal + 1) == 1){
           tfree(2);
-          print((int*)"_____EXPRESSION__  ");
+          //print((int*)"_____EXPRESSION__  ");
           if (operatorSymbol == SYM_EQUALITY) {
             *constantVal = (leftVal == literal);
           } else if (operatorSymbol == SYM_NOTEQ) {
@@ -6806,7 +6809,7 @@ int main(int argc, int* argv) {
   prolog_Test = 8;
   print((int*)"trying to compute 8+8 with(/out) constant folding");
   prolog_Test = 8 + 8;
-  prolog_Test = prolog_Test + 8;
+  //prolog_Test = prolog_Test + 8;
   println();
   print((int*)"computed: ");
   print(itoa(prolog_Test,string_buffer,10,0,0));
