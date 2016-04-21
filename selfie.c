@@ -176,6 +176,7 @@ int* outputName = (int*) 0;
 int outputFD    = 1;
 // Variable for Testing Purposes
 int prolog_Test = 0;
+int testVal2 = 10;
 
 // ------------------------- INITIALIZATION ------------------------
 
@@ -6784,12 +6785,12 @@ int main(int argc, int* argv) {
   print((int*)"This is Prolog Selfie.");
   println();
 
-//  TEST ENVIRONMENT
+  // TEST ENVIRONMENT
   print((int*)"Executing Testfile");
   println();
 
-
-// prolog_Test global definiert
+  // prolog_Test global definiert
+  // testVal2 global definiert
   prolog_Test = 20;
   print((int*)"Original: ");
   print(itoa(prolog_Test,string_buffer,10,0,0));
@@ -6807,13 +6808,26 @@ int main(int argc, int* argv) {
   print(itoa(prolog_Test,string_buffer,10,0,0));
   println();
   prolog_Test = 8;
-  print((int*)"trying to compute 8+8 with(/out) constant folding");
+  print((int*)"trying to compute 8+8 with(/out) constant folding should be 16: ");
   prolog_Test = 8 + 8;
-  //prolog_Test = prolog_Test + 8;
-  println();
-  print((int*)"computed: ");
   print(itoa(prolog_Test,string_buffer,10,0,0));
   println();
+  
+  prolog_Test = prolog_Test * 2 - 10 * 9;
+  print((int*)"Multiplicated (2) and substracted (10) and mult (9) should be -58: ");
+  print(itoa(prolog_Test,string_buffer,10,0,0));
+  println();
+
+  prolog_Test = prolog_Test + ((20 * 2) - 10/2 + 14*2) - 5;
+  print((int*)"Testing with constants (0): ");
+  print(itoa(prolog_Test,string_buffer,10,0,0));
+  println();
+
+  prolog_Test = prolog_Test + (testVal2 * 2) / (testVal2 - 5);
+  print((int*)"Testing with Variables (4): ");
+  print(itoa(prolog_Test,string_buffer,10,0,0));
+  println();
+
   print((int*) "End of Test.");
   println();
   println();
