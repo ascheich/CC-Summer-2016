@@ -6038,17 +6038,11 @@ void fetch() {
 }
 
 void execute() {
-  if (debug)
-    if (sourceLineNumber != (int*) 0) {
-      print(binaryName);
-      print((int*) ": ");
-    }
-
-  if (interpret)
-    if (debug)
-      print((int*) "$pc=");
-
   if (debug) {
+    if (interpret) {
+      print(binaryName);
+      print((int*) ": $pc=");
+    }
     print(itoa(pc, string_buffer, 16, 0, 0));
     if (sourceLineNumber != (int*) 0) {
       print((int*) "(~");
@@ -6809,21 +6803,17 @@ int main(int argc, int* argv) {
   prolog_Test = 20;
   print((int*)"Original: ");
   print(itoa(prolog_Test,string_buffer,10,0,0));
-  prolog_Test = prolog_Test * 2;
+  prolog_Test = prolog_Test * 2 - 10;
   println();
-  print((int*)"Multiplicated  (2) should be 40: ");
+  print((int*)"Multiplicated (2) and substracted (10) should be 30: ");
   print(itoa(prolog_Test,string_buffer,10,0,0));
   println();
   prolog_Test = prolog_Test + 10;
-  print((int*)"Added (10) should be 50: ");
+  print((int*)"Added (10) should be 40: ");
   print(itoa(prolog_Test,string_buffer,10,0,0));
   println();
   prolog_Test = prolog_Test / 2;
-  print((int*)"Divided (2) should be 25: ");
-  print(itoa(prolog_Test,string_buffer,10,0,0));
-  println();
-  prolog_Test = prolog_Test - 5;
-  print((int*)"Substracted (5) should be 20: ");
+  print((int*)"Divided (2) should be 20: ");
   print(itoa(prolog_Test,string_buffer,10,0,0));
   println();
   prolog_Test = 8;
