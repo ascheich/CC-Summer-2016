@@ -6828,6 +6828,16 @@ int main(int argc, int* argv) {
   print(itoa(prolog_Test,string_buffer,10,0,0));
   println();
 
+  prolog_Test = prolog_Test + (testVal2 * 2) / (testVal2 - 5) >> 2 * 4 << 1;
+  print((int*)"Shifting inside ");
+  print(itoa(prolog_Test,string_buffer,10,0,0));
+  println();
+
+  //prolog_Test = prolog_Test + 20 * 14 - 250 / 7 * (24 / 4 + 17 * 3);
+  print((int*)"Shifting inside ");
+  print(itoa(prolog_Test,string_buffer,10,0,0));
+  println();
+
   print((int*) "End of Test.");
   println();
   println();
