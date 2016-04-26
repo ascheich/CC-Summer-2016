@@ -737,7 +737,7 @@ void selfie_load();
 
 // ------------------------ GLOBAL CONSTANTS -----------------------
 
-int maxBinaryLength = 131072; // 128KB
+int maxBinaryLength = 262144; // 256KB
 
 // ------------------------ GLOBAL VARIABLES -----------------------
 
@@ -2853,6 +2853,9 @@ int gr_simpleExpression(int* constantVal) {
         load_integer(*constantVal);
         return ltype;
       }
+    } else {
+      *constantVal = 0;
+      *(constantVal + 1) = 0;
     }
 
   // assert: allocatedTemporaries == n + 2
@@ -2923,6 +2926,9 @@ int gr_shiftExpression(int* constantVal) {
             load_integer(*constantVal);
             return ltype;
           }
+        } else {
+          *constantVal = 0;
+          *(constantVal + 1) = 0;
         }
 
     if (operatorSymbol == SYM_SLLV) {
@@ -2999,6 +3005,9 @@ int gr_expression() {
           load_integer(*constantVal);
           return ltype;
         }
+    } else {
+      *constantVal = 0;
+      *(constantVal + 1) = 0;
     }
 
   if (operatorSymbol == SYM_EQUALITY) {
@@ -6794,58 +6803,68 @@ int main(int argc, int* argv) {
   println();
 
   // prolog_Test global definiert
-  // testVal2 global definiert
+
   prolog_Test = 20;
   print((int*)"Original: ");
   print(itoa(prolog_Test,string_buffer,10,0,0));
+  println();
+
   prolog_Test = prolog_Test * 2 - 10;
-  println();
   print((int*)"Multiplicated (2) and substracted (10) should be 30: ");
-  print(itoa(prolog_Test,string_buffer,10,0,0));
-  println();
-  prolog_Test = prolog_Test + 10;
-  print((int*)"Added (10) should be 40: ");
-  print(itoa(prolog_Test,string_buffer,10,0,0));
-  println();
-  prolog_Test = prolog_Test / 2;
-  print((int*)"Divided (2) should be 20: ");
-  print(itoa(prolog_Test,string_buffer,10,0,0));
-  println();
-  prolog_Test = 8;
-  print((int*)"trying to compute 8+8 with(/out) constant folding should be 16: ");
-  prolog_Test = 8 + 8;
   print(itoa(prolog_Test,string_buffer,10,0,0));
   println();
 
   prolog_Test = prolog_Test * 2 - 10 * 9;
-  print((int*)"Multiplicated (2) and substracted (10) and mult (9) should be -58: ");
-  print(itoa(prolog_Test,string_buffer,10,0,0));
-  println();
-  prolog_Test = 1;
-
-
-  // prolog_Test = prolog_Test + ((20 * 2) - 10/2 + 14*2) - 5;
-  // print((int*)"Testing with constants (0): ");
-  // print(itoa(prolog_Test,string_buffer,10,0,0));
-  // println();
-
-  // prolog_Test = prolog_Test + (testVal2 * 2) / (testVal2 - 5);
-  // print((int*)"Testing with Variables (4): ");
-  // print(itoa(prolog_Test,string_buffer,10,0,0));
-  // println();
-
-  // prolog_Test = prolog_Test + (testVal2 * 2) / (testVal2 - 5) >> 2 * 4 << 1;
-  // print((int*)"Shifting inside ");
-  // print(itoa(prolog_Test,string_buffer,10,0,0));
-  // println();
-
-  prolog_Test = prolog_Test - 30;// * 14 - 250 / 7 * (24 / 4 + 17 * 3);
-  print((int*)"prolog_Test -= 30");
+  print((int*)"Multiplicated (2) and substracted (10) and mult (9) should be -30: ");
   print(itoa(prolog_Test,string_buffer,10,0,0));
   println();
 
-  prolog_Test = prolog_Test + 20;// * 14 - 250 / 7 * (24 / 4 + 17 * 3);
-  print((int*)"prolog_Test += 20");
+  prolog_Test = prolog_Test + ((20 * 2) - 10/2 + 14*2) - 4;
+  print((int*)"Testing with constants should be 29: ");
+  print(itoa(prolog_Test,string_buffer,10,0,0));
+  println();
+
+  // testVal2 global definiert
+  // testVal2 = 10
+  print(itoa(prolog_Test,string_buffer,10,0,0));
+  prolog_Test = prolog_Test + testVal2;
+  print((int*)" + ");
+  print(itoa(testVal2,string_buffer,10,0,0));
+  print((int*)" should be 39: ");
+  print(itoa(prolog_Test,string_buffer,10,0,0));
+  println();
+
+
+  prolog_Test = prolog_Test - 30;
+  print((int*)"- 30 should be 9: ");
+  print(itoa(prolog_Test,string_buffer,10,0,0));
+  println();
+
+  prolog_Test = prolog_Test - 30;
+  print((int*)"- 30 should be -21: ");
+  print(itoa(prolog_Test,string_buffer,10,0,0));
+  println();
+
+  prolog_Test = prolog_Test - 30;
+  print((int*)"- 30 should be -51: ");
+  print(itoa(prolog_Test,string_buffer,10,0,0));
+  println();
+
+  prolog_Test = prolog_Test + (20 * 14 - 1000 / 8);
+  print((int*)"");
+  print(itoa(prolog_Test,string_buffer,10,0,0));
+  println();
+
+
+  prolog_Test = 10;
+  prolog_Test = prolog_Test / 2;
+  print((int*)"should be 5: ");
+  print(itoa(prolog_Test,string_buffer,10,0,0));
+  println();
+
+  prolog_Test = 2;
+  prolog_Test = 10 / prolog_Test;
+  print((int*)"should be 5: ");
   print(itoa(prolog_Test,string_buffer,10,0,0));
   println();
 
