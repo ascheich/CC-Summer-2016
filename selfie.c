@@ -283,6 +283,8 @@ int SYM_STRING       = 27; // string
 
 int SYM_SLLV          = 28; // <<
 int SYM_SRLV          = 29; // >>
+int SYM_LBRACKET      = 30; // [
+int SYM_RBRACKET      = 31; // ]
 
 
 
@@ -316,7 +318,7 @@ int sourceFD    = 0;        // file descriptor of open source file
 // ------------------------- INITIALIZATION ------------------------
 
 void initScanner () {
-  SYMBOLS = malloc(30 * SIZEOFINTSTAR);
+  SYMBOLS = malloc(32 * SIZEOFINTSTAR);
 
   *(SYMBOLS + SYM_IDENTIFIER)   = (int) "identifier";
   *(SYMBOLS + SYM_INTEGER)      = (int) "integer";
@@ -349,6 +351,8 @@ void initScanner () {
 
   *(SYMBOLS + SYM_SLLV)          = (int) "<<";
   *(SYMBOLS + SYM_SRLV)          = (int) ">>";
+  *(SYMBOLS + SYM_LBRACKET)      = (int) "[";
+  *(SYMBOLS + SYM_RBRACKET)      = (int) "]";
 
   character = CHAR_EOF;
   symbol    = SYM_EOF;
@@ -6817,6 +6821,8 @@ int main(int argc, int* argv) {
   print((int*)"Multiplicated (2) and substracted (10) and mult (9) should be -58: ");
   print(itoa(prolog_Test,string_buffer,10,0,0));
   println();
+  prolog_Test = 1;
+
 
   // prolog_Test = prolog_Test + ((20 * 2) - 10/2 + 14*2) - 5;
   // print((int*)"Testing with constants (0): ");
