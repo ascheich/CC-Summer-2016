@@ -2588,6 +2588,7 @@ int gr_factor(int* constantVal) {
 
   // not a cast: "(" expression ")"
   } else {
+    //TODO const-folding
       type = gr_expression();
 
       if (symbol == SYM_RPARENTHESIS)
@@ -2685,7 +2686,7 @@ int gr_factor(int* constantVal) {
   //  "(" expression ")"
   } else if (symbol == SYM_LPARENTHESIS) {
   getSymbol();
-
+  //TODO const-folding
   type = gr_expression();
 
   if (symbol == SYM_RPARENTHESIS)
@@ -2712,14 +2713,6 @@ int gr_term(int* constantVal) {
   int sign;
 
   // assert: n = allocatedTemporaries
-
-  if (*constantVal == INT_MIN){
-    if (*(constantVal + 1) == 0){
-      sign = 1;
-      print((int*)"SIGN");
-      println();
-    }
-  }
 
   ltype = gr_factor(constantVal);
 
@@ -2749,9 +2742,6 @@ int gr_term(int* constantVal) {
 
     if (leftFoldable == 1){
       if (*(constantVal + 1) == 1){
-        if (sign){
-          leftVal = 0 - leftVal;
-        }
         if (prologDebug){
           print((int*)"  _____DIV/MULT__");
           print((int*)"line: ");
@@ -2847,8 +2837,6 @@ int gr_simpleExpression(int* constantVal) {
       // even though 0-INT_MIN == INT_MIN
       sign = 0;
     }
-    *constantVal = INT_MIN;
-    *(constantVal + 1) = 0;
   } else
     sign = 0;
 
@@ -2870,6 +2858,8 @@ int gr_simpleExpression(int* constantVal) {
 
     if(leftFoldable == 0)
       emitRFormat(OP_SPECIAL, REG_ZR, currentTemporary(), currentTemporary(), FCT_SUBU);
+    else
+      leftVal = 0 - leftVal;
   }
 
   // + or -?
