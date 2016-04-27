@@ -177,6 +177,7 @@ int outputFD    = 1;
 // Variable for Testing Purposes
 int prolog_Test = 0;
 int testVal2 = 10;
+int prologDebug = 0;
 
 // ------------------------- INITIALIZATION ------------------------
 
@@ -283,6 +284,8 @@ int SYM_STRING       = 27; // string
 
 int SYM_SLLV          = 28; // <<
 int SYM_SRLV          = 29; // >>
+int SYM_LBRACKET      = 30; // [
+int SYM_RBRACKET      = 31; // ]
 
 
 
@@ -316,7 +319,7 @@ int sourceFD    = 0;        // file descriptor of open source file
 // ------------------------- INITIALIZATION ------------------------
 
 void initScanner () {
-  SYMBOLS = malloc(30 * SIZEOFINTSTAR);
+  SYMBOLS = malloc(32 * SIZEOFINTSTAR);
 
   *(SYMBOLS + SYM_IDENTIFIER)   = (int) "identifier";
   *(SYMBOLS + SYM_INTEGER)      = (int) "integer";
@@ -349,6 +352,8 @@ void initScanner () {
 
   *(SYMBOLS + SYM_SLLV)          = (int) "<<";
   *(SYMBOLS + SYM_SRLV)          = (int) ">>";
+  *(SYMBOLS + SYM_LBRACKET)      = (int) "[";
+  *(SYMBOLS + SYM_RBRACKET)      = (int) "]";
 
   character = CHAR_EOF;
   symbol    = SYM_EOF;
@@ -733,7 +738,7 @@ void selfie_load();
 
 // ------------------------ GLOBAL CONSTANTS -----------------------
 
-int maxBinaryLength = 262144; // 256KB originally : 131072
+int maxBinaryLength = 262144; // 256KB
 
 // ------------------------ GLOBAL VARIABLES -----------------------
 
@@ -2702,28 +2707,33 @@ int gr_factor(int* constantVal) {
 
 int gr_term(int* constantVal) {
   int ltype;
-  int operatorSymbol;
-  int rtype;
   int leftFoldable;
   int leftVal;
+  int operatorSymbol;
+  int rtype;
+  int sign;
 
   // assert: n = allocatedTemporaries
 
+  if (*constantVal == INT_MIN){
+    if (*(constantVal + 1) == 0)
+      sign = 1;
+  }
 
   ltype = gr_factor(constantVal);
 
   // assert: allocatedTemporaries == n + 1
 
+  // * / or % ?
+  while (isStarOrDivOrModulo()) {
+
   if (*(constantVal + 1) == 1){
     leftFoldable = 1;
     leftVal = *constantVal;
-  } else {
-    leftFoldable = 0;
-    leftVal = 0;
   }
+  else
+    leftFoldable = 0;
 
-  // * / or % ?
-  while (isStarOrDivOrModulo()) {
   operatorSymbol = symbol;
 
   getSymbol();
@@ -2735,24 +2745,32 @@ int gr_term(int* constantVal) {
   if (ltype != rtype)
     typeWarning(ltype, rtype);
 
-    if (leftFoldable == 1){
-        if (*(constantVal + 1) == 1){
-          tfree(2);
-          //print((int*)"_____DIV/MULT__  ");
-          if (operatorSymbol == SYM_ASTERISK) {
-            *constantVal = leftVal * literal;
-          } else if (operatorSymbol == SYM_DIV) {
-            *constantVal = leftVal / literal;
-          } else if (operatorSymbol == SYM_MOD) {
-            *constantVal = leftVal % literal;
-          }
-          load_integer(*constantVal);
-          return ltype;
-        }
-    } else {
-      *constantVal = 0;
-      *(constantVal + 1) = 0;
+  if (leftFoldable == 1){
+    if (*(constantVal + 1) == 1){
+      tfree(2);
+      if (sign){
+        leftVal = 0 - leftVal;
+      }
+      if (prologDebug){
+        print((int*)"  _____DIV/MULT__");
+        print((int*)"line: ");
+        print(itoa(lineNumber,string_buffer,10,0,0));
+        println();
+      }
+      if (operatorSymbol == SYM_ASTERISK) {
+        *constantVal = leftVal * literal;
+      } else if (operatorSymbol == SYM_DIV) {
+        *constantVal = leftVal / literal;
+      } else if (operatorSymbol == SYM_MOD) {
+        *constantVal = leftVal % literal;
+      }
+      load_integer(*constantVal);
+      return ltype;
     }
+  } else {
+    *constantVal = 0;
+    *(constantVal + 1) = 0;
+  }
 
   if (operatorSymbol == SYM_ASTERISK) {
     emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), 0, FCT_MULTU);
@@ -2779,33 +2797,35 @@ int gr_term(int* constantVal) {
 int gr_simpleExpression(int* constantVal) {
   int sign;
   int ltype;
-  int operatorSymbol;
-  int rtype;
   int leftFoldable;
   int leftVal;
+  int operatorSymbol;
+  int rtype;
 
   // assert: n = allocatedTemporaries
 
   // optional: -
   if (symbol == SYM_MINUS) {
-  sign = 1;
+    sign = 1;
 
-  mayBeINTMIN = 1;
-  isINTMIN  = 0;
+    mayBeINTMIN = 1;
+    isINTMIN  = 0;
 
-  getSymbol();
+    getSymbol();
 
-  mayBeINTMIN = 0;
+    mayBeINTMIN = 0;
 
-  if (isINTMIN) {
-    isINTMIN = 0;
+    if (isINTMIN) {
+      isINTMIN = 0;
 
-    // avoids 0-INT_MIN overflow when bootstrapping
-    // even though 0-INT_MIN == INT_MIN
-    sign = 0;
-  }
+      // avoids 0-INT_MIN overflow when bootstrapping
+      // even though 0-INT_MIN == INT_MIN
+      sign = 0;
+    }
+    *constantVal = INT_MIN;
+    *(constantVal + 1) = 0;
   } else
-  sign = 0;
+    sign = 0;
 
   ltype = gr_term(constantVal);
 
@@ -2820,17 +2840,26 @@ int gr_simpleExpression(int* constantVal) {
   }
 
   if (sign) {
-  if (ltype != INT_T) {
-    typeWarning(INT_T, ltype);
+    if (ltype != INT_T) {
+      typeWarning(INT_T, ltype);
 
     ltype = INT_T;
-  }
+    }
 
-  emitRFormat(OP_SPECIAL, REG_ZR, currentTemporary(), currentTemporary(), FCT_SUBU);
+    if(leftFoldable == 0)
+      emitRFormat(OP_SPECIAL, REG_ZR, currentTemporary(), currentTemporary(), FCT_SUBU);
   }
 
   // + or -?
   while (isPlusOrMinus()) {
+  if(*(constantVal + 1) == 1){
+    leftFoldable = 1;
+    leftVal = *constantVal;
+  } else {
+    leftFoldable = 0;
+    leftVal = 0;
+  }
+
   operatorSymbol = symbol;
 
   getSymbol();
@@ -2840,7 +2869,12 @@ int gr_simpleExpression(int* constantVal) {
     if (leftFoldable == 1){
       if (*(constantVal + 1) == 1){
         tfree(2);
-        //print((int*)"_____ADD/SUB__  ");
+        if (prologDebug){
+          print((int*)"  _____ADD/SUB__");
+          print((int*)"line: ");
+          print(itoa(lineNumber,string_buffer,10,0,0));
+          println();
+        }
         if (operatorSymbol == SYM_PLUS) {
           *constantVal = leftVal + literal;
         } else if (operatorSymbol == SYM_MINUS) {
@@ -2849,6 +2883,9 @@ int gr_simpleExpression(int* constantVal) {
         load_integer(*constantVal);
         return ltype;
       }
+    } else {
+      *constantVal = 0;
+      *(constantVal + 1) = 0;
     }
 
   // assert: allocatedTemporaries == n + 2
@@ -2880,24 +2917,25 @@ int gr_simpleExpression(int* constantVal) {
 
 int gr_shiftExpression(int* constantVal) {
   int ltype;
-  int rtype;
-  int operatorSymbol;
   int leftFoldable;
   int leftVal;
+  int rtype;
+  int operatorSymbol;
 
   ltype = gr_simpleExpression(constantVal);
 
   //assert: allocatedTemporaries == n + 1
 
-  if(*(constantVal + 1) == 1){
-    leftFoldable = 1;
-    leftVal = *constantVal;
-  } else {
-    leftFoldable = 0;
-    leftVal = 0;
-  }
-
   while(isShift()) {
+
+    if(*(constantVal + 1) == 1){
+      leftFoldable = 1;
+      leftVal = *constantVal;
+    } else {
+      leftFoldable = 0;
+      leftVal = 0;
+    }
+
   operatorSymbol = symbol;
 
   getSymbol();
@@ -2910,7 +2948,12 @@ int gr_shiftExpression(int* constantVal) {
       if (leftFoldable == 1){
           if (*(constantVal + 1) == 1){
             tfree(2);
-            //print((int*)"_____SHIFT__  ");
+            if (prologDebug){
+              print((int*)"  _____SHIFT__");
+              print((int*)"line: ");
+              print(itoa(lineNumber,string_buffer,10,0,0));
+              println();
+            }
             if (operatorSymbol == SYM_SLLV) {
               *constantVal = leftVal << literal;
             } else if (operatorSymbol == SYM_SRLV) {
@@ -2919,6 +2962,9 @@ int gr_shiftExpression(int* constantVal) {
             load_integer(*constantVal);
             return ltype;
           }
+        } else {
+          *constantVal = 0;
+          *(constantVal + 1) = 0;
         }
 
     if (operatorSymbol == SYM_SLLV) {
@@ -2936,10 +2982,10 @@ int gr_shiftExpression(int* constantVal) {
 
 int gr_expression() {
   int ltype;
-  int operatorSymbol;
-  int rtype;
   int leftFoldable;
   int leftVal;
+  int operatorSymbol;
+  int rtype;
 
   // constantVal: 2 Byte field for constant folding
   //1st is for value
@@ -2978,7 +3024,12 @@ int gr_expression() {
     if (leftFoldable == 1){
         if (*(constantVal + 1) == 1){
           tfree(2);
-          //print((int*)"_____EXPRESSION__  ");
+          if(prologDebug){
+            print((int*)"  _____EXPRESSION__");
+            print((int*)"line: ");
+            print(itoa(lineNumber,string_buffer,10,0,0));
+            println();
+          }
           if (operatorSymbol == SYM_EQUALITY) {
             *constantVal = (leftVal == literal);
           } else if (operatorSymbol == SYM_NOTEQ) {
@@ -2995,6 +3046,9 @@ int gr_expression() {
           load_integer(*constantVal);
           return ltype;
         }
+    } else {
+      *constantVal = 0;
+      *(constantVal + 1) = 0;
     }
 
   if (operatorSymbol == SYM_EQUALITY) {
@@ -6782,7 +6836,6 @@ int main(int argc, int* argv) {
   argc = argc - 1;
   argv = argv + 1;
 
-  println();
   print((int*)"This is Prolog Selfie.");
   println();
 
@@ -6791,7 +6844,9 @@ int main(int argc, int* argv) {
   println();
 
   // prolog_Test global definiert
-  
+
+  prologDebug = 1;
+
   prolog_Test = 20;
   print((int*)"Original: ");
   print(itoa(prolog_Test,string_buffer,10,0,0));
@@ -6808,6 +6863,11 @@ int main(int argc, int* argv) {
   println();
 
   prolog_Test = prolog_Test + ((20 * 2) - 10/2 + 14*2) - 4;
+  print((int*)"Testing with constants should be 29: ");
+  print(itoa(prolog_Test,string_buffer,10,0,0));
+  println();
+
+  prolog_Test = 1 * 2 * 4;
   print((int*)"Testing with constants should be 29: ");
   print(itoa(prolog_Test,string_buffer,10,0,0));
   println();
@@ -6840,6 +6900,19 @@ int main(int argc, int* argv) {
 
   prolog_Test = prolog_Test + (20 * 14 - 1000 / 8);
   print((int*)"");
+  print(itoa(prolog_Test,string_buffer,10,0,0));
+  println();
+
+
+  prolog_Test = 10;
+  prolog_Test = prolog_Test / 2;
+  print((int*)"should be 5: ");
+  print(itoa(prolog_Test,string_buffer,10,0,0));
+  println();
+
+  prolog_Test = 2;
+  prolog_Test = 10 / prolog_Test;
+  print((int*)"should be 5: ");
   print(itoa(prolog_Test,string_buffer,10,0,0));
   println();
 
