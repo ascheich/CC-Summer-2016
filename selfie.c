@@ -3098,10 +3098,10 @@ int gr_expression() {
 
           tfree(1);
 
-          emitIFormat(OP_BEQ, REG_ZR, previousTemporary(), 4);
-          emitIFormat(OP_ADDIU, REG_ZR, previousTemporary(), 0);
-          emitIFormat(OP_BEQ, REG_ZR, previousTemporary(), 2);
-          emitIFormat(OP_ADDIU, REG_ZR, previousTemporary(), 1);
+          emitIFormat(OP_BEQ, REG_ZR, currentTemporary(), 4);
+          emitIFormat(OP_ADDIU, REG_ZR, currentTemporary(), 0);
+          emitIFormat(OP_BEQ, REG_ZR, currentTemporary(), 2);
+          emitIFormat(OP_ADDIU, REG_ZR, currentTemporary(), 1);
 
         } else if (operatorSymbol == SYM_NOTEQ) {
           // subtract, if result = 0 then 0, else 1
@@ -3109,10 +3109,10 @@ int gr_expression() {
 
           tfree(1);
 
-          emitIFormat(OP_BNE, REG_ZR, previousTemporary(), 4);
-          emitIFormat(OP_ADDIU, REG_ZR, previousTemporary(), 0);
-          emitIFormat(OP_BEQ, REG_ZR, previousTemporary(), 2);
-          emitIFormat(OP_ADDIU, REG_ZR, previousTemporary(), 1);
+          emitIFormat(OP_BNE, REG_ZR, currentTemporary(), 4);
+          emitIFormat(OP_ADDIU, REG_ZR, currentTemporary(), 0);
+          emitIFormat(OP_BEQ, REG_ZR, currentTemporary(), 2);
+          emitIFormat(OP_ADDIU, REG_ZR, currentTemporary(), 1);
 
         } else if (operatorSymbol == SYM_LT) {
           // set to 1 if a < b, else 0
