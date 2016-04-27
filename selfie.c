@@ -6953,7 +6953,7 @@ int main(int argc, int* argv) {
 
   // prolog_Test global definiert
 
-  prologDebug = 1;
+  prologDebug = 0;
 
   prolog_Test = 20;
   print((int*)"Original: ");
@@ -6982,47 +6982,34 @@ int main(int argc, int* argv) {
 
   // testVal2 global definiert
   // testVal2 = 10
-  print(itoa(prolog_Test,string_buffer,10,0,0));
-  prolog_Test = prolog_Test + testVal2;
-  print((int*)" + ");
-  print(itoa(testVal2,string_buffer,10,0,0));
-  print((int*)" should be 39: ");
-  print(itoa(prolog_Test,string_buffer,10,0,0));
-  println();
-
-
-  prolog_Test = prolog_Test - 30;
-  print((int*)"- 30 should be 9: ");
-  print(itoa(prolog_Test,string_buffer,10,0,0));
-  println();
-
-  prolog_Test = prolog_Test - 30;
-  print((int*)"- 30 should be -21: ");
-  print(itoa(prolog_Test,string_buffer,10,0,0));
-  println();
-
-  prolog_Test = prolog_Test - 30;
-  print((int*)"- 30 should be -51: ");
+  prolog_Test = prolog_Test + testVal2 * testVal2;
+  print((int*)"Addition of Variables should be 180:");
   print(itoa(prolog_Test,string_buffer,10,0,0));
   println();
 
   prolog_Test = prolog_Test + (20 * 14 - 1000 / 8);
-  print((int*)"");
+  print((int*)"This one should be 263: ");
   print(itoa(prolog_Test,string_buffer,10,0,0));
   println();
 
+  if (prolog_Test == 263)
+  {
+    print((int*)"Checking in a if for equal: ");
+    println();
+  }
+  else if(testVal2 != 10)
+  {
+    print((int*)"Checking in a if for a non equal: ");
+    println();
+  }
 
-  prolog_Test = 10;
-  prolog_Test = prolog_Test / 2;
-  print((int*)"should be 5: ");
-  print(itoa(prolog_Test,string_buffer,10,0,0));
-  println();
-
-  prolog_Test = 2;
-  prolog_Test = 10 / prolog_Test;
-  print((int*)"should be 5: ");
-  print(itoa(prolog_Test,string_buffer,10,0,0));
-  println();
+  while(prolog_Test >= 260){
+    print((int*)"While ");
+    print(itoa(prolog_Test,string_buffer,10,0,0));
+    print((int*)" != 260");
+    println();
+    prolog_Test = prolog_Test -1;
+  }
 
   print((int*) "End of Test.");
   println();
