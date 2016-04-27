@@ -2755,6 +2755,7 @@ int gr_term(int* constantVal) {
         print((int*)"  _____DIV/MULT__");
         print((int*)"line: ");
         print(itoa(lineNumber,string_buffer,10,0,0));
+        println();
       }
       if (operatorSymbol == SYM_ASTERISK) {
         *constantVal = leftVal * literal;
@@ -2927,13 +2928,13 @@ int gr_shiftExpression(int* constantVal) {
 
   while(isShift()) {
 
-  if(*(constantVal + 1) == 1){
-    leftFoldable = 1;
-    leftVal = *constantVal;
-  } else {
-    leftFoldable = 0;
-    leftVal = 0;
-  }
+    if(*(constantVal + 1) == 1){
+      leftFoldable = 1;
+      leftVal = *constantVal;
+    } else {
+      leftFoldable = 0;
+      leftVal = 0;
+    }
 
   operatorSymbol = symbol;
 
@@ -2951,6 +2952,7 @@ int gr_shiftExpression(int* constantVal) {
               print((int*)"  _____SHIFT__");
               print((int*)"line: ");
               print(itoa(lineNumber,string_buffer,10,0,0));
+              println();
             }
             if (operatorSymbol == SYM_SLLV) {
               *constantVal = leftVal << literal;
@@ -3026,6 +3028,7 @@ int gr_expression() {
             print((int*)"  _____EXPRESSION__");
             print((int*)"line: ");
             print(itoa(lineNumber,string_buffer,10,0,0));
+            println();
           }
           if (operatorSymbol == SYM_EQUALITY) {
             *constantVal = (leftVal == literal);
