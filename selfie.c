@@ -2657,14 +2657,12 @@ int gr_factor(int* constantVal) {
 
   // integer?
   } else if (symbol == SYM_INTEGER) {
-  load_integer(literal);
+    *constantVal = literal;
+    *(constantVal + 1) = 1;
 
-  *constantVal = literal;
-  *(constantVal + 1) = 1;
+    getSymbol();
 
-  getSymbol();
-
-  type = INT_T;
+    type = INT_T;
 
   // character?
   } else if (symbol == SYM_CHARACTER) {
@@ -2730,9 +2728,14 @@ int gr_term(int* constantVal) {
     if (*(constantVal + 1) == 1){
       leftFoldable = 1;
       leftVal = *constantVal;
-    }
-    else
+      print(itoa(lineNumber,string_buffer,10,0,0));
+      print((int*)":  Val: ");
+      print(itoa(leftVal,string_buffer,10,0,0));
+      println();
+    } else {
       leftFoldable = 0;
+      leftVal = 0;
+    }
 
     operatorSymbol = symbol;
 
@@ -2747,7 +2750,8 @@ int gr_term(int* constantVal) {
 
     if (leftFoldable == 1){
       if (*(constantVal + 1) == 1){
-        tfree(2);
+        print((int*)"MULT_const");
+        println();
         if (sign){
           leftVal = 0 - leftVal;
         }
@@ -2757,16 +2761,42 @@ int gr_term(int* constantVal) {
           print(itoa(lineNumber,string_buffer,10,0,0));
           println();
         }
-        if (operatorSymbol == SYM_ASTERISK) {
+        if (operatorSymbol == SYM_ASTERISK)
           *constantVal = leftVal * literal;
-        } else if (operatorSymbol == SYM_DIV) {
-          *constantVal = leftVal / literal;
-        } else if (operatorSymbol == SYM_MOD) {
-          *constantVal = leftVal % literal;
+        else
+          if (operatorSymbol == SYM_DIV)
+            *constantVal = leftVal / literal;
+          else
+            if (operatorSymbol == SYM_MOD)
+              *constantVal = leftVal % literal;
+      } else {
+        print((int*)"MULT_innermost");
+        println();
+        load_integer(leftVal);
+
+        if (operatorSymbol == SYM_ASTERISK) {
+          emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), 0, FCT_MULTU);
+          emitRFormat(OP_SPECIAL, 0, 0, currentTemporary(), FCT_MFLO);
+
+        } else {
+          if (operatorSymbol == SYM_DIV) {
+            emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary(), 0, FCT_DIVU);
+            emitRFormat(OP_SPECIAL, 0, 0, currentTemporary(), FCT_MFLO);
+
+          } else {
+            if (operatorSymbol == SYM_MOD) {
+              emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary(), 0, FCT_DIVU);
+              emitRFormat(OP_SPECIAL, 0, 0, currentTemporary(), FCT_MFHI);
+            }
+          }
         }
-        load_integer(*constantVal);
+        tfree(1);
       }
     } else {
+      print((int*)"MULT_outer");
+      println();
+      if (*(constantVal + 1) == 1)
+        load_integer(*constantVal);
       *constantVal = 0;
       *(constantVal + 1) = 0;
 
@@ -2774,15 +2804,18 @@ int gr_term(int* constantVal) {
         emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), 0, FCT_MULTU);
         emitRFormat(OP_SPECIAL, 0, 0, previousTemporary(), FCT_MFLO);
 
-      } else if (operatorSymbol == SYM_DIV) {
-        emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), 0, FCT_DIVU);
-        emitRFormat(OP_SPECIAL, 0, 0, previousTemporary(), FCT_MFLO);
+      } else {
+        if (operatorSymbol == SYM_DIV) {
+          emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), 0, FCT_DIVU);
+          emitRFormat(OP_SPECIAL, 0, 0, previousTemporary(), FCT_MFLO);
 
-      } else if (operatorSymbol == SYM_MOD) {
-        emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), 0, FCT_DIVU);
-        emitRFormat(OP_SPECIAL, 0, 0, previousTemporary(), FCT_MFHI);
+        } else {
+          if (operatorSymbol == SYM_MOD) {
+            emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), 0, FCT_DIVU);
+            emitRFormat(OP_SPECIAL, 0, 0, previousTemporary(), FCT_MFHI);
+          }
+        }
       }
-
       tfree(1);
     }
   }
@@ -2839,7 +2872,7 @@ int gr_simpleExpression(int* constantVal) {
     if (ltype != INT_T) {
       typeWarning(INT_T, ltype);
 
-    ltype = INT_T;
+      ltype = INT_T;
     }
 
     if(leftFoldable == 0)
@@ -2862,9 +2895,12 @@ int gr_simpleExpression(int* constantVal) {
 
     rtype = gr_term(constantVal);
 
+    // assert: allocatedTemporaries == n + 2
+
     if (leftFoldable == 1){
       if (*(constantVal + 1) == 1){
-        tfree(2);
+        print((int*)"ADD_const");
+        println();
         if (prologDebug){
           print((int*)"  _____ADD/SUB__");
           print((int*)"line: ");
@@ -2876,33 +2912,63 @@ int gr_simpleExpression(int* constantVal) {
         } else if (operatorSymbol == SYM_MINUS) {
           *constantVal = leftVal - literal;
         }
-        load_integer(*constantVal);
+      } else {
+        print((int*)"ADD_innermost");
+        println();
+        load_integer(leftVal);
+        if (operatorSymbol == SYM_PLUS) {
+          if (ltype == INTSTAR_T) {
+            if (rtype == INT_T)
+              // pointer arithmetic: factor of 2^2 of integer operand
+              emitLeftShiftBy(2);
+          } else {
+            if (rtype == INTSTAR_T){
+              typeWarning(ltype, rtype);
+            }
+          }
+
+          emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), FCT_ADDU);
+
+        } else {
+          if (operatorSymbol == SYM_MINUS) {
+            if (ltype != rtype)
+              typeWarning(ltype, rtype);
+
+            emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary(), previousTemporary(), FCT_SUBU);
+          }
+        }
       }
-    } else
+    } else {
+      print((int*)"ADD_outer");
+      println();
+      if (*(constantVal + 1) == 1)
+        load_integer(*constantVal);
       *constantVal = 0;
       *(constantVal + 1) = 0;
-
-      // assert: allocatedTemporaries == n + 2
 
       if (operatorSymbol == SYM_PLUS) {
         if (ltype == INTSTAR_T) {
           if (rtype == INT_T)
             // pointer arithmetic: factor of 2^2 of integer operand
             emitLeftShiftBy(2);
-        } else if (rtype == INTSTAR_T){
-        typeWarning(ltype, rtype);
+        } else {
+          if (rtype == INTSTAR_T){
+            typeWarning(ltype, rtype);
+          }
+        }
 
         emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), FCT_ADDU);
 
-      } else if (operatorSymbol == SYM_MINUS) {
-        if (ltype != rtype)
-        typeWarning(ltype, rtype);
+      } else {
+        if (operatorSymbol == SYM_MINUS) {
+          if (ltype != rtype)
+            typeWarning(ltype, rtype);
 
-        emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), FCT_SUBU);
+          emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), FCT_SUBU);
+        }
       }
-
-      tfree(1);
     }
+    tfree(1);
   }
 
   // assert: allocatedTemporaries == n + 1
@@ -2942,7 +3008,8 @@ int gr_shiftExpression(int* constantVal) {
 
     if (leftFoldable == 1){
       if (*(constantVal + 1) == 1){
-        tfree(2);
+        print((int*)"SHIFT_const");
+        println();
         if (prologDebug){
           print((int*)"  _____SHIFT__");
           print((int*)"line: ");
@@ -2954,16 +3021,31 @@ int gr_shiftExpression(int* constantVal) {
         } else if (operatorSymbol == SYM_SRLV) {
           *constantVal = leftVal >> literal;
         }
-        load_integer(*constantVal);
+      } else {
+        print((int*)"SHIFT_innermost");
+        println();
+        load_integer(leftVal);
+        if (operatorSymbol == SYM_SLLV) {
+          emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), FCT_SLLV);
+        } else {
+          if (operatorSymbol == SYM_SRLV) {
+            emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), FCT_SRLV);
+          }
+        }
       }
     } else {
+      print((int*)"SHIFT_outer");
+      if(*(constantVal + 1) == 1)
+        load_integer(*constantVal);
       *constantVal = 0;
       *(constantVal + 1) = 0;
 
       if (operatorSymbol == SYM_SLLV) {
-      emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary(), previousTemporary(), FCT_SLLV);
-      } else if (operatorSymbol == SYM_SRLV) {
-      emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary(), previousTemporary(), FCT_SRLV);
+        emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary(), previousTemporary(), FCT_SLLV);
+      } else {
+        if (operatorSymbol == SYM_SRLV) {
+          emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary(), previousTemporary(), FCT_SRLV);
+        }
       }
       tfree(1);
     }
@@ -3017,7 +3099,8 @@ int gr_expression() {
 
     if (leftFoldable == 1){
       if (*(constantVal + 1) == 1){
-        tfree(2);
+        print((int*)"EXPR_const");
+        println();
         if(prologDebug){
           print((int*)"  _____EXPRESSION__");
           print((int*)"line: ");
@@ -3037,9 +3120,72 @@ int gr_expression() {
         } else if (operatorSymbol == SYM_GEQ) {
           *constantVal = (leftVal >= literal);
         }
-        load_integer(*constantVal);
+      } else {
+        print((int*)"EXPR_innermost");
+        println();
+        load_integer(leftVal);
+        if (operatorSymbol == SYM_EQUALITY) {
+          // subtract, if result = 0 then 1, else 0
+          emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary(), previousTemporary(), FCT_SUBU);
+
+          tfree(1);
+
+          emitIFormat(OP_BEQ, REG_ZR, previousTemporary(), 4);
+          emitIFormat(OP_ADDIU, REG_ZR, previousTemporary(), 0);
+          emitIFormat(OP_BEQ, REG_ZR, previousTemporary(), 2);
+          emitIFormat(OP_ADDIU, REG_ZR, previousTemporary(), 1);
+
+        } else if (operatorSymbol == SYM_NOTEQ) {
+          // subtract, if result = 0 then 0, else 1
+          emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary(), previousTemporary(), FCT_SUBU);
+
+          tfree(1);
+
+          emitIFormat(OP_BNE, REG_ZR, previousTemporary(), 4);
+          emitIFormat(OP_ADDIU, REG_ZR, previousTemporary(), 0);
+          emitIFormat(OP_BEQ, REG_ZR, previousTemporary(), 2);
+          emitIFormat(OP_ADDIU, REG_ZR, previousTemporary(), 1);
+
+        } else if (operatorSymbol == SYM_LT) {
+          // set to 1 if a < b, else 0
+          emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary(), previousTemporary(), FCT_SLT);
+
+          tfree(1);
+
+        } else if (operatorSymbol == SYM_GT) {
+          // set to 1 if b < a, else 0
+          emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), FCT_SLT);
+
+          tfree(1);
+
+        } else if (operatorSymbol == SYM_LEQ) {
+          // if b < a set 0, else 1
+          emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), FCT_SLT);
+
+          tfree(1);
+
+          emitIFormat(OP_BNE, REG_ZR, previousTemporary(), 4);
+          emitIFormat(OP_ADDIU, REG_ZR, previousTemporary(), 1);
+          emitIFormat(OP_BEQ, REG_ZR, REG_ZR, 2);
+          emitIFormat(OP_ADDIU, REG_ZR, previousTemporary(), 0);
+
+        } else if (operatorSymbol == SYM_GEQ) {
+          // if a < b set 0, else 1
+          emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary(), previousTemporary(), FCT_SLT);
+
+          tfree(1);
+
+          emitIFormat(OP_BNE, REG_ZR, previousTemporary(), 4);
+          emitIFormat(OP_ADDIU, REG_ZR, previousTemporary(), 1);
+          emitIFormat(OP_BEQ, REG_ZR, REG_ZR, 2);
+          emitIFormat(OP_ADDIU, REG_ZR, previousTemporary(), 0);
+        }
       }
     } else {
+      print((int*)"EXPR_outer");
+      println();
+      if (*(constantVal + 1) == 1)
+        load_integer(*constantVal);
       *constantVal = 0;
       *(constantVal + 1) = 0;
 
@@ -6839,7 +6985,7 @@ int main(int argc, int* argv) {
 
   // prolog_Test global definiert
 
-  prologDebug = 0;
+  prologDebug = 1;
 
   prolog_Test = 20;
   print((int*)"Original: ");
@@ -6862,53 +7008,53 @@ int main(int argc, int* argv) {
   println();
 
   prolog_Test = 1 * 2 * 4;
-  print((int*)"Testing with constants should be 29: ");
+  print((int*)"Testing with constants should be 8: ");
   print(itoa(prolog_Test,string_buffer,10,0,0));
   println();
 
   // testVal2 global definiert
   // testVal2 = 10
-  print(itoa(prolog_Test,string_buffer,10,0,0));
-  prolog_Test = prolog_Test + testVal2;
-  print((int*)" + ");
-  print(itoa(testVal2,string_buffer,10,0,0));
-  print((int*)" should be 39: ");
-  print(itoa(prolog_Test,string_buffer,10,0,0));
-  println();
-
-
-  prolog_Test = prolog_Test - 30;
-  print((int*)"- 30 should be 9: ");
-  print(itoa(prolog_Test,string_buffer,10,0,0));
-  println();
-
-  prolog_Test = prolog_Test - 30;
-  print((int*)"- 30 should be -21: ");
-  print(itoa(prolog_Test,string_buffer,10,0,0));
-  println();
-
-  prolog_Test = prolog_Test - 30;
-  print((int*)"- 30 should be -51: ");
-  print(itoa(prolog_Test,string_buffer,10,0,0));
-  println();
-
-  prolog_Test = prolog_Test + (20 * 14 - 1000 / 8);
-  print((int*)"");
-  print(itoa(prolog_Test,string_buffer,10,0,0));
-  println();
-
-
-  prolog_Test = 10;
-  prolog_Test = prolog_Test / 2;
-  print((int*)"should be 5: ");
-  print(itoa(prolog_Test,string_buffer,10,0,0));
-  println();
-
-  prolog_Test = 2;
-  prolog_Test = 10 / prolog_Test;
-  print((int*)"should be 5: ");
-  print(itoa(prolog_Test,string_buffer,10,0,0));
-  println();
+  // print(itoa(prolog_Test,string_buffer,10,0,0));
+  // prolog_Test = prolog_Test + testVal2;
+  // print((int*)" + ");
+  // print(itoa(testVal2,string_buffer,10,0,0));
+  // print((int*)" should be 39: ");
+  // print(itoa(prolog_Test,string_buffer,10,0,0));
+  // println();
+  //
+  //
+  // prolog_Test = prolog_Test - 30;
+  // print((int*)"- 30 should be 9: ");
+  // print(itoa(prolog_Test,string_buffer,10,0,0));
+  // println();
+  //
+  // prolog_Test = prolog_Test - 30;
+  // print((int*)"- 30 should be -21: ");
+  // print(itoa(prolog_Test,string_buffer,10,0,0));
+  // println();
+  //
+  // prolog_Test = prolog_Test - 30;
+  // print((int*)"- 30 should be -51: ");
+  // print(itoa(prolog_Test,string_buffer,10,0,0));
+  // println();
+  //
+  // prolog_Test = prolog_Test + (20 * 14 - 1000 / 8);
+  // print((int*)"");
+  // print(itoa(prolog_Test,string_buffer,10,0,0));
+  // println();
+  //
+  //
+  // prolog_Test = 10;
+  // prolog_Test = prolog_Test / 2;
+  // print((int*)"should be 5: ");
+  // print(itoa(prolog_Test,string_buffer,10,0,0));
+  // println();
+  //
+  // prolog_Test = 2;
+  // prolog_Test = 10 / prolog_Test;
+  // print((int*)"should be 5: ");
+  // print(itoa(prolog_Test,string_buffer,10,0,0));
+  // println();
 
   print((int*) "End of Test.");
   println();
