@@ -6992,6 +6992,25 @@ int main(int argc, int* argv) {
   print(itoa(prolog_Test,string_buffer,10,0,0));
   println();
 
+  if (prolog_Test == 263)
+  {
+    print((int*)"Checking in a if for equal: ");
+    println();
+  }
+  else if(testVal2 != 10)
+  {
+    print((int*)"Checking in a if for a non equal: ");
+    println();
+  }
+
+  while(prolog_Test >= 260){
+    print((int*)"While ");
+    print(itoa(prolog_Test,string_buffer,10,0,0));
+    print((int*)" != 260");
+    println();
+    prolog_Test = prolog_Test -1;
+  }
+
   print((int*) "End of Test.");
   println();
   println();
