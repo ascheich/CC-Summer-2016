@@ -2728,10 +2728,6 @@ int gr_term(int* constantVal) {
     if (*(constantVal + 1) == 1){
       leftFoldable = 1;
       leftVal = *constantVal;
-      print(itoa(lineNumber,string_buffer,10,0,0));
-      print((int*)":  Val: ");
-      print(itoa(leftVal,string_buffer,10,0,0));
-      println();
     } else {
       leftFoldable = 0;
       leftVal = 0;
@@ -2750,8 +2746,6 @@ int gr_term(int* constantVal) {
 
     if (leftFoldable == 1){
       if (*(constantVal + 1) == 1){
-        print((int*)"MULT_const");
-        println();
         if (sign){
           leftVal = 0 - leftVal;
         }
@@ -2762,16 +2756,14 @@ int gr_term(int* constantVal) {
           println();
         }
         if (operatorSymbol == SYM_ASTERISK)
-          *constantVal = leftVal * literal;
+          *constantVal = leftVal * *constantVal;
         else
           if (operatorSymbol == SYM_DIV)
-            *constantVal = leftVal / literal;
+            *constantVal = leftVal / *constantVal;
           else
             if (operatorSymbol == SYM_MOD)
-              *constantVal = leftVal % literal;
+              *constantVal = leftVal % *constantVal;
       } else {
-        print((int*)"MULT_innermost");
-        println();
         load_integer(leftVal);
 
         if (operatorSymbol == SYM_ASTERISK) {
@@ -2793,8 +2785,6 @@ int gr_term(int* constantVal) {
         tfree(1);
       }
     } else {
-      print((int*)"MULT_outer");
-      println();
       if (*(constantVal + 1) == 1)
         load_integer(*constantVal);
       *constantVal = 0;
@@ -2899,8 +2889,6 @@ int gr_simpleExpression(int* constantVal) {
 
     if (leftFoldable == 1){
       if (*(constantVal + 1) == 1){
-        print((int*)"ADD_const");
-        println();
         if (prologDebug){
           print((int*)"  _____ADD/SUB__");
           print((int*)"line: ");
@@ -2908,13 +2896,11 @@ int gr_simpleExpression(int* constantVal) {
           println();
         }
         if (operatorSymbol == SYM_PLUS) {
-          *constantVal = leftVal + literal;
+          *constantVal = leftVal + *constantVal;
         } else if (operatorSymbol == SYM_MINUS) {
-          *constantVal = leftVal - literal;
+          *constantVal = leftVal - *constantVal;
         }
       } else {
-        print((int*)"ADD_innermost");
-        println();
         load_integer(leftVal);
         if (operatorSymbol == SYM_PLUS) {
           if (ltype == INTSTAR_T) {
@@ -2939,8 +2925,6 @@ int gr_simpleExpression(int* constantVal) {
         }
       }
     } else {
-      print((int*)"ADD_outer");
-      println();
       if (*(constantVal + 1) == 1)
         load_integer(*constantVal);
       *constantVal = 0;
@@ -2967,8 +2951,8 @@ int gr_simpleExpression(int* constantVal) {
           emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), FCT_SUBU);
         }
       }
+      tfree(1);
     }
-    tfree(1);
   }
 
   // assert: allocatedTemporaries == n + 1
@@ -3008,8 +2992,6 @@ int gr_shiftExpression(int* constantVal) {
 
     if (leftFoldable == 1){
       if (*(constantVal + 1) == 1){
-        print((int*)"SHIFT_const");
-        println();
         if (prologDebug){
           print((int*)"  _____SHIFT__");
           print((int*)"line: ");
@@ -3017,13 +2999,11 @@ int gr_shiftExpression(int* constantVal) {
           println();
         }
         if (operatorSymbol == SYM_SLLV) {
-          *constantVal = leftVal << literal;
+          *constantVal = leftVal << *constantVal;
         } else if (operatorSymbol == SYM_SRLV) {
-          *constantVal = leftVal >> literal;
+          *constantVal = leftVal >> *constantVal;
         }
       } else {
-        print((int*)"SHIFT_innermost");
-        println();
         load_integer(leftVal);
         if (operatorSymbol == SYM_SLLV) {
           emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), FCT_SLLV);
@@ -3034,7 +3014,6 @@ int gr_shiftExpression(int* constantVal) {
         }
       }
     } else {
-      print((int*)"SHIFT_outer");
       if(*(constantVal + 1) == 1)
         load_integer(*constantVal);
       *constantVal = 0;
@@ -3099,8 +3078,6 @@ int gr_expression() {
 
     if (leftFoldable == 1){
       if (*(constantVal + 1) == 1){
-        print((int*)"EXPR_const");
-        println();
         if(prologDebug){
           print((int*)"  _____EXPRESSION__");
           print((int*)"line: ");
@@ -3108,21 +3085,19 @@ int gr_expression() {
           println();
         }
         if (operatorSymbol == SYM_EQUALITY) {
-          *constantVal = (leftVal == literal);
+          *constantVal = (leftVal == *constantVal);
         } else if (operatorSymbol == SYM_NOTEQ) {
-          *constantVal = (leftVal != literal);
+          *constantVal = (leftVal != *constantVal);
         } else if (operatorSymbol == SYM_LT) {
-          *constantVal = (leftVal < literal);
+          *constantVal = (leftVal < *constantVal);
         } else if (operatorSymbol == SYM_GT) {
-          *constantVal = (leftVal > literal);
+          *constantVal = (leftVal > *constantVal);
         } else if (operatorSymbol == SYM_LEQ) {
-          *constantVal = (leftVal <= literal);
+          *constantVal = (leftVal <= *constantVal);
         } else if (operatorSymbol == SYM_GEQ) {
-          *constantVal = (leftVal >= literal);
+          *constantVal = (leftVal >= *constantVal);
         }
       } else {
-        print((int*)"EXPR_innermost");
-        println();
         load_integer(leftVal);
         if (operatorSymbol == SYM_EQUALITY) {
           // subtract, if result = 0 then 1, else 0
@@ -3182,8 +3157,6 @@ int gr_expression() {
         }
       }
     } else {
-      print((int*)"EXPR_outer");
-      println();
       if (*(constantVal + 1) == 1)
         load_integer(*constantVal);
       *constantVal = 0;
@@ -3247,6 +3220,8 @@ int gr_expression() {
       }
     }
   }
+  if (*(constantVal + 1) == 1)
+    load_integer(*constantVal);
 
   // assert: allocatedTemporaries == n + 1
 
@@ -6985,7 +6960,7 @@ int main(int argc, int* argv) {
 
   // prolog_Test global definiert
 
-  prologDebug = 1;
+  prologDebug = 0;
 
   prolog_Test = 20;
   print((int*)"Original: ");
