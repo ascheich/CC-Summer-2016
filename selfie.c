@@ -2761,17 +2761,17 @@ int gr_term(int* constantVal) {
 
         if (operatorSymbol == SYM_ASTERISK) {
           emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), 0, FCT_MULTU);
-          emitRFormat(OP_SPECIAL, 0, 0, currentTemporary(), FCT_MFLO);
+          emitRFormat(OP_SPECIAL, 0, 0, previousTemporary(), FCT_MFLO);
 
         } else {
           if (operatorSymbol == SYM_DIV) {
             emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary(), 0, FCT_DIVU);
-            emitRFormat(OP_SPECIAL, 0, 0, currentTemporary(), FCT_MFLO);
+            emitRFormat(OP_SPECIAL, 0, 0, previousTemporary(), FCT_MFLO);
 
           } else {
             if (operatorSymbol == SYM_MOD) {
               emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary(), 0, FCT_DIVU);
-              emitRFormat(OP_SPECIAL, 0, 0, currentTemporary(), FCT_MFHI);
+              emitRFormat(OP_SPECIAL, 0, 0, previousTemporary(), FCT_MFHI);
             }
           }
         }
@@ -6982,47 +6982,47 @@ int main(int argc, int* argv) {
 
   // testVal2 global definiert
   // testVal2 = 10
-  // print(itoa(prolog_Test,string_buffer,10,0,0));
-  // prolog_Test = prolog_Test + testVal2;
-  // print((int*)" + ");
-  // print(itoa(testVal2,string_buffer,10,0,0));
-  // print((int*)" should be 39: ");
-  // print(itoa(prolog_Test,string_buffer,10,0,0));
-  // println();
-  //
-  //
-  // prolog_Test = prolog_Test - 30;
-  // print((int*)"- 30 should be 9: ");
-  // print(itoa(prolog_Test,string_buffer,10,0,0));
-  // println();
-  //
-  // prolog_Test = prolog_Test - 30;
-  // print((int*)"- 30 should be -21: ");
-  // print(itoa(prolog_Test,string_buffer,10,0,0));
-  // println();
-  //
-  // prolog_Test = prolog_Test - 30;
-  // print((int*)"- 30 should be -51: ");
-  // print(itoa(prolog_Test,string_buffer,10,0,0));
-  // println();
-  //
-  // prolog_Test = prolog_Test + (20 * 14 - 1000 / 8);
-  // print((int*)"");
-  // print(itoa(prolog_Test,string_buffer,10,0,0));
-  // println();
-  //
-  //
-  // prolog_Test = 10;
-  // prolog_Test = prolog_Test / 2;
-  // print((int*)"should be 5: ");
-  // print(itoa(prolog_Test,string_buffer,10,0,0));
-  // println();
-  //
-  // prolog_Test = 2;
-  // prolog_Test = 10 / prolog_Test;
-  // print((int*)"should be 5: ");
-  // print(itoa(prolog_Test,string_buffer,10,0,0));
-  // println();
+  print(itoa(prolog_Test,string_buffer,10,0,0));
+  prolog_Test = prolog_Test + testVal2;
+  print((int*)" + ");
+  print(itoa(testVal2,string_buffer,10,0,0));
+  print((int*)" should be 39: ");
+  print(itoa(prolog_Test,string_buffer,10,0,0));
+  println();
+
+
+  prolog_Test = prolog_Test - 30;
+  print((int*)"- 30 should be 9: ");
+  print(itoa(prolog_Test,string_buffer,10,0,0));
+  println();
+
+  prolog_Test = prolog_Test - 30;
+  print((int*)"- 30 should be -21: ");
+  print(itoa(prolog_Test,string_buffer,10,0,0));
+  println();
+
+  prolog_Test = prolog_Test - 30;
+  print((int*)"- 30 should be -51: ");
+  print(itoa(prolog_Test,string_buffer,10,0,0));
+  println();
+
+  prolog_Test = prolog_Test + (20 * 14 - 1000 / 8);
+  print((int*)"");
+  print(itoa(prolog_Test,string_buffer,10,0,0));
+  println();
+
+
+  prolog_Test = 10;
+  prolog_Test = prolog_Test / 2;
+  print((int*)"should be 5: ");
+  print(itoa(prolog_Test,string_buffer,10,0,0));
+  println();
+
+  prolog_Test = 2;
+  prolog_Test = 10 / prolog_Test;
+  print((int*)"should be 5: ");
+  print(itoa(prolog_Test,string_buffer,10,0,0));
+  println();
 
   print((int*) "End of Test.");
   println();
