@@ -2714,8 +2714,11 @@ int gr_term(int* constantVal) {
   // assert: n = allocatedTemporaries
 
   if (*constantVal == INT_MIN){
-    if (*(constantVal + 1) == 0)
+    if (*(constantVal + 1) == 0){
       sign = 1;
+      print((int*)"SIGN");
+      println();
+    }
   }
 
   ltype = gr_factor(constantVal);
@@ -6960,7 +6963,7 @@ int main(int argc, int* argv) {
 
   // prolog_Test global definiert
 
-  prologDebug = 0;
+  prologDebug = 1;
 
   prolog_Test = 20;
   print((int*)"Original: ");
