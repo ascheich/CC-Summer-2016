@@ -6845,7 +6845,7 @@ int main(int argc, int* argv) {
 
   // prolog_Test global definiert
 
-  prologDebug = 1;
+  prologDebug = 0;
 
   prolog_Test = 20;
   print((int*)"Original: ");
