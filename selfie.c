@@ -2588,6 +2588,7 @@ int gr_factor(int* constantVal) {
 
   // not a cast: "(" expression ")"
   } else {
+    //TODO const-folding
       type = gr_expression();
 
       if (symbol == SYM_RPARENTHESIS)
@@ -2657,14 +2658,12 @@ int gr_factor(int* constantVal) {
 
   // integer?
   } else if (symbol == SYM_INTEGER) {
-  load_integer(literal);
+    *constantVal = literal;
+    *(constantVal + 1) = 1;
 
-  *constantVal = literal;
-  *(constantVal + 1) = 1;
+    getSymbol();
 
-  getSymbol();
-
-  type = INT_T;
+    type = INT_T;
 
   // character?
   } else if (symbol == SYM_CHARACTER) {
@@ -2687,7 +2686,7 @@ int gr_factor(int* constantVal) {
   //  "(" expression ")"
   } else if (symbol == SYM_LPARENTHESIS) {
   getSymbol();
-
+  //TODO const-folding
   type = gr_expression();
 
   if (symbol == SYM_RPARENTHESIS)
@@ -2736,56 +2735,86 @@ int gr_term(int* constantVal) {
 
   operatorSymbol = symbol;
 
-  getSymbol();
-
-  rtype = gr_factor(constantVal);
-
-  // assert: allocatedTemporaries == n + 2
-
-  if (ltype != rtype)
-    typeWarning(ltype, rtype);
-
-  if (leftFoldable == 1){
     if (*(constantVal + 1) == 1){
-      tfree(2);
-      if (sign){
-        leftVal = 0 - leftVal;
-      }
-      if (prologDebug){
-        print((int*)"  _____DIV/MULT__");
-        print((int*)"line: ");
-        print(itoa(lineNumber,string_buffer,10,0,0));
-        println();
-      }
-      if (operatorSymbol == SYM_ASTERISK) {
-        *constantVal = leftVal * literal;
-      } else if (operatorSymbol == SYM_DIV) {
-        *constantVal = leftVal / literal;
-      } else if (operatorSymbol == SYM_MOD) {
-        *constantVal = leftVal % literal;
-      }
-      load_integer(*constantVal);
-      return ltype;
+      leftFoldable = 1;
+      leftVal = *constantVal;
+    } else {
+      leftFoldable = 0;
+      leftVal = 0;
     }
-  } else {
-    *constantVal = 0;
-    *(constantVal + 1) = 0;
-  }
 
-  if (operatorSymbol == SYM_ASTERISK) {
-    emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), 0, FCT_MULTU);
-    emitRFormat(OP_SPECIAL, 0, 0, previousTemporary(), FCT_MFLO);
+    operatorSymbol = symbol;
 
-  } else if (operatorSymbol == SYM_DIV) {
-    emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), 0, FCT_DIVU);
-    emitRFormat(OP_SPECIAL, 0, 0, previousTemporary(), FCT_MFLO);
+    getSymbol();
 
-  } else if (operatorSymbol == SYM_MOD) {
-    emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), 0, FCT_DIVU);
-    emitRFormat(OP_SPECIAL, 0, 0, previousTemporary(), FCT_MFHI);
-  }
+    rtype = gr_factor(constantVal);
 
-  tfree(1);
+    // assert: allocatedTemporaries == n + 2
+
+    if (ltype != rtype)
+      typeWarning(ltype, rtype);
+
+    if (leftFoldable == 1){
+      if (*(constantVal + 1) == 1){
+        if (prologDebug){
+          print((int*)"  _____DIV/MULT__");
+          print((int*)"line: ");
+          print(itoa(lineNumber,string_buffer,10,0,0));
+          println();
+        }
+        if (operatorSymbol == SYM_ASTERISK)
+          *constantVal = leftVal * *constantVal;
+        else
+          if (operatorSymbol == SYM_DIV)
+            *constantVal = leftVal / *constantVal;
+          else
+            if (operatorSymbol == SYM_MOD)
+              *constantVal = leftVal % *constantVal;
+      } else {
+        load_integer(leftVal);
+
+        if (operatorSymbol == SYM_ASTERISK) {
+          emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), 0, FCT_MULTU);
+          emitRFormat(OP_SPECIAL, 0, 0, previousTemporary(), FCT_MFLO);
+
+        } else {
+          if (operatorSymbol == SYM_DIV) {
+            emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary(), 0, FCT_DIVU);
+            emitRFormat(OP_SPECIAL, 0, 0, previousTemporary(), FCT_MFLO);
+
+          } else {
+            if (operatorSymbol == SYM_MOD) {
+              emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary(), 0, FCT_DIVU);
+              emitRFormat(OP_SPECIAL, 0, 0, previousTemporary(), FCT_MFHI);
+            }
+          }
+        }
+        tfree(1);
+      }
+    } else {
+      if (*(constantVal + 1) == 1)
+        load_integer(*constantVal);
+      *constantVal = 0;
+      *(constantVal + 1) = 0;
+
+      if (operatorSymbol == SYM_ASTERISK) {
+        emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), 0, FCT_MULTU);
+        emitRFormat(OP_SPECIAL, 0, 0, previousTemporary(), FCT_MFLO);
+
+      } else {
+        if (operatorSymbol == SYM_DIV) {
+          emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), 0, FCT_DIVU);
+          emitRFormat(OP_SPECIAL, 0, 0, previousTemporary(), FCT_MFLO);
+
+        } else {
+          if (operatorSymbol == SYM_MOD) {
+            emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), 0, FCT_DIVU);
+            emitRFormat(OP_SPECIAL, 0, 0, previousTemporary(), FCT_MFHI);
+          }
+        }
+      }
+      tfree(1);
+    }
   }
 
   // assert: allocatedTemporaries == n + 1
@@ -2831,40 +2860,41 @@ int gr_simpleExpression(int* constantVal) {
 
   // assert: allocatedTemporaries == n + 1
 
-  if(*(constantVal + 1) == 1){
+  if(*(constantVal + 1) == 1)
     leftFoldable = 1;
-    leftVal = *constantVal;
-  } else {
+  else
     leftFoldable = 0;
-    leftVal = 0;
-  }
 
   if (sign) {
     if (ltype != INT_T) {
       typeWarning(INT_T, ltype);
 
-    ltype = INT_T;
+      ltype = INT_T;
     }
 
     if(leftFoldable == 0)
       emitRFormat(OP_SPECIAL, REG_ZR, currentTemporary(), currentTemporary(), FCT_SUBU);
+    else
+      leftVal = 0 - leftVal;
   }
 
   // + or -?
   while (isPlusOrMinus()) {
-  if(*(constantVal + 1) == 1){
-    leftFoldable = 1;
-    leftVal = *constantVal;
-  } else {
-    leftFoldable = 0;
-    leftVal = 0;
-  }
+    if(*(constantVal + 1) == 1){
+      leftFoldable = 1;
+      leftVal = *constantVal;
+    } else {
+      leftFoldable = 0;
+      leftVal = 0;
+    }
 
-  operatorSymbol = symbol;
+    operatorSymbol = symbol;
 
-  getSymbol();
+    getSymbol();
 
-  rtype = gr_term(constantVal);
+    rtype = gr_term(constantVal);
+
+    // assert: allocatedTemporaries == n + 2
 
     if (leftFoldable == 1){
       if (*(constantVal + 1) == 1){
@@ -2876,38 +2906,63 @@ int gr_simpleExpression(int* constantVal) {
           println();
         }
         if (operatorSymbol == SYM_PLUS) {
-          *constantVal = leftVal + literal;
+          *constantVal = leftVal + *constantVal;
         } else if (operatorSymbol == SYM_MINUS) {
-          *constantVal = leftVal - literal;
+          *constantVal = leftVal - *constantVal;
         }
-        load_integer(*constantVal);
-        return ltype;
+      } else {
+        load_integer(leftVal);
+        if (operatorSymbol == SYM_PLUS) {
+          if (ltype == INTSTAR_T) {
+            if (rtype == INT_T)
+              // pointer arithmetic: factor of 2^2 of integer operand
+              emitLeftShiftBy(2);
+          } else {
+            if (rtype == INTSTAR_T){
+              typeWarning(ltype, rtype);
+            }
+          }
+
+          emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), FCT_ADDU);
+
+        } else {
+          if (operatorSymbol == SYM_MINUS) {
+            if (ltype != rtype)
+              typeWarning(ltype, rtype);
+
+            emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary(), previousTemporary(), FCT_SUBU);
+          }
+        }
       }
     } else {
+      if (*(constantVal + 1) == 1)
+        load_integer(*constantVal);
       *constantVal = 0;
       *(constantVal + 1) = 0;
+
+      if (operatorSymbol == SYM_PLUS) {
+        if (ltype == INTSTAR_T) {
+          if (rtype == INT_T)
+            // pointer arithmetic: factor of 2^2 of integer operand
+            emitLeftShiftBy(2);
+        } else {
+          if (rtype == INTSTAR_T){
+            typeWarning(ltype, rtype);
+          }
+        }
+
+        emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), FCT_ADDU);
+
+      } else {
+        if (operatorSymbol == SYM_MINUS) {
+          if (ltype != rtype)
+            typeWarning(ltype, rtype);
+
+          emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), FCT_SUBU);
+        }
+      }
+      tfree(1);
     }
-
-  // assert: allocatedTemporaries == n + 2
-
-  if (operatorSymbol == SYM_PLUS) {
-    if (ltype == INTSTAR_T) {
-    if (rtype == INT_T)
-      // pointer arithmetic: factor of 2^2 of integer operand
-      emitLeftShiftBy(2);
-    } else if (rtype == INTSTAR_T)
-    typeWarning(ltype, rtype);
-
-    emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), FCT_ADDU);
-
-  } else if (operatorSymbol == SYM_MINUS) {
-    if (ltype != rtype)
-    typeWarning(ltype, rtype);
-
-    emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), FCT_SUBU);
-  }
-
-  tfree(1);
   }
 
   // assert: allocatedTemporaries == n + 1
@@ -2938,41 +2993,64 @@ int gr_shiftExpression(int* constantVal) {
 
   operatorSymbol = symbol;
 
-  getSymbol();
+    if(*(constantVal + 1) == 1){
+      leftFoldable = 1;
+      leftVal = *constantVal;
+    } else {
+      leftFoldable = 0;
+      leftVal = 0;
+    }
 
-  rtype = gr_simpleExpression(constantVal);
+    operatorSymbol = symbol;
+
+    getSymbol();
+
+    rtype = gr_simpleExpression(constantVal);
 
     if (ltype != rtype)
       typeWarning(ltype, rtype);
 
-      if (leftFoldable == 1){
-          if (*(constantVal + 1) == 1){
-            tfree(2);
-            if (prologDebug){
-              print((int*)"  _____SHIFT__");
-              print((int*)"line: ");
-              print(itoa(lineNumber,string_buffer,10,0,0));
-              println();
-            }
-            if (operatorSymbol == SYM_SLLV) {
-              *constantVal = leftVal << literal;
-            } else if (operatorSymbol == SYM_SRLV) {
-              *constantVal = leftVal >> literal;
-            }
-            load_integer(*constantVal);
-            return ltype;
+    if (leftFoldable == 1){
+      if (*(constantVal + 1) == 1){
+        if (prologDebug){
+          print((int*)"  _____SHIFT__");
+          print((int*)"line: ");
+          print(itoa(lineNumber,string_buffer,10,0,0));
+          println();
+        }
+        if (operatorSymbol == SYM_SLLV) {
+          *constantVal = leftVal << *constantVal;
+        } else if (operatorSymbol == SYM_SRLV) {
+          *constantVal = leftVal >> *constantVal;
+        }
+      } else {
+        load_integer(leftVal);
+        if (operatorSymbol == SYM_SLLV) {
+          emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), FCT_SLLV);
+        } else {
+          if (operatorSymbol == SYM_SRLV) {
+            emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), FCT_SRLV);
           }
         } else {
           *constantVal = 0;
           *(constantVal + 1) = 0;
         }
+      }
+    } else {
+      if(*(constantVal + 1) == 1)
+        load_integer(*constantVal);
+      *constantVal = 0;
+      *(constantVal + 1) = 0;
 
-    if (operatorSymbol == SYM_SLLV) {
-    emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary(), previousTemporary(), FCT_SLLV);
-    } else if (operatorSymbol == SYM_SRLV) {
-    emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary(), previousTemporary(), FCT_SRLV);
-  }
-  tfree(1);
+      if (operatorSymbol == SYM_SLLV) {
+        emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary(), previousTemporary(), FCT_SLLV);
+      } else {
+        if (operatorSymbol == SYM_SRLV) {
+          emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary(), previousTemporary(), FCT_SRLV);
+        }
+      }
+      tfree(1);
+    }
   }
 
   // assert: allocatedTemporaries == n + 1
@@ -3011,103 +3089,163 @@ int gr_expression() {
 
   //optional: ==, !=, <, >, <=, >= simpleExpression
   if (isComparison()) {
-  operatorSymbol = symbol;
+    operatorSymbol = symbol;
 
-  getSymbol();
-  rtype = gr_shiftExpression(constantVal);
+    getSymbol();
+    rtype = gr_shiftExpression(constantVal);
 
-  // assert: allocatedTemporaries == n + 2
+    // assert: allocatedTemporaries == n + 2
 
     if (ltype != rtype)
       typeWarning(ltype, rtype);
 
     if (leftFoldable == 1){
-        if (*(constantVal + 1) == 1){
-          tfree(2);
-          if(prologDebug){
-            print((int*)"  _____EXPRESSION__");
-            print((int*)"line: ");
-            print(itoa(lineNumber,string_buffer,10,0,0));
-            println();
-          }
-          if (operatorSymbol == SYM_EQUALITY) {
-            *constantVal = (leftVal == literal);
-          } else if (operatorSymbol == SYM_NOTEQ) {
-            *constantVal = (leftVal != literal);
-          } else if (operatorSymbol == SYM_LT) {
-            *constantVal = (leftVal < literal);
-          } else if (operatorSymbol == SYM_GT) {
-            *constantVal = (leftVal > literal);
-          } else if (operatorSymbol == SYM_LEQ) {
-            *constantVal = (leftVal <= literal);
-          } else if (operatorSymbol == SYM_GEQ) {
-            *constantVal = (leftVal >= literal);
-          }
-          load_integer(*constantVal);
-          return ltype;
+      if (*(constantVal + 1) == 1){
+        if(prologDebug){
+          print((int*)"  _____EXPRESSION__");
+          print((int*)"line: ");
+          print(itoa(lineNumber,string_buffer,10,0,0));
+          println();
         }
+        if (operatorSymbol == SYM_EQUALITY) {
+          *constantVal = (leftVal == *constantVal);
+        } else if (operatorSymbol == SYM_NOTEQ) {
+          *constantVal = (leftVal != *constantVal);
+        } else if (operatorSymbol == SYM_LT) {
+          *constantVal = (leftVal < *constantVal);
+        } else if (operatorSymbol == SYM_GT) {
+          *constantVal = (leftVal > *constantVal);
+        } else if (operatorSymbol == SYM_LEQ) {
+          *constantVal = (leftVal <= *constantVal);
+        } else if (operatorSymbol == SYM_GEQ) {
+          *constantVal = (leftVal >= *constantVal);
+        }
+      } else {
+        load_integer(leftVal);
+        if (operatorSymbol == SYM_EQUALITY) {
+          // subtract, if result = 0 then 1, else 0
+          emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary(), previousTemporary(), FCT_SUBU);
+
+          tfree(1);
+
+          emitIFormat(OP_BEQ, REG_ZR, previousTemporary(), 4);
+          emitIFormat(OP_ADDIU, REG_ZR, previousTemporary(), 0);
+          emitIFormat(OP_BEQ, REG_ZR, previousTemporary(), 2);
+          emitIFormat(OP_ADDIU, REG_ZR, previousTemporary(), 1);
+
+        } else if (operatorSymbol == SYM_NOTEQ) {
+          // subtract, if result = 0 then 0, else 1
+          emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary(), previousTemporary(), FCT_SUBU);
+
+          tfree(1);
+
+          emitIFormat(OP_BNE, REG_ZR, previousTemporary(), 4);
+          emitIFormat(OP_ADDIU, REG_ZR, previousTemporary(), 0);
+          emitIFormat(OP_BEQ, REG_ZR, previousTemporary(), 2);
+          emitIFormat(OP_ADDIU, REG_ZR, previousTemporary(), 1);
+
+        } else if (operatorSymbol == SYM_LT) {
+          // set to 1 if a < b, else 0
+          emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary(), previousTemporary(), FCT_SLT);
+
+          tfree(1);
+
+        } else if (operatorSymbol == SYM_GT) {
+          // set to 1 if b < a, else 0
+          emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), FCT_SLT);
+
+          tfree(1);
+
+        } else if (operatorSymbol == SYM_LEQ) {
+          // if b < a set 0, else 1
+          emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), FCT_SLT);
+
+          tfree(1);
+
+          emitIFormat(OP_BNE, REG_ZR, previousTemporary(), 4);
+          emitIFormat(OP_ADDIU, REG_ZR, previousTemporary(), 1);
+          emitIFormat(OP_BEQ, REG_ZR, REG_ZR, 2);
+          emitIFormat(OP_ADDIU, REG_ZR, previousTemporary(), 0);
+
+        } else if (operatorSymbol == SYM_GEQ) {
+          // if a < b set 0, else 1
+          emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary(), previousTemporary(), FCT_SLT);
+
+          tfree(1);
+
+          emitIFormat(OP_BNE, REG_ZR, previousTemporary(), 4);
+          emitIFormat(OP_ADDIU, REG_ZR, previousTemporary(), 1);
+          emitIFormat(OP_BEQ, REG_ZR, REG_ZR, 2);
+          emitIFormat(OP_ADDIU, REG_ZR, previousTemporary(), 0);
+        }
+      }
     } else {
+      if (*(constantVal + 1) == 1)
+        load_integer(*constantVal);
       *constantVal = 0;
       *(constantVal + 1) = 0;
+
+      if (operatorSymbol == SYM_EQUALITY) {
+        // subtract, if result = 0 then 1, else 0
+        emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), FCT_SUBU);
+
+        tfree(1);
+
+        emitIFormat(OP_BEQ, REG_ZR, currentTemporary(), 4);
+        emitIFormat(OP_ADDIU, REG_ZR, currentTemporary(), 0);
+        emitIFormat(OP_BEQ, REG_ZR, currentTemporary(), 2);
+        emitIFormat(OP_ADDIU, REG_ZR, currentTemporary(), 1);
+
+      } else if (operatorSymbol == SYM_NOTEQ) {
+        // subtract, if result = 0 then 0, else 1
+        emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), FCT_SUBU);
+
+        tfree(1);
+
+        emitIFormat(OP_BNE, REG_ZR, currentTemporary(), 4);
+        emitIFormat(OP_ADDIU, REG_ZR, currentTemporary(), 0);
+        emitIFormat(OP_BEQ, REG_ZR, currentTemporary(), 2);
+        emitIFormat(OP_ADDIU, REG_ZR, currentTemporary(), 1);
+
+      } else if (operatorSymbol == SYM_LT) {
+        // set to 1 if a < b, else 0
+        emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), FCT_SLT);
+
+        tfree(1);
+
+      } else if (operatorSymbol == SYM_GT) {
+        // set to 1 if b < a, else 0
+        emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary(), previousTemporary(), FCT_SLT);
+
+        tfree(1);
+
+      } else if (operatorSymbol == SYM_LEQ) {
+        // if b < a set 0, else 1
+        emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary(), previousTemporary(), FCT_SLT);
+
+        tfree(1);
+
+        emitIFormat(OP_BNE, REG_ZR, currentTemporary(), 4);
+        emitIFormat(OP_ADDIU, REG_ZR, currentTemporary(), 1);
+        emitIFormat(OP_BEQ, REG_ZR, REG_ZR, 2);
+        emitIFormat(OP_ADDIU, REG_ZR, currentTemporary(), 0);
+
+      } else if (operatorSymbol == SYM_GEQ) {
+        // if a < b set 0, else 1
+        emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), FCT_SLT);
+
+        tfree(1);
+
+        emitIFormat(OP_BNE, REG_ZR, currentTemporary(), 4);
+        emitIFormat(OP_ADDIU, REG_ZR, currentTemporary(), 1);
+        emitIFormat(OP_BEQ, REG_ZR, REG_ZR, 2);
+        emitIFormat(OP_ADDIU, REG_ZR, currentTemporary(), 0);
+      }
     }
-
-  if (operatorSymbol == SYM_EQUALITY) {
-    // subtract, if result = 0 then 1, else 0
-    emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), FCT_SUBU);
-
-    tfree(1);
-
-    emitIFormat(OP_BEQ, REG_ZR, currentTemporary(), 4);
-    emitIFormat(OP_ADDIU, REG_ZR, currentTemporary(), 0);
-    emitIFormat(OP_BEQ, REG_ZR, currentTemporary(), 2);
-    emitIFormat(OP_ADDIU, REG_ZR, currentTemporary(), 1);
-
-  } else if (operatorSymbol == SYM_NOTEQ) {
-    // subtract, if result = 0 then 0, else 1
-    emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), FCT_SUBU);
-
-    tfree(1);
-
-    emitIFormat(OP_BNE, REG_ZR, currentTemporary(), 4);
-    emitIFormat(OP_ADDIU, REG_ZR, currentTemporary(), 0);
-    emitIFormat(OP_BEQ, REG_ZR, currentTemporary(), 2);
-    emitIFormat(OP_ADDIU, REG_ZR, currentTemporary(), 1);
-
-  } else if (operatorSymbol == SYM_LT) {
-    // set to 1 if a < b, else 0
-    emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), FCT_SLT);
-
-    tfree(1);
-
-  } else if (operatorSymbol == SYM_GT) {
-    // set to 1 if b < a, else 0
-    emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary(), previousTemporary(), FCT_SLT);
-
-    tfree(1);
-
-  } else if (operatorSymbol == SYM_LEQ) {
-    // if b < a set 0, else 1
-    emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary(), previousTemporary(), FCT_SLT);
-
-    tfree(1);
-
-    emitIFormat(OP_BNE, REG_ZR, currentTemporary(), 4);
-    emitIFormat(OP_ADDIU, REG_ZR, currentTemporary(), 1);
-    emitIFormat(OP_BEQ, REG_ZR, REG_ZR, 2);
-    emitIFormat(OP_ADDIU, REG_ZR, currentTemporary(), 0);
-
-  } else if (operatorSymbol == SYM_GEQ) {
-    // if a < b set 0, else 1
-    emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), FCT_SLT);
-
-    tfree(1);
-
-    emitIFormat(OP_BNE, REG_ZR, currentTemporary(), 4);
-    emitIFormat(OP_ADDIU, REG_ZR, currentTemporary(), 1);
-    emitIFormat(OP_BEQ, REG_ZR, REG_ZR, 2);
-    emitIFormat(OP_ADDIU, REG_ZR, currentTemporary(), 0);
   }
-  }
+  if (*(constantVal + 1) == 1)
+    load_integer(*constantVal);
+
   // assert: allocatedTemporaries == n + 1
 
   return ltype;
@@ -6868,7 +7006,7 @@ int main(int argc, int* argv) {
   println();
 
   prolog_Test = 1 * 2 * 4;
-  print((int*)"Testing with constants should be 29: ");
+  print((int*)"Testing with constants should be 8: ");
   print(itoa(prolog_Test,string_buffer,10,0,0));
   println();
 
@@ -6879,6 +7017,7 @@ int main(int argc, int* argv) {
   print((int*)" + ");
   print(itoa(testVal2,string_buffer,10,0,0));
   print((int*)" should be 39: ");
+
   print(itoa(prolog_Test,string_buffer,10,0,0));
   println();
 
@@ -6902,7 +7041,6 @@ int main(int argc, int* argv) {
   print((int*)"");
   print(itoa(prolog_Test,string_buffer,10,0,0));
   println();
-
 
   prolog_Test = 10;
   prolog_Test = prolog_Test / 2;
