@@ -11,61 +11,66 @@ C* is a small Turing-complete subset of C that includes dereferencing (the * ope
 Keywords: int, while, if, else, return, void
 
 ```
-digit            = "0" | ... | "9" .
+digit                         = "0" | ... | "9" .
 
-integer          = digit { digit } .
+integer                       = digit { digit } .
 
-letter           = "a" | ... | "z" | "A" | ... | "Z" .
+letter                        = "a" | ... | "z" | "A" | ... | "Z" .
 
-identifier       = letter { letter | digit | "_" } .
+identifier                    = letter { letter | digit | "_" } .
 
-type             = "int" [ "*" ] .
+type                          = "int" [ "*" ] .
 
-cast             = "(" type ")" .
+cast                          = "(" type ")" .
 
-call             = identifier "(" [ expression { "," expression } ] ")" .
+call                          = identifier "(" [ expression { "," expression } ] ")" .
 
-literal          = integer | "'" ascii_character "'" .
+literal                       = integer | "'" ascii_character "'" .
 
-factor           = [ cast ] 
-                    ( [ "*" ] ( identifier | "(" expression ")" ) |
-                      call |
-                      literal |
-                      """ { ascii_character } """ ) .
+selector                      = "[" expression "]" .
 
-term             = factor { ( "*" | "/" | "%" ) factor } .
+array                         = [ type ] identifier selector .
 
-simpleExpression = [ "-" ] term { ( "+" | "-" ) term } .
+factor<constantVal>           = [ cast ]
+                                ( [ "*" ] ( identifier | "(" expression ")" ) |
+                                call |
+                                literal |
+                                array |
+                                """ { ascii_character } """ ) .
 
-shiftExpression  = simpleExpression { ( "<<" | ">>" ) simpleExpression }.
+term<constantVal>             = factor<constantVal> { ( "*" | "/" | "%" ) factor<constantVal> } .
 
-expression       = shiftExpression [ ( "==" | "!=" | "<" | ">" | "<=" | ">=" ) shiftExpression ] .
+simpleExpression<constantVal> = [ "-" ] term<constantVal> { ( "+" | "-" ) term<constantVal> } .
 
-while            = "while" "(" expression ")" 
-                             ( statement |
-                               "{" { statement } "}" ) .
+shiftExpression<constantVal>  = simpleExpression<constantVal> { ( "<<" | ">>" ) simpleExpression<constantVal> }.
 
-if               = "if" "(" expression ")" 
-                             ( statement | 
-                               "{" { statement } "}" ) 
-                         [ "else"
-                             ( statement |
-                               "{" { statement } "}" ) ] .
+expression                    = shiftExpression [ ( "==" | "!=" | "<" | ">" | "<=" | ">=" ) shiftExpression ] .
 
-return           = "return" [ expression ] .
+while                         = "while" "(" expression ")"
+                                          ( statement |
+                                           "{" { statement } "}" ) .
 
-statement        = ( [ "*" ] identifier | "*" "(" expression ")" ) "="
-                      expression ";" |
-                    call ";" | 
-                    while | 
-                    if | 
-                    return ";" .
+if                            = "if" "(" expression ")"
+                                          ( statement |
+                                            "{" { statement } "}" )
+                                      [ "else"
+                                          ( statement |
+                                            "{" { statement } "}" ) ] .
 
-variable         = type identifier .
+return                        = "return" [ expression ] .
 
-procedure        = "(" [ variable { "," variable } ] ")" 
-                    ( ";" | "{" { variable ";" } { statement } "}" ) .
+statement                     = ( [ "*" ] identifier | "*" "(" expression ")" ) "="
+                                    expression ";" |
+                                  call ";" |
+                                  while |
+                                  if |
+                                  return ";" .
 
-cstar            = { type identifier [ "=" [ cast ] [ "-" ] literal ] ";" |
-                   ( "void" | type ) identifier procedure } .
+variable                      = ( type identifier ) | array .
+
+procedure                     = "(" [ variable { "," variable } ] ")"
+                                ( ";" | "{" { variable ";" } { statement } "}" ) .
+
+cstar                         = { type identifier [ "=" [ cast ] [ "-" ] literal ] ";" |
+                                ( "void" | type ) identifier procedure } .
 ```
