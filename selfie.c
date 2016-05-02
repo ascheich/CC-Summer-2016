@@ -353,7 +353,7 @@ void initScanner () {
 
   *(SYMBOLS + SYM_SLLV)          = (int) "<<";
   *(SYMBOLS + SYM_SRLV)          = (int) ">>";
-  *(SYMBOLS + SYM_SELECTOR)      = (int) "[+INTEGER]"
+  *(SYMBOLS + SYM_SELECTOR)      = (int) "[+INTEGER]";
 
 
   character = CHAR_EOF;
@@ -2677,26 +2677,30 @@ int gr_factor(int* constantVal) {
 
     // identifier?
   } else if (symbol == SYM_IDENTIFIER) {
-  variableOrProcedureName = identifier;
+    variableOrProcedureName = identifier;
 
-  getSymbol();
-
-  if (symbol == SYM_LPARENTHESIS) {
     getSymbol();
 
-    // function call: identifier "(" ... ")"
-    type = gr_call(variableOrProcedureName);
+    if (symbol == SYM_LPARENTHESIS) {
+      getSymbol();
 
-    talloc();
+      // function call: identifier "(" ... ")"
+      type = gr_call(variableOrProcedureName);
 
-    // retrieve return value
-    emitIFormat(OP_ADDIU, REG_V0, currentTemporary(), 0);
+      talloc();
 
-    // reset return register
-    emitIFormat(OP_ADDIU, REG_ZR, REG_V0, 0);
-  } else
-    // variable access: identifier
-    type = load_variable(variableOrProcedureName);
+      // retrieve return value
+      emitIFormat(OP_ADDIU, REG_V0, currentTemporary(), 0);
+
+      // reset return register
+      emitIFormat(OP_ADDIU, REG_ZR, REG_V0, 0);
+    } else if (symbol == SYM_SELECTOR) {
+
+
+    } else {
+        // variable access: identifier
+        type = load_variable(variableOrProcedureName);
+    }
 
   // integer?
   } else if (symbol == SYM_INTEGER) {
