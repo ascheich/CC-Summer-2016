@@ -3234,13 +3234,6 @@ int gr_expression() {
   return ltype;
 }
 
-void gr_array() {
-
-
-
-
-}
-
 void gr_while() {
   int brBackToWhile;
   int brForwardToEnd;
