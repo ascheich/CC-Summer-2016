@@ -287,7 +287,8 @@ int SYM_STRING       = 27; // string
 
 int SYM_SLLV          = 28; // <<
 int SYM_SRLV          = 29; // >>
-int SYM_SELECTOR      = 30; // [+INTEGER]
+int SYM_LBRACKET      = 30; // [
+int SYM_RBRACKET      = 31; // ]
 
 int* SYMBOLS; // array of strings representing symbols
 
@@ -319,7 +320,7 @@ int sourceFD    = 0;        // file descriptor of open source file
 // ------------------------- INITIALIZATION ------------------------
 
 void initScanner () {
-  SYMBOLS = malloc(31 * SIZEOFINTSTAR);
+  SYMBOLS = malloc(32 * SIZEOFINTSTAR);
 
   *(SYMBOLS + SYM_IDENTIFIER)   = (int) "identifier";
   *(SYMBOLS + SYM_INTEGER)      = (int) "integer";
@@ -352,7 +353,8 @@ void initScanner () {
 
   *(SYMBOLS + SYM_SLLV)          = (int) "<<";
   *(SYMBOLS + SYM_SRLV)          = (int) ">>";
-  *(SYMBOLS + SYM_SELECTOR)      = (int) "[+INTEGER]";
+  *(SYMBOLS + SYM_LBRACKET)      = (int) "[";
+  *(SYMBOLS + SYM_RBRACKET)      = (int) "]";
 
   character = CHAR_EOF;
   symbol    = SYM_EOF;
@@ -1949,47 +1951,13 @@ int getSymbol() {
     symbol = SYM_MOD;
 
   } else if (character == CHAR_LBRACKET) {
-      getCharacter();
+    getCharacter();
 
-      if (isCharacterDigit()) {
-        integer = malloc(maxIntegerLength + 1);
-        i = 0;
+    symbol = SYM_LBRACKET;
+  } else if (character == CHAR_RBRACKET) {
+    getCharacter();
 
-        while (isCharacterDigit()) {
-          if (i >= maxIntegerLength) {
-            syntaxErrorMessage((int*) "integer out of bound");
-            exit(-1);
-          }
-
-          storeCharacter(integer, i, character);
-
-          i = i + 1;
-
-          getCharacter();
-        }
-
-        storeCharacter(integer, i, 0); // null terminated string
-
-        literal = atoi(integer);
-
-        if (literal < 0) {
-          syntaxErrorMessage((int*) "only positive integers as array selector allowed");
-          exit(-1);
-        }
-
-        if (character == CHAR_RBRACKET) {
-          getCharacter();
-
-          symbol = SYM_SELECTOR;
-        } else {
-          syntaxErrorCharacter(CHAR_RBRACKET);
-          exit(-1);
-        }
-      } else {
-        syntaxErrorMessage((int*) "positive integer expected");
-        exit(-1);
-      }
-
+    symbol = SYM_RBRACKET;
   } else {
     printLineNumber((int*) "error", lineNumber);
     print((int*) "found unknown character ");
@@ -2615,19 +2583,19 @@ int gr_factor(int* constantVal) {
   if (symbol == SYM_LPARENTHESIS) {
     getSymbol();
 
-  // cast: "(" "int" [ "*" ] ")"
-  if (symbol == SYM_INT) {
-    hasCast = 1;
+    // cast: "(" "int" [ "*" ] ")"
+    if (symbol == SYM_INT) {
+      hasCast = 1;
 
-    cast = gr_type();
+      cast = gr_type();
 
-    if (symbol == SYM_RPARENTHESIS)
-      getSymbol();
-    else
-      syntaxErrorSymbol(SYM_RPARENTHESIS);
+      if (symbol == SYM_RPARENTHESIS)
+        getSymbol();
+      else
+        syntaxErrorSymbol(SYM_RPARENTHESIS);
 
-  // not a cast: "(" expression ")"
-  } else {
+    // not a cast: "(" expression ")"
+    } else {
       type = gr_expression();
 
       if (symbol == SYM_RPARENTHESIS)
@@ -2691,8 +2659,22 @@ int gr_factor(int* constantVal) {
 
       // reset return register
       emitIFormat(OP_ADDIU, REG_ZR, REG_V0, 0);
-    } else if (symbol == SYM_SELECTOR) {
+    } else if (symbol == SYM_LBRACKET) {
+        getSymbol();
 
+        type = gr_expression();
+
+        if (type != INT_T)
+          typeWarning(INT_T, type);
+
+        if (symbol == SYM_RBRACKET){
+          //PROLOG gr_factor array implementation
+          //pick correct place within memory
+          //maybe add new method
+
+          getSymbol();
+        } else
+          syntaxErrorSymbol(SYM_RBRACKET);
 
     } else {
         // variable access: identifier
@@ -3252,6 +3234,13 @@ int gr_expression() {
   return ltype;
 }
 
+void gr_array() {
+
+
+
+
+}
+
 void gr_while() {
   int brBackToWhile;
   int brForwardToEnd;
@@ -3614,13 +3603,28 @@ int gr_type() {
 
 void gr_variable(int offset) {
   int type;
+  int selectorType;
 
   type = gr_type();
 
   if (symbol == SYM_IDENTIFIER) {
-    createSymbolTableEntry(LOCAL_TABLE, identifier, lineNumber, VARIABLE, type, 0, offset);
-
     getSymbol();
+
+    if (symbol == SYM_LBRACKET){
+
+      selectorType = gr_expression();
+
+      if (selectorType != INT_T)
+        typeWarning(INT_T,selectorType);
+
+      if (symbol == SYM_RBRACKET){
+        getSymbol();
+        // PROLOG array declaration in local symbol table
+
+      } else
+        syntaxErrorSymbol(SYM_RBRACKET);
+    } else
+      createSymbolTableEntry(LOCAL_TABLE, identifier, lineNumber, VARIABLE, type, 0, offset);
   } else {
     syntaxErrorSymbol(SYM_IDENTIFIER);
 
@@ -3875,17 +3879,43 @@ void gr_cstar() {
         if (symbol == SYM_LPARENTHESIS)
           gr_procedure(variableOrProcedureName, type);
         else {
-          allocatedMemory = allocatedMemory + WORDSIZE;
-
-          // type identifier ";" global variable declaration
-          if (symbol == SYM_SEMICOLON) {
-            createSymbolTableEntry(GLOBAL_TABLE, variableOrProcedureName, lineNumber, VARIABLE, type, 0, -allocatedMemory);
-
+          if (symbol == SYM_RBRACKET) {
             getSymbol();
 
-          // type identifier "=" global variable definition
-          } else
-            gr_initialization(variableOrProcedureName, -allocatedMemory, type);
+            type = gr_expression();
+
+            if (type != INT_T)
+              typeWarning(INT_T, type);
+
+            if (symbol == SYM_RBRACKET){
+              // PROLOG allocate memory accordingly and
+              // save to global symbol table
+
+              getSymbol();
+            } else
+              syntaxErrorSymbol(SYM_RBRACKET);
+
+
+
+          // PROLOG maybe-todo: add array initialization:
+          // else if (symbol == SYM_ASSIGN){ blabla}
+          // todo: remove mentioned if-condition within gr_initialization
+          // and create gr_arrayInitialization similarly
+          // then last else-branch (gr_init.-call) should be before
+          // this else-branch (simple variable declaration)
+          } else {
+            allocatedMemory = allocatedMemory + WORDSIZE;
+
+            // type identifier ";" global variable declaration
+            if (symbol == SYM_SEMICOLON) {
+              createSymbolTableEntry(GLOBAL_TABLE, variableOrProcedureName, lineNumber, VARIABLE, type, 0, -allocatedMemory);
+
+              getSymbol();
+
+            // type identifier "=" global variable definition
+            } else
+              gr_initialization(variableOrProcedureName, -allocatedMemory, type);
+          }
         }
       } else
         syntaxErrorSymbol(SYM_IDENTIFIER);
