@@ -143,6 +143,9 @@ int CHAR_PERCENTAGE   = '%';
 int CHAR_SINGLEQUOTE  = 39; // ASCII code 39 = '
 int CHAR_DOUBLEQUOTE  = '"';
 
+int CHAR_LBRACKET     = '[';
+int CHAR_RBRACKET     = ']';
+
 int SIZEOFINT     = 4; // must be the same as WORDSIZE
 int SIZEOFINTSTAR = 4; // must be the same as WORDSIZE
 
@@ -283,6 +286,7 @@ int SYM_STRING       = 27; // string
 
 int SYM_SLLV          = 28; // <<
 int SYM_SRLV          = 29; // >>
+int SYM_SELECTOR      = 30; // [+INTEGER]
 
 
 
@@ -316,7 +320,7 @@ int sourceFD    = 0;        // file descriptor of open source file
 // ------------------------- INITIALIZATION ------------------------
 
 void initScanner () {
-  SYMBOLS = malloc(30 * SIZEOFINTSTAR);
+  SYMBOLS = malloc(31 * SIZEOFINTSTAR);
 
   *(SYMBOLS + SYM_IDENTIFIER)   = (int) "identifier";
   *(SYMBOLS + SYM_INTEGER)      = (int) "integer";
@@ -349,6 +353,8 @@ void initScanner () {
 
   *(SYMBOLS + SYM_SLLV)          = (int) "<<";
   *(SYMBOLS + SYM_SRLV)          = (int) ">>";
+  *(SYMBOLS + SYM_SELECTOR)      = (int) "[+INTEGER]"
+
 
   character = CHAR_EOF;
   symbol    = SYM_EOF;
@@ -1943,6 +1949,48 @@ int getSymbol() {
     getCharacter();
 
     symbol = SYM_MOD;
+
+  } else if (character == CHAR_LBRACKET) {
+      getCharacter();
+
+      if (isCharacterDigit()) {
+        integer = malloc(maxIntegerLength + 1);
+        i = 0;
+
+        while (isCharacterDigit()) {
+          if (i >= maxIntegerLength) {
+            syntaxErrorMessage((int*) "integer out of bound");
+            exit(-1);
+          }
+
+          storeCharacter(integer, i, character);
+
+          i = i + 1;
+
+          getCharacter();
+        }
+
+        storeCharacter(integer, i, 0); // null terminated string
+
+        literal = atoi(integer);
+
+        if (literal < 0) {
+          syntaxErrorMessage((int*) "only positive integers as array selector allowed");
+          exit(-1);
+        }
+
+        if (character == CHAR_RBRACKET) {
+          getCharacter();
+
+          symbol = SYM_SELECTOR;
+        } else {
+          syntaxErrorCharacter(CHAR_RBRACKET);
+          exit(-1);
+        }
+      } else {
+        syntaxErrorMessage((int*) "positive integer expected");
+        exit(-1);
+      }
 
   } else {
     printLineNumber((int*) "error", lineNumber);
@@ -6812,7 +6860,7 @@ int main(int argc, int* argv) {
   prolog_Test = 8 + 8;
   print(itoa(prolog_Test,string_buffer,10,0,0));
   println();
-  
+
   prolog_Test = prolog_Test * 2 - 10 * 9;
   print((int*)"Multiplicated (2) and substracted (10) and mult (9) should be -58: ");
   print(itoa(prolog_Test,string_buffer,10,0,0));
