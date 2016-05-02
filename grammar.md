@@ -29,13 +29,12 @@ literal                       = integer | "'" ascii_character "'" .
 
 selector                      = "[" expression "]" .
 
-array                         = [ type ] identifier selector .
+integerList                     = "{" integer { "," integer } "}" .
 
 factor<constantVal>           = [ cast ]
-                                ( [ "*" ] ( identifier | "(" expression ")" ) |
+                                ( [ "*" ] ( identifier [ selector ]  | "(" expression ")" ) |
                                 call |
                                 literal |
-                                array |
                                 """ { ascii_character } """ ) .
 
 term<constantVal>             = factor<constantVal> { ( "*" | "/" | "%" ) factor<constantVal> } .
@@ -59,18 +58,18 @@ if                            = "if" "(" expression ")"
 
 return                        = "return" [ expression ] .
 
-statement                     = ( [ "*" ] identifier | "*" "(" expression ")" ) "="
+statement                     = ( [ "*" ] identifier [ selector ] | "*" "(" expression ")" ) "="
                                     expression ";" |
                                   call ";" |
                                   while |
                                   if |
                                   return ";" .
 
-variable                      = ( type identifier ) | array .
+variable                      = type identifier [ selector | "=" integerList ] .
 
 procedure                     = "(" [ variable { "," variable } ] ")"
                                 ( ";" | "{" { variable ";" } { statement } "}" ) .
 
-cstar                         = { type identifier [ "=" [ cast ] [ "-" ] literal ] ";" |
+cstar                         = { type identifier [ "=" ( ([ cast ] [ "-" ] literal) | integerList ) | selector ] ";" |
                                 ( "void" | type ) identifier procedure } .
 ```
