@@ -2681,7 +2681,8 @@ int gr_factor(int* constantVal) {
           if (literal >= getSize(entry))
             syntaxErrorMessage((int*) "array selector exceeds array size");
           else
-            load_integer(*(entry + getValue(entry) + literal));
+            //PROLOG maybe change -literal to +literal
+            load_integer((getAddress(entry) - literal * SIZEOFINT));
         } else
           syntaxErrorSymbol(SYM_RBRACKET);
 
