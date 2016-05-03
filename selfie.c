@@ -390,6 +390,7 @@ int reportUndefinedProcedures();
 // |  5 | value   | VARIABLE: initial value
 // |  6 | address | VARIABLE: offset, PROCEDURE: address, STRING: offset
 // |  7 | scope   | REG_GP, REG_FP
+// |  8 | size    | 
 // +----+---------+
 
 int* getNextEntry(int* entry) { return (int*) *entry; }
@@ -400,6 +401,7 @@ int  getType(int* entry)       { return *(entry + 4); }
 int  getValue(int* entry)      { return *(entry + 5); }
 int  getAddress(int* entry)    { return *(entry + 6); }
 int  getScope(int* entry)      { return *(entry + 7); }
+int  getSize(int* entry)       { return *(entry + 8); }
 
 void setNextEntry(int* entry, int* next)    { *entry       = (int) next; }
 void setString(int* entry, int* identifier) { *(entry + 1) = (int) identifier; }
@@ -409,6 +411,7 @@ void setType(int* entry, int type)          { *(entry + 4) = type; }
 void setValue(int* entry, int value)        { *(entry + 5) = value; }
 void setAddress(int* entry, int address)    { *(entry + 6) = address; }
 void setScope(int* entry, int scope)        { *(entry + 7) = scope; }
+void setSize(int* entry, int size)        { *(entry + 8) = size; }
 
 // ------------------------ GLOBAL CONSTANTS -----------------------
 
@@ -1978,7 +1981,7 @@ int getSymbol() {
 void createSymbolTableEntry(int whichTable, int* string, int line, int class, int type, int value, int address) {
   int* newEntry;
 
-  newEntry = malloc(2 * SIZEOFINTSTAR + 6 * SIZEOFINT);
+  newEntry = malloc(2 * SIZEOFINTSTAR + 7 * SIZEOFINT);
 
   setString(newEntry, string);
   setLineNumber(newEntry, line);
