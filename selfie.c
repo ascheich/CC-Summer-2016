@@ -386,11 +386,11 @@ int reportUndefinedProcedures();
 // |  1 | string  | identifier string, string literal
 // |  2 | line#   | source line number
 // |  3 | class   | VARIABLE, PROCEDURE, STRING
-// |  4 | type    | INT_T, INTSTAR_T, VOID_T
-// |  5 | value   | VARIABLE: initial value
+// |  4 | type    | INT_T, INTSTAR_T, VOID_T, ARRAY_T
+// |  5 | value   | VARIABLE: initial value   ARRAY: pointer to memory
 // |  6 | address | VARIABLE: offset, PROCEDURE: address, STRING: offset
 // |  7 | scope   | REG_GP, REG_FP
-// |  8 | size    | length of
+// |  8 | size    | length of array
 // +----+---------+
 
 int* getNextEntry(int* entry) { return (int*) *entry; }
@@ -424,6 +424,7 @@ int STRING    = 3;
 int INT_T     = 1;
 int INTSTAR_T = 2;
 int VOID_T    = 3;
+int ARRAY_T   = 4;
 
 // symbol tables
 int GLOBAL_TABLE  = 1;
@@ -2680,7 +2681,7 @@ int gr_factor(int* constantVal) {
           if (literal >= getSize(entry))
             syntaxErrorMessage((int*) "array selector exceeds array size");
           else
-            load_integer(*(entry + value + literal));
+            load_integer(*(entry + getValue(entry) + literal));
         } else
           syntaxErrorSymbol(SYM_RBRACKET);
 
