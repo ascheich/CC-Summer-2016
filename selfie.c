@@ -390,7 +390,7 @@ int reportUndefinedProcedures();
 // |  5 | value   | VARIABLE: initial value
 // |  6 | address | VARIABLE: offset, PROCEDURE: address, STRING: offset
 // |  7 | scope   | REG_GP, REG_FP
-// |  8 | size    | 
+// |  8 | size    | length of
 // +----+---------+
 
 int* getNextEntry(int* entry) { return (int*) *entry; }
@@ -2563,6 +2563,7 @@ int gr_factor(int* constantVal) {
   int hasCast;
   int cast;
   int type;
+  int* entry;
 
   int* variableOrProcedureName;
 
@@ -2667,15 +2668,19 @@ int gr_factor(int* constantVal) {
 
         type = gr_expression();
 
+        tfree(1);   //using literal for array selection now
+
         if (type != INT_T)
           typeWarning(INT_T, type);
 
         if (symbol == SYM_RBRACKET){
-          //PROLOG gr_factor array implementation
-          //pick correct place within memory
-          //maybe add new method
-
-          getSymbol();
+          entry = getVariable(variableOrProcedureName);
+          if (literal < 0)
+            syntaxErrorMessage((int*) "only positive integers as array selector allowed");
+          if (literal >= getSize(entry))
+            syntaxErrorMessage((int*) "array selector exceeds array size");
+          else
+            load_integer(*(entry + value + literal));
         } else
           syntaxErrorSymbol(SYM_RBRACKET);
 
