@@ -179,7 +179,7 @@ int* outputName = (int*) 0;
 int outputFD    = 1;
 // Variable for Testing Purposes
 int prolog_Test = 0;
-int testVal2 = 10;
+int testVal[2];
 int prologDebug = 0;
 
 // ------------------------- INITIALIZATION ------------------------
@@ -7018,16 +7018,15 @@ int main(int argc, int* argv) {
   print((int*)"Executing Testcalculations");
   println();
 
-  int array[2];
-  print((int*)"array[2] initiliazed");
-  array[0]=3;
-  array[1]=5;
+  print((int*)"testVal[2] initialized");
+  testVal[0]=3;
+  testVal[1]=5;
   println();
-  print((int*)"array[0] = ");
-  print(itoa(array[0],string_buffer,10,0,0));
+  print((int*)"testVal[0] = ");
+  print(itoa(testVal[0],string_buffer,10,0,0));
   println();
-  print((int*)"array[1] = ");
-  print(itoa(array[1],string_buffer,10,0,0));
+  print((int*)"testVal[1] = ");
+  print(itoa(testVal[1],string_buffer,10,0,0));
 
   println();
   // if (prolog_Test == 263)
