@@ -2679,8 +2679,9 @@ int gr_factor(int* constantVal) {
           if (literal >= getSize(entry))
             syntaxErrorMessage((int*) "array selector exceeds array size");
           else {
-            load_variable(getAddress(entry) - previousTemporary() * getType(entry));
-
+            talloc();
+            emitIFormat(OP_LW, (getAddress(entry) - previousTemporary() * getType(entry)), currentTemporary(), 0);
+            emitIFormat(OP_ADDIU, currentTemporary(), previousTemporary(), 0);
             tfree(1);
           }
         } else
@@ -3882,7 +3883,7 @@ void gr_cstar() {
         if (symbol == SYM_LPARENTHESIS)
           gr_procedure(variableOrProcedureName, type);
         else {
-          if (symbol == SYM_RBRACKET) {
+          if (symbol == SYM_LBRACKET) {
             getSymbol();
 
             type = gr_expression();
