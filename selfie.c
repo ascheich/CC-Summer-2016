@@ -179,9 +179,8 @@ int* outputName = (int*) 0;
 int outputFD    = 1;
 // Variable for Testing Purposes
 int prolog_Test = 0;
-int testVal2 = 10;
+int testVal[2];
 int prologDebug = 0;
-
 // ------------------------- INITIALIZATION ------------------------
 
 void initLibrary() {
@@ -7033,87 +7032,21 @@ int main(int argc, int* argv) {
   println();
 
   // TEST ENVIRONMENT
-  // print((int*)"Executing Testcalculations");
-  // println();
-
-  // prolog_Test global definiert
-  // testVal2 global definiert
-  prolog_Test = 20;
-  print((int*)"Original: ");
-  print(itoa(prolog_Test,string_buffer,10,0,0));
-  prolog_Test = prolog_Test * 2 - 10;
-  println();
-  print((int*)"Multiplicated (2) and substracted (10) should be 30: ");
-  print(itoa(prolog_Test,string_buffer,10,0,0));
-  println();
-  prolog_Test = prolog_Test + 10;
-  print((int*)"Added (10) should be 40: ");
-  print(itoa(prolog_Test,string_buffer,10,0,0));
-  println();
-  prolog_Test = prolog_Test / 2;
-  print((int*)"Divided (2) should be 20: ");
-  print(itoa(prolog_Test,string_buffer,10,0,0));
-  println();
-  prolog_Test = 8;
-  print((int*)"trying to compute 8+8 with(/out) constant folding should be 16: ");
-  prolog_Test = 8 + 8;
-  print(itoa(prolog_Test,string_buffer,10,0,0));
+  print((int*)"Executing Test");
   println();
 
-  prolog_Test = prolog_Test * 2 - 10 * 9;
-  print((int*)"Multiplicated (2) and substracted (10) and mult (9) should be -58: ");
-  print(itoa(prolog_Test,string_buffer,10,0,0));
+  print((int*)"testVal[2] initialized");
+  testVal[0]=3;
+  testVal[1]=5;
+  println();
+  print((int*)"testVal[0] = ");
+  print(itoa(testVal[0],string_buffer,10,0,0));
+  println();
+  print((int*)"testVal[1] = ");
+  print(itoa(testVal[1],string_buffer,10,0,0));
+
   println();
 
-  prolog_Test = prolog_Test + ((20 * 2) - 10/2 + 14*2) - 5;
-  print((int*)"Testing with constants (0): ");
-  print(itoa(prolog_Test,string_buffer,10,0,0));
-  println();
-
-  prolog_Test = prolog_Test + (testVal2 * 2) / (testVal2 - 5);
-  print((int*)"Testing with Variables (4): ");
-  print(itoa(prolog_Test,string_buffer,10,0,0));
-  println();
-
-  prologDebug = 0;
-
-  // prolog_Test = 20;
-  // print((int*)"Original: ");
-  // print(itoa(prolog_Test,string_buffer,10,0,0));
-  // println();
-  //
-  // prolog_Test = prolog_Test * 2 - 10;
-  // print((int*)"Multiplicated (2) and substracted (10) should be 30: ");
-  // print(itoa(prolog_Test,string_buffer,10,0,0));
-  // println();
-  //
-  // prolog_Test = prolog_Test * 2 - 10 * 9;
-  // print((int*)"Multiplicated (2) and substracted (10) and mult (9) should be -30: ");
-  // print(itoa(prolog_Test,string_buffer,10,0,0));
-  // println();
-  //
-  // prolog_Test = prolog_Test + ((20 * 2) - 10/2 + 14*2) - 4;
-  // print((int*)"Testing with constants should be 29: ");
-  // print(itoa(prolog_Test,string_buffer,10,0,0));
-  // println();
-  //
-  // prolog_Test = 1 * 2 * 4;
-  // print((int*)"Testing with constants should be 8: ");
-  // print(itoa(prolog_Test,string_buffer,10,0,0));
-  // println();
-  //
-  // // testVal2 global definiert
-  // // testVal2 = 10
-  // prolog_Test = prolog_Test + testVal2 * testVal2;
-  // print((int*)"Addition of Variables should be 108:");
-  // print(itoa(prolog_Test,string_buffer,10,0,0));
-  // println();
-  //
-  // prolog_Test = prolog_Test + (20 * 14 - 1000 / 8);
-  // print((int*)"This one should be 263: ");
-  // print(itoa(prolog_Test,string_buffer,10,0,0));
-  // println();
-  //
   // if (prolog_Test == 263)
   // {
   //   print((int*)"Checking in a if for equal: ");
@@ -7133,9 +7066,9 @@ int main(int argc, int* argv) {
   //   prolog_Test = prolog_Test -1;
   // }
   //
-  // print((int*) "End of Test.");
-  // println();
-  // println();
+   print((int*) "End of Test.");
+   println();
+   println();
 //  END OF TEST ENVIRONMENT
 
 
