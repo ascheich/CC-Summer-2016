@@ -3886,29 +3886,26 @@ void gr_cstar() {
           if (symbol == SYM_LBRACKET) {
             getSymbol();
 
-            type = gr_expression();
-
-            if (type != INT_T)
-              typeWarning(INT_T, type);
-
             if (symbol == SYM_RBRACKET){
               allocatedMemory = allocatedMemory + literal * SIZEOFINT;
               createSymbolTableEntry(GLOBAL_TABLE, literal, lineNumber, VARIABLE, type, 0, -allocatedMemory);
-              // PROLOG allocate memory accordingly and
-              // save to global symbol table
 
               getSymbol();
-            } else
-              syntaxErrorSymbol(SYM_RBRACKET);
+            } else {
 
+              type = gr_expression();
 
+              if (type != INT_T)
+                typeWarning(INT_T, type);
 
-          // PROLOG maybe-todo: add array initialization:
-          // else if (symbol == SYM_ASSIGN){ blabla}
-          // todo: remove mentioned if-condition within gr_initialization
-          // and create gr_arrayInitialization similarly
-          // then last else-branch (gr_init.-call) should be before
-          // this else-branch (simple variable declaration)
+              if (symbol == SYM_RBRACKET) {
+                allocatedMemory = allocatedMemory + literal * SIZEOFINT;
+                createSymbolTableEntry(GLOBAL_TABLE, literal, lineNumber, VARIABLE, type, 0, -allocatedMemory);
+
+                getSymbol();
+              } else
+                syntaxErrorSymbol(SYM_RBRACKET);
+            }
           } else {
             allocatedMemory = allocatedMemory + WORDSIZE;
 
