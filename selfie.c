@@ -3610,6 +3610,11 @@ void gr_variable(int offset) {
   int type;
   int selectorType;
 
+  int* entry;
+  int* constantVal;
+  constantVal = malloc(2 * SIZEOFINT);
+  *constantVal = 0;
+
   type = gr_type();
 
   if (symbol == SYM_IDENTIFIER) {
