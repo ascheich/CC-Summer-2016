@@ -178,7 +178,7 @@ int S_IRUSR_IWUSR_IRGRP_IROTH = 420; // flags for rw-r--r-- file permissions
 int* outputName = (int*) 0;
 int outputFD    = 1;
 // Variable for Testing Purposes
-int prolog_Test = 0;
+int prolog_Test = 42;
 int testVal[2];
 int prologDebug = 0;
 // --------------------g----- INITIALIZATION ------------------------
@@ -7080,14 +7080,19 @@ int main(int argc, int* argv) {
   println();
 
   print((int*)"testVal[2] initialized");
-  //testVal[0]=3;
-  //testVal[1]=5;
   println();
-  print((int*)"testVal[0] = ");
-  print(itoa(testVal[0],string_buffer,10,0,0));
+  print(itoa(prolog_Test,string_buffer,10,0,0));
+//  testVal[0]=3;
+//  testVal[1]=5;
+  prolog_Test = testVal[0];
   println();
-  print((int*)"testVal[1] = ");
-  print(itoa(testVal[1],string_buffer,10,0,0));
+  print(itoa(prolog_Test,string_buffer,10,0,0));
+  println();
+//  print((int*)"testVal[0] = ");
+//  print(itoa(testVal[0],string_buffer,10,0,0));
+//  println();
+//  print((int*)"testVal[1] = ");
+//  print(itoa(testVal[1],string_buffer,10,0,0));
 
   println();
 
