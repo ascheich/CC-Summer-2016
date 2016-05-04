@@ -2669,8 +2669,6 @@ int gr_factor(int* constantVal) {
 
         type = gr_expression();
 
-        tfree(1);   //using literal for array selection now
-
         if (type != INT_T)
           typeWarning(INT_T, type);
 
@@ -2680,9 +2678,11 @@ int gr_factor(int* constantVal) {
             syntaxErrorMessage((int*) "only positive integers as array selector allowed");
           if (literal >= getSize(entry))
             syntaxErrorMessage((int*) "array selector exceeds array size");
-          else
-            //PROLOG maybe change -literal to +literal
-            load_integer((getAddress(entry) - literal * SIZEOFINT));
+          else {
+            load_variable(getAddress(entry) - previousTemporary() * getType(entry));
+
+            tfree(1);
+          }
         } else
           syntaxErrorSymbol(SYM_RBRACKET);
 
