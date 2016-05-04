@@ -3621,25 +3621,51 @@ void gr_variable(int offset) {
   if (symbol == SYM_IDENTIFIER) {
     getSymbol();
 
-    if (symbol == SYM_LBRACKET){
+    if (0){
+      getSymbol();
 
-      selectorType = gr_expression();
+      allocatedMemory = allocatedMemory + WORDSIZE;
 
-      if (selectorType != INT_T)
-        typeWarning(INT_T,selectorType);
+      if (type == INT_T)
+        type = INT_ARRAY_T;
+      else if (type == INTSTAR_T)
+        type = INTSTAR_ARRAY_T;
+
+      createSymbolTableEntry(GLOBAL_TABLE, identifier, lineNumber, VARIABLE, type, 0, -allocatedMemory);
+      entry = getSymbolTableEntry(identifier, VARIABLE);
 
       if (symbol == SYM_RBRACKET){
         getSymbol();
-        // PROLOG array declaration in local symbol table
-
-      } else
-        syntaxErrorSymbol(SYM_RBRACKET);
-    }
+        //PROLOG array initialization
+        // e.g.: int array[] = {1,2,3,4,5};
 
 
+        if (symbol != SYM_SEMICOLON)
+          syntaxErrorSymbol(SYM_SEMICOLON);
+        getSymbol();
+      } else {
+        gr_simpleExpression(constantVal);
 
+        if (symbol == SYM_RBRACKET) {
+          getSymbol();
+          if (*(constantVal + 1) == 1) {
+            if (type == INT_ARRAY_T){
+              type = SIZEOFINT;
+            } else
+              type = SIZEOFINTSTAR;
 
-      else
+            allocatedMemory = allocatedMemory + *constantVal * type - 1;
+            setSize(entry, *constantVal);
+
+            if (symbol != SYM_SEMICOLON)
+              syntaxErrorSymbol(SYM_SEMICOLON);
+            getSymbol();
+          } else
+            syntaxErrorMessage((int*) "expected integer as array selector");
+        } else
+          syntaxErrorSymbol(SYM_RBRACKET);
+      }
+    } else
       createSymbolTableEntry(LOCAL_TABLE, identifier, lineNumber, VARIABLE, type, 0, offset);
   } else {
     syntaxErrorSymbol(SYM_IDENTIFIER);
@@ -7054,8 +7080,8 @@ int main(int argc, int* argv) {
   println();
 
   print((int*)"testVal[2] initialized");
-  testVal[0]=3;
-  testVal[1]=5;
+  //testVal[0]=3;
+  //testVal[1]=5;
   println();
   print((int*)"testVal[0] = ");
   print(itoa(testVal[0],string_buffer,10,0,0));
