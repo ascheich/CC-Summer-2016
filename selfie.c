@@ -181,7 +181,7 @@ int outputFD    = 1;
 int prolog_Test = 42;
 int testVal[2];
 int prologDebug = 0;
-// --------------------g----- INITIALIZATION ------------------------
+// ------------------------- INITIALIZATION ------------------------
 
 void initLibrary() {
   int i;
@@ -319,7 +319,7 @@ int sourceFD    = 0;        // file descriptor of open source file
 // ------------------------- INITIALIZATION ------------------------
 
 void initScanner () {
-  SYMBOLS = malloc(32 * SIZEOFINTSTAR);
+  SYMBOLS = malloc(33 * SIZEOFINTSTAR);
 
   *(SYMBOLS + SYM_IDENTIFIER)   = (int) "identifier";
   *(SYMBOLS + SYM_INTEGER)      = (int) "integer";
@@ -2667,7 +2667,7 @@ int gr_factor(int* constantVal) {
     } else if (symbol == SYM_LBRACKET) {
         getSymbol();
 
-        type = gr_expression();
+        type = gr_shiftExpression(constantVal);
 
         if (type != INT_T)
           typeWarning(INT_T, type);
@@ -2675,16 +2675,22 @@ int gr_factor(int* constantVal) {
         if (symbol == SYM_RBRACKET){
           getSymbol();
 
-          entry = getVariable(variableOrProcedureName);
-          if (literal < 0)
-            syntaxErrorMessage((int*) "only positive integers as array selector allowed");
-          if (literal >= getSize(entry))
-            syntaxErrorMessage((int*) "array selector exceeds array size");
-          else {
-            talloc();
-            emitIFormat(OP_LW, (getAddress(entry) - previousTemporary() * getType(entry)), currentTemporary(), 0);
-            emitIFormat(OP_ADDIU, currentTemporary(), previousTemporary(), 0);
-            tfree(1);
+          entry = getSymbolTableEntry(variableOrProcedureName, VARIABLE);
+
+          if (*(constantVal + 1) == 1) {
+            print((int*)"aopejnrgon");
+            if (*constantVal < 0)
+              syntaxErrorMessage((int*) "only positive integers as array selector allowed");
+            if (*constantVal >= getSize(entry))
+              syntaxErrorMessage((int*) "array selector exceeds array size");
+            else {
+              talloc();
+              emitIFormat(OP_LW, (getAddress(entry) - previousTemporary() * getType(entry)), currentTemporary(), 0);
+              emitIFormat(OP_ADDIU, currentTemporary(), previousTemporary(), 0);
+              tfree(1);
+            }
+          } else {
+
           }
         } else
           syntaxErrorSymbol(SYM_RBRACKET);
@@ -3660,8 +3666,10 @@ void gr_variable(int offset) {
             if (symbol != SYM_SEMICOLON)
               syntaxErrorSymbol(SYM_SEMICOLON);
             getSymbol();
-          } else
+          } else {
             syntaxErrorMessage((int*) "expected integer as array selector");
+            tfree(1);
+          }
         } else
           syntaxErrorSymbol(SYM_RBRACKET);
       }
@@ -3929,12 +3937,12 @@ void gr_cstar() {
           if (symbol == SYM_LBRACKET) {
             getSymbol();
 
-            allocatedMemory = allocatedMemory + WORDSIZE;
-
             if (type == INT_T)
               type = INT_ARRAY_T;
             else if (type == INTSTAR_T)
               type = INTSTAR_ARRAY_T;
+
+            allocatedMemory = allocatedMemory + roundUp(type, WORDSIZE);
 
             createSymbolTableEntry(GLOBAL_TABLE, variableOrProcedureName, lineNumber, VARIABLE, type, 0, -allocatedMemory);
             entry = getSymbolTableEntry(variableOrProcedureName, VARIABLE);
@@ -3949,7 +3957,7 @@ void gr_cstar() {
                 syntaxErrorSymbol(SYM_SEMICOLON);
               getSymbol();
             } else {
-              gr_simpleExpression(constantVal);
+              gr_shiftExpression(constantVal);
 
               if (symbol == SYM_RBRACKET) {
                 getSymbol();
@@ -3959,7 +3967,7 @@ void gr_cstar() {
                   } else
                     type = SIZEOFINTSTAR;
 
-                  allocatedMemory = allocatedMemory + *constantVal * type - 1;
+                  allocatedMemory = allocatedMemory + *constantVal * roundUp(type, WORDSIZE) - 1;
                   setSize(entry, *constantVal);
 
                   if (symbol != SYM_SEMICOLON)
