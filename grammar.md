@@ -27,7 +27,7 @@ call                          = identifier "(" [ expression { "," expression } ]
 
 literal                       = integer | "'" ascii_character "'" .
 
-selector                      = "[" expression "]" .
+selector                      = "[" [ expression ] "]" .
 
 integerList                     = "{" integer { "," integer } "}" .
 
@@ -65,11 +65,11 @@ statement                     = ( [ "*" ] identifier [ selector ] | "*" "(" expr
                                   if |
                                   return ";" .
 
-variable                      = type identifier [ selector | "=" integerList ] .
+variable                      = type identifier [ selector [ "=" integerList ] ] .
 
 procedure                     = "(" [ variable { "," variable } ] ")"
                                 ( ";" | "{" { variable ";" } { statement } "}" ) .
 
-cstar                         = { type identifier [ "=" ( ([ cast ] [ "-" ] literal) | integerList ) | selector ] ";" |
+cstar                         = { type identifier [ selector ] [ "=" ( ([ cast ] [ "-" ] literal) | integerList ) ] ";" |
                                 ( "void" | type ) identifier procedure } .
 ```
