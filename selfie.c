@@ -3892,6 +3892,8 @@ void gr_cstar() {
               typeWarning(INT_T, type);
 
             if (symbol == SYM_RBRACKET){
+              allocatedMemory = allocatedMemory + literal * SIZEOFINT;
+              createSymbolTableEntry(GLOBAL_TABLE, literal, lineNumber, VARIABLE, type, 0, -allocatedMemory);
               // PROLOG allocate memory accordingly and
               // save to global symbol table
 
