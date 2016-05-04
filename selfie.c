@@ -3907,19 +3907,19 @@ void gr_cstar() {
             entry = getSymbolTableEntry(variableOrProcedureName, VARIABLE);
 
             if (symbol == SYM_RBRACKET){
+              getSymbol();
               //PROLOG array initialization
               // e.g.: int array[] = {1,2,3,4,5};
 
-              getSymbol();
-              if (symbol == SYM_SEMICOLON)
-                getSymbol();
-              else
-                syntaxErrorSymbol(SYM_SEMICOLON);
-            } else {
 
+              if (symbol != SYM_SEMICOLON)
+                syntaxErrorSymbol(SYM_SEMICOLON);
+              getSymbol();
+            } else {
               gr_simpleExpression(constantVal);
 
               if (symbol == SYM_RBRACKET) {
+                getSymbol();
                 if (*(constantVal + 1) == 1) {
                   if (type == INT_ARRAY_T){
                     type = SIZEOFINT;
@@ -3929,16 +3929,11 @@ void gr_cstar() {
                   allocatedMemory = allocatedMemory + *constantVal * type - 1;
                   setSize(entry, *constantVal);
 
-                  getSymbol();
-
-                  if (symbol == SYM_SEMICOLON)
-                    getSymbol();
-                  else
+                  if (symbol != SYM_SEMICOLON)
                     syntaxErrorSymbol(SYM_SEMICOLON);
+                  getSymbol();
                 } else
                   syntaxErrorMessage((int*) "expected integer as array selector");
-
-                getSymbol();
               } else
                 syntaxErrorSymbol(SYM_RBRACKET);
             }
