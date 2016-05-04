@@ -2673,6 +2673,8 @@ int gr_factor(int* constantVal) {
           typeWarning(INT_T, type);
 
         if (symbol == SYM_RBRACKET){
+          getSymbol();
+
           entry = getVariable(variableOrProcedureName);
           if (literal < 0)
             syntaxErrorMessage((int*) "only positive integers as array selector allowed");
@@ -3632,7 +3634,12 @@ void gr_variable(int offset) {
 
       } else
         syntaxErrorSymbol(SYM_RBRACKET);
-    } else
+    }
+
+
+
+
+      else
       createSymbolTableEntry(LOCAL_TABLE, identifier, lineNumber, VARIABLE, type, 0, offset);
   } else {
     syntaxErrorSymbol(SYM_IDENTIFIER);
