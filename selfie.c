@@ -181,7 +181,7 @@ int outputFD    = 1;
 int prolog_Test = 0;
 int testVal[2];
 int prologDebug = 0;
-// ------------------------- INITIALIZATION ------------------------
+// --------------------g----- INITIALIZATION ------------------------
 
 void initLibrary() {
   int i;
@@ -3906,6 +3906,10 @@ void gr_cstar() {
               // e.g.: int array[] = {1,2,3,4,5};
 
               getSymbol();
+              if (symbol == SYM_SEMICOLON)
+                getSymbol();
+              else
+                syntaxErrorSymbol(SYM_SEMICOLON);
             } else {
 
               gr_simpleExpression(constantVal);
@@ -3919,6 +3923,13 @@ void gr_cstar() {
 
                   allocatedMemory = allocatedMemory + *constantVal * type - 1;
                   setSize(entry, *constantVal);
+
+                  getSymbol();
+
+                  if (symbol == SYM_SEMICOLON)
+                    getSymbol();
+                  else
+                    syntaxErrorSymbol(SYM_SEMICOLON);
                 } else
                   syntaxErrorMessage((int*) "expected integer as array selector");
 
