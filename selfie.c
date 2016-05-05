@@ -179,7 +179,8 @@ int* outputName = (int*) 0;
 int outputFD    = 1;
 // Variable for Testing Purposes
 int prolog_Test = 42;
-int testVal[1];
+int testVal[2];
+int testArr[10];
 int prologDebug = 0;
 // ------------------------- INITIALIZATION ------------------------
 
@@ -2578,6 +2579,8 @@ int gr_factor(int* constantVal) {
   int typeSize;
   int* entry;
 
+  int address;
+
   int* variableOrProcedureName;
 
   // assert: n = allocatedTemporaries
@@ -2687,7 +2690,7 @@ int gr_factor(int* constantVal) {
         if (symbol == SYM_RBRACKET){
           getSymbol();
 
-          entry = getSymbolTableEntry(variableOrProcedureName, VARIABLE);
+          entry = searchSymbolTable(global_symbol_table, variableOrProcedureName, ARRAY);
 
           if (*(constantVal + 1) == 1) {
             if (*constantVal < 0)
@@ -2695,11 +2698,13 @@ int gr_factor(int* constantVal) {
             if (*constantVal >= getSize(entry))
               syntaxErrorMessage((int*) "array selector exceeds array size");
             else {
-              tfree(1);
               talloc();
-              load_integer(getAddress(entry) + (*constantVal) * typeSize);
-              emitIFormat(OP_LW, currentTemporary(), previousTemporary(), 0);
-              tfree(1);
+              print(itoa(getAddress(entry),string_buffer,10,0,0));
+              println();
+              address = getAddress(entry) - *constantVal * typeSize;
+              print(itoa(address,string_buffer,10,0,0));
+              println();
+              emitIFormat(OP_LW, getScope(entry), currentTemporary(), address);
             }
           } else {
             load_integer(typeSize);
@@ -3868,6 +3873,7 @@ void gr_cstar() {
   int* variableOrProcedureName;
 
   int size;
+  int* entry;
   int* constantVal;
   constantVal = malloc(2 * SIZEOFINT);
   *constantVal = 0;
@@ -3934,6 +3940,7 @@ void gr_cstar() {
                     } else
                       syntaxErrorSymbol(SYM_INTEGER);
                   }
+
                   if (type == INT_T)
                     allocatedMemory = allocatedMemory + size * SIZEOFINT;
                   else
@@ -3959,12 +3966,18 @@ void gr_cstar() {
                 getSymbol();
                 if (*(constantVal + 1) == 1) {
                   if (*constantVal > 0) {
-                    if (type == INT_T)
-                      allocatedMemory = allocatedMemory + *constantVal * SIZEOFINT;
-                    else
-                      allocatedMemory = allocatedMemory  + *constantVal * SIZEOFINTSTAR;
 
-                    createSymbolTableEntry(GLOBAL_TABLE, variableOrProcedureName, lineNumber, ARRAY, type, 0, -allocatedMemory);
+                    createSymbolTableEntry(GLOBAL_TABLE, variableOrProcedureName, lineNumber, ARRAY, type, 0, 0);
+                    entry = searchSymbolTable(global_symbol_table, variableOrProcedureName, ARRAY);
+                    setSize(entry, *constantVal);
+
+                    if (type == INT_T) {
+                      setAddress(entry, - (allocatedMemory + SIZEOFINT));
+                      allocatedMemory = allocatedMemory + *constantVal * SIZEOFINT;
+                    } else {
+                      setAddress(entry, - (allocatedMemory + SIZEOFINTSTAR));
+                      allocatedMemory = allocatedMemory  + *constantVal * SIZEOFINTSTAR;
+                    }
 
                     if (symbol != SYM_SEMICOLON)
                       syntaxErrorSymbol(SYM_SEMICOLON);
@@ -4442,7 +4455,8 @@ void emitGlobalsStrings() {
   int i;
   int size;
   int type;
-  int address;
+
+  i = 0;
 
   entry = global_symbol_table;
 
@@ -4459,17 +4473,20 @@ void emitGlobalsStrings() {
     } else if (getClass(entry) == ARRAY) {
       size = getSize(entry);
       type = getType(entry);
-      address = getAddress(entry);
+      if (type == INT_T)
+        type = SIZEOFINT;
+      else
+        type = SIZEOFINTSTAR;
 
       while (i < size){
-        storeBinary(binaryLength, address + i);
-
-        if (type == INT_T)
-          binaryLength = binaryLength + SIZEOFINT;
-        else
-          binaryLength = binaryLength + SIZEOFINTSTAR;
+        storeBinary(binaryLength + i * type, 10);
         i = i + 1;
       }
+      if (type == SIZEOFINT)
+        binaryLength = binaryLength + size * SIZEOFINT;
+      else
+        binaryLength = binaryLength + size * SIZEOFINTSTAR;
+      i = 0;
     }
 
     entry = getNextEntry(entry);
@@ -7110,7 +7127,11 @@ int main(int argc, int* argv) {
   print(itoa(prolog_Test,string_buffer,10,0,0));
 //  testVal[0]=3;
 //  testVal[1]=5;
-  //prolog_Test = testVal[0];
+  prolog_Test = testVal[0];
+  println();
+  print(itoa(prolog_Test,string_buffer,10,0,0));
+  println();
+  prolog_Test = testVal[1] + testArr[0] - testArr[3] + testArr[4];
   println();
   print(itoa(prolog_Test,string_buffer,10,0,0));
   println();
