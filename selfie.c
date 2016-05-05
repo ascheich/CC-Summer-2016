@@ -3643,6 +3643,8 @@ void gr_variable(int offset) {
   int type;
   int selectorType;
 
+  int size;
+  int* variableOrProcedureName;
   int* entry;
   int* constantVal;
   constantVal = malloc(2 * SIZEOFINT);
@@ -3652,6 +3654,85 @@ void gr_variable(int offset) {
 
   if (symbol == SYM_IDENTIFIER) {
     getSymbol();
+
+    if (symbol == SYM_LBRACKET) {
+      getSymbol();
+
+      variableOrProcedureName = identifier;
+
+      // type identifier "[" "]" "=" "{" integer [ "," integer ] "}""
+      if (symbol == SYM_RBRACKET){
+        getSymbol();
+
+        if (symbol == SYM_ASSIGN){
+          getSymbol();
+
+          if (symbol == SYM_LBRACE) {
+            getSymbol();
+
+            while (isIntegerList()){
+              if (symbol == SYM_INTEGER) {
+                getSymbol();
+
+                size = size + 1;
+                if (symbol == SYM_COMMA)
+                  getSymbol();
+                else
+                  syntaxErrorSymbol(SYM_COMMA);
+              } else
+                syntaxErrorSymbol(SYM_INTEGER);
+            }
+
+            if (type == INT_T)
+              allocatedMemory = allocatedMemory + size * SIZEOFINT;
+            else
+              allocatedMemory = allocatedMemory + size * SIZEOFINTSTAR;
+
+            createSymbolTableEntry(GLOBAL_TABLE, variableOrProcedureName, lineNumber, ARRAY, type, 0, -allocatedMemory);
+
+            if (symbol == SYM_RBRACE) {
+              getSymbol();
+
+              if (symbol != SYM_SEMICOLON)
+                syntaxErrorSymbol(SYM_SEMICOLON);
+              getSymbol();
+            }
+          } else
+            syntaxErrorSymbol(SYM_LBRACE);
+        } else
+          syntaxErrorSymbol(SYM_ASSIGN);
+      } else {
+        gr_shiftExpression(constantVal);
+
+        if (symbol == SYM_RBRACKET) {
+          getSymbol();
+          if (*(constantVal + 1) == 1) {
+            if (*constantVal > 0) {
+
+              createSymbolTableEntry(LOCAL_TABLE, variableOrProcedureName, lineNumber, ARRAY, type, 0, 0);
+              entry = searchSymbolTable(global_symbol_table, variableOrProcedureName, ARRAY);
+              setSize(entry, *constantVal);
+
+              if (type == INT_T) {
+                setAddress(entry, - (allocatedMemory + SIZEOFINT));
+                allocatedMemory = allocatedMemory + *constantVal * SIZEOFINT;
+              } else {
+                setAddress(entry, - (allocatedMemory + SIZEOFINTSTAR));
+                allocatedMemory = allocatedMemory  + *constantVal * SIZEOFINTSTAR;
+              }
+
+              if (symbol != SYM_SEMICOLON)
+                syntaxErrorSymbol(SYM_SEMICOLON);
+
+              getSymbol();
+            } else
+              syntaxErrorMessage((int*) "arraysize must be greater than 0");
+          } else
+            syntaxErrorMessage((int*) "expected integer as array selector");
+        } else
+          syntaxErrorSymbol(SYM_RBRACKET);
+      }
+    }
     createSymbolTableEntry(LOCAL_TABLE, identifier, lineNumber, VARIABLE, type, 0, offset);
   } else {
     syntaxErrorSymbol(SYM_IDENTIFIER);
@@ -3971,11 +4052,13 @@ void gr_cstar() {
                     setSize(entry, *constantVal);
 
                     if (type == INT_T) {
-                      setAddress(entry, - (allocatedMemory + SIZEOFINT));
+                      // setAddress(entry, - (allocatedMemory + SIZEOFINT));
                       allocatedMemory = allocatedMemory + *constantVal * SIZEOFINT;
+                      setAddress(entry, - allocatedMemory);
                     } else {
-                      setAddress(entry, - (allocatedMemory + SIZEOFINTSTAR));
+                      // setAddress(entry, - (allocatedMemory + SIZEOFINTSTAR));
                       allocatedMemory = allocatedMemory  + *constantVal * SIZEOFINTSTAR;
+                      setAddress(entry, - allocatedMemory);
                     }
 
                     if (symbol != SYM_SEMICOLON)
