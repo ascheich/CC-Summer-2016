@@ -2345,7 +2345,7 @@ void typeWarning(int expected, int found) {
   println();
 }
 
-int* getVariable(int*constantVal, int* variable) {
+int* getVariable(int* variable) {
   int* entry;
 
   entry = getSymbolTableEntry(variable, VARIABLE);
@@ -3610,36 +3610,41 @@ void gr_statement() {
 
       gr_shiftExpression(constantVal);
 
-      if (symbol == SYM_INTEGER)  {
+      if (symbol == SYM_RBRACKET) {
         getSymbol();
+
         if (symbol == SYM_ASSIGN)  {
           getSymbol();
-            entry = getVariable(variableOrProcedureName);
 
-            ltype = getType(entry);
+          entry = getVariable(variableOrProcedureName);
 
-            getSymbol();
+          ltype = getType(entry);
 
-            rtype = gr_expression(constantVal);
+          rtype = gr_expression();
 
-            if (ltype != rtype)
-              typeWarning(ltype, rtype);
+          if (ltype != rtype)
+            typeWarning(ltype, rtype);
 
-            emitIFormat(OP_ADDIU, REG_ZR, nextTemporary(), WORDSIZE);//statement_array
-            emitRFormat(OP_SPECIAL, previousTemporary(), nextTemporary(), 0, FCT_MULTU);
-            emitRFormat(OP_SPECIAL, 0, 0, previousTemporary(), FCT_MFLO);
-            emitIFormat(OP_ADDIU, previousTemporary(), previousTemporary(), -getAddress(entry));
-            emitRFormat(OP_SPECIAL, getScope(entry), previousTemporary(), previousTemporary(), FCT_SUBU);
-            emitIFormat(OP_SW, previousTemporary(), currentTemporary(), 0);
-            tfree(2);
+          if (ltype == INT_T)
+            ltype = SIZEOFINT;
+          else
+            ltype = SIZEOFINTSTAR;
 
-            if (symbol == SYM_SEMICOLON)
-              getSymbol();
-            else
-              syntaxErrorSymbol(SYM_SEMICOLON);
+          if (*(constantVal + 1) == 1) {
+            talloc();
+            emitIFormat(OP_SW, getScope(entry), previousTemporary(), getAddress(entry) - *constantVal * ltype);
+          } else {
+
           }
-        }
-      }
+
+          if (symbol == SYM_SEMICOLON)
+            getSymbol();
+          else
+            syntaxErrorSymbol(SYM_SEMICOLON);
+        } else
+          syntaxErrorSymbol(SYM_ASSIGN);
+      } else
+        syntaxErrorSymbol(SYM_RBRACKET);
     } else
       syntaxErrorUnexpected();
   }
