@@ -2345,7 +2345,7 @@ void typeWarning(int expected, int found) {
   println();
 }
 
-int* getVariable(int* variable) {
+int* getVariable(int*constantVal, int* variable) {
   int* entry;
 
   entry = getSymbolTableEntry(variable, VARIABLE);
@@ -3480,6 +3480,10 @@ void gr_statement() {
   int* variableOrProcedureName;
   int* entry;
 
+  int* constantVal;
+  constantVal = malloc(2 * SIZEOFINT);
+  *constantVal = 0;
+
   // assert: allocatedTemporaries == 0;
 
   while (lookForStatement()) {
@@ -3603,21 +3607,36 @@ void gr_statement() {
         syntaxErrorSymbol(SYM_SEMICOLON);
     } else if (symbol == SYM_LBRACKET)  {
       getSymbol();
+
+      gr_shiftExpression(constantVal);
+
       if (symbol == SYM_INTEGER)  {
         getSymbol();
-        if (symbol == SYM_RBRACKET)  {
+        if (symbol == SYM_ASSIGN)  {
           getSymbol();
-          if (symbol == SYM_ASSIGN)  {
+            entry = getVariable(variableOrProcedureName);
+
+            ltype = getType(entry);
+
             getSymbol();
-            if (symbol == SYM_INTEGER)  {
+
+            rtype = gr_expression(constantVal);
+
+            if (ltype != rtype)
+              typeWarning(ltype, rtype);
+
+            emitIFormat(OP_ADDIU, REG_ZR, nextTemporary(), WORDSIZE);//statement_array
+            emitRFormat(OP_SPECIAL, previousTemporary(), nextTemporary(), 0, FCT_MULTU);
+            emitRFormat(OP_SPECIAL, 0, 0, previousTemporary(), FCT_MFLO);
+            emitIFormat(OP_ADDIU, previousTemporary(), previousTemporary(), -getAddress(entry));
+            emitRFormat(OP_SPECIAL, getScope(entry), previousTemporary(), previousTemporary(), FCT_SUBU);
+            emitIFormat(OP_SW, previousTemporary(), currentTemporary(), 0);
+            tfree(2);
+
+            if (symbol == SYM_SEMICOLON)
               getSymbol();
-
-              if (symbol == SYM_SEMICOLON)
-                getSymbol();
-              else
-                syntaxErrorSymbol(SYM_SEMICOLON);
-
-            }
+            else
+              syntaxErrorSymbol(SYM_SEMICOLON);
           }
         }
       }
