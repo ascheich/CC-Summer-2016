@@ -2579,8 +2579,6 @@ int gr_factor(int* constantVal) {
   int typeSize;
   int* entry;
 
-  int address;
-
   int* variableOrProcedureName;
 
   // assert: n = allocatedTemporaries
@@ -2692,6 +2690,11 @@ int gr_factor(int* constantVal) {
 
           entry = searchSymbolTable(global_symbol_table, variableOrProcedureName, ARRAY);
 
+          if (getType(entry) == INT_T)
+            typeSize = SIZEOFINT;
+          else
+            typeSize = SIZEOFINTSTAR;
+
           if (*(constantVal + 1) == 1) {
             if (*constantVal < 0)
               syntaxErrorMessage((int*) "only positive integers as array selector allowed");
@@ -2699,14 +2702,10 @@ int gr_factor(int* constantVal) {
               syntaxErrorMessage((int*) "array selector exceeds array size");
             else {
               talloc();
-              print(itoa(getAddress(entry),string_buffer,10,0,0));
-              println();
-              address = getAddress(entry) - *constantVal * typeSize;
-              print(itoa(address,string_buffer,10,0,0));
-              println();
-              emitIFormat(OP_LW, getScope(entry), currentTemporary(), address);
+              emitIFormat(OP_LW, getScope(entry), currentTemporary(), getAddress(entry) - *constantVal * typeSize);
             }
           } else {
+            //PROLOG
             load_integer(typeSize);
             emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), 0, FCT_MULTU);
             emitRFormat(OP_SPECIAL, 0, 0, previousTemporary(), FCT_MFLO);
@@ -4479,7 +4478,7 @@ void emitGlobalsStrings() {
         type = SIZEOFINTSTAR;
 
       while (i < size){
-        storeBinary(binaryLength + i * type, 10);
+        storeBinary(binaryLength + i * type, 0);
         i = i + 1;
       }
       if (type == SIZEOFINT)
