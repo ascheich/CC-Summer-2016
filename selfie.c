@@ -179,7 +179,7 @@ int* outputName = (int*) 0;
 int outputFD    = 1;
 // Variable for Testing Purposes
 int prolog_Test = 42;
-int testVal[2];
+int testVal[1];
 int prologDebug = 0;
 // ------------------------- INITIALIZATION ------------------------
 
@@ -384,8 +384,8 @@ int reportUndefinedProcedures();
 // |  0 | next    | pointer to next entry
 // |  1 | string  | identifier string, string literal
 // |  2 | line#   | source line number
-// |  3 | class   | VARIABLE, PROCEDURE, STRING
-// |  4 | type    | INT_T, INTSTAR_T, VOID_T, INT_ARRAY_T, INTSTAR_ARRAY_T
+// |  3 | class   | VARIABLE, PROCEDURE, STRING, ARRAY
+// |  4 | type    | INT_T, INTSTAR_T, VOID_T
 // |  5 | value   | VARIABLE: initial value
 // |  6 | address | VARIABLE: offset, PROCEDURE: address, STRING: offset
 // |  7 | scope   | REG_GP, REG_FP
@@ -418,13 +418,12 @@ void setSize(int* entry, int size)        { *(entry + 8) = size; }
 int VARIABLE  = 1;
 int PROCEDURE = 2;
 int STRING    = 3;
+int ARRAY     = 4;
 
 // types
 int INT_T           = 1;
 int INTSTAR_T       = 2;
 int VOID_T          = 3;
-int INT_ARRAY_T     = 4;
-int INTSTAR_ARRAY_T = 5;
 
 // symbol tables
 int GLOBAL_TABLE  = 1;
@@ -456,6 +455,9 @@ int isLiteral();
 int isStarOrDivOrModulo();
 int isPlusOrMinus();
 int isComparison();
+
+int isShift();
+int isIntegerList();
 
 int lookForFactor();
 int lookForStatement();
@@ -2166,6 +2168,15 @@ int isShift() {
     return 0;
 }
 
+int isIntegerList() {
+  if (symbol == SYM_INTEGER)
+    return 1;
+  else if (symbol == SYM_COMMA)
+    return 1;
+  else
+    return 0;
+}
+
 int lookForFactor() {
   if (symbol == SYM_LPARENTHESIS)
     return 0;
@@ -2564,6 +2575,7 @@ int gr_factor(int* constantVal) {
   int hasCast;
   int cast;
   int type;
+  int typeSize;
   int* entry;
 
   int* variableOrProcedureName;
@@ -2678,19 +2690,29 @@ int gr_factor(int* constantVal) {
           entry = getSymbolTableEntry(variableOrProcedureName, VARIABLE);
 
           if (*(constantVal + 1) == 1) {
-            print((int*)"aopejnrgon");
             if (*constantVal < 0)
               syntaxErrorMessage((int*) "only positive integers as array selector allowed");
             if (*constantVal >= getSize(entry))
               syntaxErrorMessage((int*) "array selector exceeds array size");
             else {
+              tfree(1);
               talloc();
-              emitIFormat(OP_LW, (getAddress(entry) - previousTemporary() * getType(entry)), currentTemporary(), 0);
-              emitIFormat(OP_ADDIU, currentTemporary(), previousTemporary(), 0);
+              load_integer(getAddress(entry) + (*constantVal) * typeSize);
+              emitIFormat(OP_LW, currentTemporary(), previousTemporary(), 0);
               tfree(1);
             }
           } else {
+            load_integer(typeSize);
+            emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), 0, FCT_MULTU);
+            emitRFormat(OP_SPECIAL, 0, 0, previousTemporary(), FCT_MFLO);
+            tfree(1);
 
+            load_integer(getAddress(entry));
+            emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary(), previousTemporary(), FCT_ADDU);
+            tfree(1);
+
+            talloc();
+            emitIFormat(OP_LW, currentTemporary(), previousTemporary(), 0);
           }
         } else
           syntaxErrorSymbol(SYM_RBRACKET);
@@ -3626,55 +3648,7 @@ void gr_variable(int offset) {
 
   if (symbol == SYM_IDENTIFIER) {
     getSymbol();
-
-    if (0){
-      getSymbol();
-
-      allocatedMemory = allocatedMemory + WORDSIZE;
-
-      if (type == INT_T)
-        type = INT_ARRAY_T;
-      else if (type == INTSTAR_T)
-        type = INTSTAR_ARRAY_T;
-
-      createSymbolTableEntry(GLOBAL_TABLE, identifier, lineNumber, VARIABLE, type, 0, -allocatedMemory);
-      entry = getSymbolTableEntry(identifier, VARIABLE);
-
-      if (symbol == SYM_RBRACKET){
-        getSymbol();
-        //PROLOG array initialization
-        // e.g.: int array[] = {1,2,3,4,5};
-
-
-        if (symbol != SYM_SEMICOLON)
-          syntaxErrorSymbol(SYM_SEMICOLON);
-        getSymbol();
-      } else {
-        gr_simpleExpression(constantVal);
-
-        if (symbol == SYM_RBRACKET) {
-          getSymbol();
-          if (*(constantVal + 1) == 1) {
-            if (type == INT_ARRAY_T){
-              type = SIZEOFINT;
-            } else
-              type = SIZEOFINTSTAR;
-
-            allocatedMemory = allocatedMemory + *constantVal * type - 1;
-            setSize(entry, *constantVal);
-
-            if (symbol != SYM_SEMICOLON)
-              syntaxErrorSymbol(SYM_SEMICOLON);
-            getSymbol();
-          } else {
-            syntaxErrorMessage((int*) "expected integer as array selector");
-            tfree(1);
-          }
-        } else
-          syntaxErrorSymbol(SYM_RBRACKET);
-      }
-    } else
-      createSymbolTableEntry(LOCAL_TABLE, identifier, lineNumber, VARIABLE, type, 0, offset);
+    createSymbolTableEntry(LOCAL_TABLE, identifier, lineNumber, VARIABLE, type, 0, offset);
   } else {
     syntaxErrorSymbol(SYM_IDENTIFIER);
 
@@ -3893,7 +3867,7 @@ void gr_cstar() {
   int type;
   int* variableOrProcedureName;
 
-  int* entry;
+  int size;
   int* constantVal;
   constantVal = malloc(2 * SIZEOFINT);
   *constantVal = 0;
@@ -3934,45 +3908,70 @@ void gr_cstar() {
         if (symbol == SYM_LPARENTHESIS)
           gr_procedure(variableOrProcedureName, type);
         else {
+          // type identifier "[" ...
           if (symbol == SYM_LBRACKET) {
             getSymbol();
 
-            if (type == INT_T)
-              type = INT_ARRAY_T;
-            else if (type == INTSTAR_T)
-              type = INTSTAR_ARRAY_T;
-
-            allocatedMemory = allocatedMemory + roundUp(type, WORDSIZE);
-
-            createSymbolTableEntry(GLOBAL_TABLE, variableOrProcedureName, lineNumber, VARIABLE, type, 0, -allocatedMemory);
-            entry = getSymbolTableEntry(variableOrProcedureName, VARIABLE);
-
+            // type identifier "[" "]" "=" "{" integer [ "," integer ] "}""
             if (symbol == SYM_RBRACKET){
               getSymbol();
-              //PROLOG array initialization
-              // e.g.: int array[] = {1,2,3,4,5};
 
+              if (symbol == SYM_ASSIGN){
+                getSymbol();
 
-              if (symbol != SYM_SEMICOLON)
-                syntaxErrorSymbol(SYM_SEMICOLON);
-              getSymbol();
+                if (symbol == SYM_LBRACE) {
+                  getSymbol();
+
+                  while (isIntegerList){
+                    if (symbol == SYM_INTEGER) {
+                      getSymbol();
+
+                      size = size + 1
+                      if (symbol == SYM_COMMA)
+                        getSymbol();
+                      else
+                        syntaxErrorSymbol(SYM_COMMA);
+                    } else
+                      syntaxErrorSymbol(SYM_INTEGER);
+                  }
+                  if (type == INT_T)
+                    allocatedMemory = allocatedMemory + size * SIZEOFINT;
+                  else
+                    allocatedMemory = allocatedMemory + size * SIZEOFINTSTAR;
+
+                  createSymbolTableEntry(GLOBAL_TABLE, variableOrProcedureName, lineNumber, ARRAY, type, 0, -allocatedMemory);
+
+                  if (symbol == SYM_RBRACE) {
+                    getSymbol();
+
+                    if (symbol != SYM_SEMICOLON)
+                      syntaxErrorSymbol(SYM_SEMICOLON);
+                    getSymbol();
+                  }
+                } else
+                  syntaxErrorSymbol(SYM_LBRACE);
+              } else
+                syntaxErrorSymbol(SYM_ASSIGN);
             } else {
               gr_shiftExpression(constantVal);
 
               if (symbol == SYM_RBRACKET) {
                 getSymbol();
                 if (*(constantVal + 1) == 1) {
-                  if (type == INT_ARRAY_T){
-                    type = SIZEOFINT;
+                  if (*constantVal > 0) {
+                    if (type == INT_T)
+                      allocatedMemory = allocatedMemory + *constantVal) * SIZEOFINT;
+                    else
+                      allocatedMemory = allocatedMemory  + *constantVal * SIZEOFINTSTAR;
+
+                    createSymbolTableEntry(GLOBAL_TABLE, variableOrProcedureName, lineNumber, ARRAY, type, 0, -allocatedMemory);
+
+                    if (symbol != SYM_SEMICOLON)
+                      syntaxErrorSymbol(SYM_SEMICOLON);
+
+                    getSymbol();
                   } else
-                    type = SIZEOFINTSTAR;
-
-                  allocatedMemory = allocatedMemory + *constantVal * roundUp(type, WORDSIZE) - 1;
-                  setSize(entry, *constantVal);
-
-                  if (symbol != SYM_SEMICOLON)
-                    syntaxErrorSymbol(SYM_SEMICOLON);
-                  getSymbol();
+                    syntaxErrorMessage((int*) "arraysize must be greater than 0");
                 } else
                   syntaxErrorMessage((int*) "expected integer as array selector");
               } else
@@ -4440,6 +4439,10 @@ int copyStringToBinary(int* s, int baddr) {
 
 void emitGlobalsStrings() {
   int* entry;
+  int i;
+  int size;
+  int type;
+  int address;
 
   entry = global_symbol_table;
 
@@ -4451,8 +4454,23 @@ void emitGlobalsStrings() {
       storeBinary(binaryLength, getValue(entry));
 
       binaryLength = binaryLength + WORDSIZE;
-    } else if (getClass(entry) == STRING)
+    } else if (getClass(entry) == STRING) {
       binaryLength = copyStringToBinary(getString(entry), binaryLength);
+    } else if (getClass(entry) == ARRAY) {
+      size = getSize(entry);
+      type = getType(entry);
+      address = getAddress(entry);
+
+      while (i < size){
+        storeBinary(binaryLength, address + i);
+
+        if (type == INT_T)
+          binaryLength = binaryLength + SIZEOFINT;
+        else
+          binaryLength = binaryLength + SIZEOFINTSTAR;
+        i = i + 1;
+      }
+    }
 
     entry = getNextEntry(entry);
   }
@@ -7087,12 +7105,12 @@ int main(int argc, int* argv) {
   print((int*)"Executing Test");
   println();
 
-  print((int*)"testVal[2] initialized");
-  println();
+  //print((int*)"testVal[2] initialized");
+  //println();
   print(itoa(prolog_Test,string_buffer,10,0,0));
 //  testVal[0]=3;
 //  testVal[1]=5;
-  prolog_Test = testVal[0];
+  //prolog_Test = testVal[0];
   println();
   print(itoa(prolog_Test,string_buffer,10,0,0));
   println();
