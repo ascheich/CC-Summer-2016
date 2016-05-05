@@ -180,7 +180,7 @@ int outputFD    = 1;
 // Variable for Testing Purposes
 int prolog_Test = 42;
 int testVal[2];
-int testArr[10];
+int testArr[16];
 int prologDebug = 0;
 // ------------------------- INITIALIZATION ------------------------
 
@@ -2688,7 +2688,9 @@ int gr_factor(int* constantVal) {
         if (symbol == SYM_RBRACKET){
           getSymbol();
 
-          entry = searchSymbolTable(global_symbol_table, variableOrProcedureName, ARRAY);
+          entry = searchSymbolTable(local_symbol_table, variableOrProcedureName, ARRAY);
+          if (entry == (int*) 0)
+            entry = searchSymbolTable(global_symbol_table, variableOrProcedureName, ARRAY);
 
           if (getType(entry) == INT_T)
             typeSize = SIZEOFINT;
@@ -2705,24 +2707,15 @@ int gr_factor(int* constantVal) {
               emitIFormat(OP_LW, getScope(entry), currentTemporary(), getAddress(entry) - *constantVal * typeSize);
             }
           } else {
-            //PROLOG
             load_integer(typeSize);
             emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), 0, FCT_MULTU);
             emitRFormat(OP_SPECIAL, 0, 0, previousTemporary(), FCT_MFLO);
-
-
-            // emitIFormat(OP_ADDIU, currentTemporary(), currentTemporary(), -getAddress(entry));
-            // emitRFormat(OP_SPECIAL, getScope(entry), currentTemporary(), currentTemporary(), FCT_SUBU);
-            // emitIFormat(OP_LW, currentTemporary(), currentTemporary(), 0);
-
             tfree(1);
-
             load_integer(getAddress(entry));
-            emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary(), previousTemporary(), FCT_ADDU);
+            emitRFormat(OP_SPECIAL, currentTemporary(entry), previousTemporary(), previousTemporary(), FCT_SUBU);
             tfree(1);
-
-            talloc();
-            emitIFormat(OP_LW, currentTemporary(), previousTemporary(), 0);
+            emitRFormat(OP_SPECIAL, getScope(entry), currentTemporary(), currentTemporary(), FCT_ADDU);
+            emitIFormat(OP_LW, currentTemporary(), currentTemporary(), 0);
           }
         } else
           syntaxErrorSymbol(SYM_RBRACKET);
@@ -3616,7 +3609,10 @@ void gr_statement() {
         if (symbol == SYM_ASSIGN)  {
           getSymbol();
 
-          entry = getVariable(variableOrProcedureName);
+
+          entry = searchSymbolTable(local_symbol_table, variableOrProcedureName, ARRAY);
+          if (entry == (int*) 0)
+            entry = searchSymbolTable(global_symbol_table, variableOrProcedureName, ARRAY);
 
           ltype = getType(entry);
 
@@ -3634,7 +3630,16 @@ void gr_statement() {
             talloc();
             emitIFormat(OP_SW, getScope(entry), previousTemporary(), getAddress(entry) - *constantVal * ltype);
           } else {
-
+            load_integer(ltype);
+            tfree(1);
+            emitRFormat(OP_SPECIAL, previousTemporary(), nextTemporary(), 0, FCT_MULTU);
+            emitRFormat(OP_SPECIAL, 0, 0, previousTemporary(), FCT_MFLO);
+            load_integer(getAddress(entry));
+            tfree(1);
+            emitRFormat(OP_SPECIAL, nextTemporary(entry), previousTemporary(), previousTemporary(), FCT_SUBU);
+            emitRFormat(OP_SPECIAL, getScope(entry), previousTemporary(), previousTemporary(), FCT_ADDU);
+            emitIFormat(OP_SW, previousTemporary(), currentTemporary(), 0);
+            tfree(2);
           }
 
           if (symbol == SYM_SEMICOLON)
@@ -7259,12 +7264,42 @@ int main(int argc, int* argv) {
   //testVal[0]=3;
   // testVal[1]=5;
   prolog_Test = testVal[0];
+  testArr[7] = 25;
   println();
   print(itoa(prolog_Test,string_buffer,10,0,0));
+  //prolog_Test = testVal[0] + testArr[0] - testArr[3] + testArr[4];
   println();
-  prolog_Test = testVal[1] + testArr[0] - testArr[3] + testArr[4];
+  print(itoa(testArr[0],string_buffer,10,0,0));
   println();
-  print(itoa(prolog_Test,string_buffer,10,0,0));
+  print(itoa(testArr[1],string_buffer,10,0,0));
+  println();
+  print(itoa(testArr[2],string_buffer,10,0,0));
+  println();
+  print(itoa(testArr[3],string_buffer,10,0,0));
+  println();
+  print(itoa(testArr[4],string_buffer,10,0,0));
+  println();
+  print(itoa(testArr[5],string_buffer,10,0,0));
+  println();
+  print(itoa(testArr[6],string_buffer,10,0,0));
+  println();
+  print(itoa(testArr[7],string_buffer,10,0,0));
+  println();
+  print(itoa(testArr[8],string_buffer,10,0,0));
+  println();
+  print(itoa(testArr[9],string_buffer,10,0,0));
+  println();
+  print(itoa(testArr[10],string_buffer,10,0,0));
+  println();
+  print(itoa(testArr[11],string_buffer,10,0,0));
+  println();
+  print(itoa(testArr[12],string_buffer,10,0,0));
+  println();
+  print(itoa(testArr[13],string_buffer,10,0,0));
+  println();
+  print(itoa(testArr[14],string_buffer,10,0,0));
+  println();
+  print(itoa(testArr[15],string_buffer,10,0,0));
   println();
 //  print((int*)"testVal[0] = ");
 //  print(itoa(testVal[0],string_buffer,10,0,0));
