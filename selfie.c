@@ -2572,20 +2572,6 @@ int gr_call(int* procedure) {
   return type;
 }
 
-int gr_selector(int* constantVal) {
-  int type;
-
-  type = gr_expression(constantVal);
-
-  if (symbol != SYM_RBRACKET) {
-    syntaxErrorUnexpected();
-  } else{
-    getSymbol();
-  }
-
-return type
-}
-
 int gr_factor(int* constantVal) {
   int hasCast;
   int cast;
@@ -3617,7 +3603,7 @@ void gr_statement() {
         syntaxErrorSymbol(SYM_SEMICOLON);
     } else if (symbol == SYM_LBRACKET)  {
       getSymbol();
-      if (symbol == SYM_INTEGER)  { 
+      if (symbol == SYM_INTEGER)  {
         getSymbol();
         if (symbol == SYM_RBRACKET)  {
           getSymbol();
@@ -3625,8 +3611,8 @@ void gr_statement() {
             getSymbol();
             if (symbol == SYM_INTEGER)  {
               getSymbol();
-              
-              if (symbol == SYM_SEMICOLON)    
+
+              if (symbol == SYM_SEMICOLON)
                 getSymbol();
               else
                 syntaxErrorSymbol(SYM_SEMICOLON);
@@ -3685,9 +3671,9 @@ void gr_variable(int offset) {
   int size;
   int* variableOrProcedureName;
   int* entry;
-  // int* constantVal;
-  // constantVal = malloc(2 * SIZEOFINT);
-  // *constantVal = 0;
+  int* constantVal;
+  constantVal = malloc(2 * SIZEOFINT);
+  *constantVal = 0;
 
   type = gr_type();
 
@@ -3753,11 +3739,11 @@ void gr_variable(int offset) {
               setSize(entry, *constantVal);
 
               if (type == INT_T) {
-                setAddress(entry, - (allocatedMemory + SIZEOFINT));
                 allocatedMemory = allocatedMemory + *constantVal * SIZEOFINT;
+                setAddress(entry, - allocatedMemory);
               } else {
-                setAddress(entry, - (allocatedMemory + SIZEOFINTSTAR));
                 allocatedMemory = allocatedMemory  + *constantVal * SIZEOFINTSTAR;
+                setAddress(entry, - allocatedMemory);
               }
 
               if (symbol != SYM_SEMICOLON)
