@@ -2572,6 +2572,20 @@ int gr_call(int* procedure) {
   return type;
 }
 
+int gr_selector(int* constantVal) {
+  int type;
+
+  type = gr_expression(constantVal);
+
+  if (symbol != SYM_RBRACKET) {
+    syntaxErrorUnexpected();
+  } else{
+    getSymbol();
+  }
+
+return type
+}
+
 int gr_factor(int* constantVal) {
   int hasCast;
   int cast;
@@ -2709,6 +2723,12 @@ int gr_factor(int* constantVal) {
             load_integer(typeSize);
             emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), 0, FCT_MULTU);
             emitRFormat(OP_SPECIAL, 0, 0, previousTemporary(), FCT_MFLO);
+
+
+            // emitIFormat(OP_ADDIU, currentTemporary(), currentTemporary(), -getAddress(entry));
+            // emitRFormat(OP_SPECIAL, getScope(entry), currentTemporary(), currentTemporary(), FCT_SUBU);
+            // emitIFormat(OP_LW, currentTemporary(), currentTemporary(), 0);
+
             tfree(1);
 
             load_integer(getAddress(entry));
@@ -2873,7 +2893,6 @@ int gr_term(int* constantVal) {
 
   return ltype;
 }
-
 
 int gr_simpleExpression(int* constantVal) {
   int sign;
@@ -3596,6 +3615,26 @@ void gr_statement() {
         getSymbol();
       else
         syntaxErrorSymbol(SYM_SEMICOLON);
+    } else if (symbol == SYM_LBRACKET)  {
+      getSymbol();
+      if (symbol == SYM_INTEGER)  { 
+        getSymbol();
+        if (symbol == SYM_RBRACKET)  {
+          getSymbol();
+          if (symbol == SYM_ASSIGN)  {
+            getSymbol();
+            if (symbol == SYM_INTEGER)  {
+              getSymbol();
+              
+              if (symbol == SYM_SEMICOLON)    
+                getSymbol();
+              else
+                syntaxErrorSymbol(SYM_SEMICOLON);
+
+            }
+          }
+        }
+      }
     } else
       syntaxErrorUnexpected();
   }
@@ -3644,9 +3683,9 @@ void gr_variable(int offset) {
   int selectorType;
 
   int* entry;
-  int* constantVal;
-  constantVal = malloc(2 * SIZEOFINT);
-  *constantVal = 0;
+  // int* constantVal;
+  // constantVal = malloc(2 * SIZEOFINT);
+  // *constantVal = 0;
 
   type = gr_type();
 
@@ -7124,8 +7163,8 @@ int main(int argc, int* argv) {
   //print((int*)"testVal[2] initialized");
   //println();
   print(itoa(prolog_Test,string_buffer,10,0,0));
-//  testVal[0]=3;
-//  testVal[1]=5;
+  //testVal[0]=3;
+  // testVal[1]=5;
   prolog_Test = testVal[0];
   println();
   print(itoa(prolog_Test,string_buffer,10,0,0));
