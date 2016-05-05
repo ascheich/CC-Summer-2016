@@ -3922,11 +3922,11 @@ void gr_cstar() {
                 if (symbol == SYM_LBRACE) {
                   getSymbol();
 
-                  while (isIntegerList){
+                  while (isIntegerList()){
                     if (symbol == SYM_INTEGER) {
                       getSymbol();
 
-                      size = size + 1
+                      size = size + 1;
                       if (symbol == SYM_COMMA)
                         getSymbol();
                       else
@@ -3960,7 +3960,7 @@ void gr_cstar() {
                 if (*(constantVal + 1) == 1) {
                   if (*constantVal > 0) {
                     if (type == INT_T)
-                      allocatedMemory = allocatedMemory + *constantVal) * SIZEOFINT;
+                      allocatedMemory = allocatedMemory + *constantVal * SIZEOFINT;
                     else
                       allocatedMemory = allocatedMemory  + *constantVal * SIZEOFINTSTAR;
 
