@@ -2677,7 +2677,8 @@ int gr_factor(int* constantVal) {
 
       // reset return register
       emitIFormat(OP_ADDIU, REG_ZR, REG_V0, 0);
-    } else if (symbol == SYM_LBRACKET) {
+    } else
+      if (symbol == SYM_LBRACKET) {
         getSymbol();
 
         // assert: allocatedTemporaries == n
@@ -2710,6 +2711,7 @@ int gr_factor(int* constantVal) {
               talloc();
               emitIFormat(OP_LW, getScope(entry), currentTemporary(), getAddress(entry) + *constantVal * typeSize);
             }
+            *(constantVal + 1) = 0;
           } else {
             // assert: allocatedTemporaries == n + 1
 
@@ -7289,7 +7291,7 @@ int main(int argc, int* argv) {
   prolog_Test = testArr[2];
   testArr[7] = 25;
   println();
-  print((int*) "prolog_Test(4): ");
+  print((int*) "prolog_Test: ");
   print(itoa(prolog_Test,string_buffer,10,0,0));
   prolog_Test = testVal[0] - testVal[1] + testArr[7];
   println();
