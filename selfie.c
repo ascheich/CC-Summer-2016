@@ -2714,15 +2714,16 @@ int gr_factor(int* constantVal) {
             *(constantVal + 1) = 0;
           } else {
             // assert: allocatedTemporaries == n + 1
-
             load_integer(typeSize);
             emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), 0, FCT_MULTU);
             emitRFormat(OP_SPECIAL, 0, 0, previousTemporary(), FCT_MFLO);
             tfree(1);
+
             load_integer(getAddress(entry));
-            emitRFormat(OP_SPECIAL, currentTemporary(entry), previousTemporary(), previousTemporary(), FCT_SUBU);
+            emitRFormat(OP_SPECIAL, currentTemporary(entry), previousTemporary(), previousTemporary(), FCT_ADDU);
             tfree(1);
-            emitRFormat(OP_SPECIAL, getScope(entry), currentTemporary(), currentTemporary(), FCT_ADDU);
+
+            emitIFormat(OP_ADDIU, currentTemporary(), currentTemporary(), getScope(entry));
             emitIFormat(OP_LW, currentTemporary(), currentTemporary(), 0);
           }
 
@@ -3654,9 +3655,9 @@ void gr_statement() {
               tfree(1);
               emitRFormat(OP_SPECIAL, 0, 0, previousTemporary(), FCT_MFLO);
               load_integer(getAddress(entry));
-              emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary() - 1, previousTemporary() - 1, FCT_SUBU);
+              emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary() - 1, previousTemporary() - 1, FCT_ADDU);
               tfree(1);
-              emitRFormat(OP_SPECIAL, getScope(entry), previousTemporary(), previousTemporary(), FCT_ADDU);
+              emitIFormat(OP_ADDIU, previousTemporary(), previousTemporary(), getScope(entry));
               emitIFormat(OP_SW, previousTemporary(), currentTemporary(), 0);
               tfree(1);
             }
@@ -7285,40 +7286,28 @@ int main(int argc, int* argv) {
   //print((int*)"testVal[2] initialized");
   //println();
   print(itoa(prolog_Test,string_buffer,10,0,0));
-  testVal[0]=3;
+  testVal[0]=10;
   testVal[1]=5;
   testArr[2] = 4;
   prolog_Test = testArr[2];
   testArr[7] = 25;
   println();
-  print((int*) "prolog_Test: ");
+  print((int*) "prolog_Test(4): ");
   print(itoa(prolog_Test,string_buffer,10,0,0));
-  prolog_Test = testVal[0] - testVal[1] + testArr[7];
+  prolog_Test = testVal[0] - testVal[1] * testArr[7];
   println();
-  print((int*) "prolog_Test(23): ");
+  print((int*) "prolog_Test(115): ");
   print(itoa(prolog_Test,string_buffer,10,0,0));
-
- print((int*)"testVal[0] = ");
- print(itoa(testVal[0],string_buffer,10,0,0));
- println();
- print((int*)"testVal[1] = ");
- print(itoa(testVal[1],string_buffer,10,0,0));
- prolog_Test = testVal[0] + testVal[1];
- println();
- print((int*)"testVal[0] + testVal[1] = ");
- print(itoa(prolog_Test,string_buffer,10,0,0));
- // println();
- // print((int*)"testVal[2] = ");
- // print(itoa(testVal[2],string_buffer,10,0,0));
- // println();
- // print((int*)"testVal[3] = ");
- // print(itoa(testVal[3],string_buffer,10,0,0));
- // println();
- // print((int*)"testVal[4] = ");
- // print(itoa(testVal[4],string_buffer,10,0,0));
-
- println();
-
+  println();
+  print((int*)"testVal[0] = ");
+  print(itoa(testVal[0],string_buffer,10,0,0));
+  println();
+  print((int*)"testVal[1] = ");
+  print(itoa(testVal[1],string_buffer,10,0,0));
+  prolog_Test = testVal[0] + testVal[1];
+  println();
+  print((int*)"testVal[0] + testVal[1] = ");
+  print(itoa(prolog_Test,string_buffer,10,0,0));
   // i = 0;
   // while (i < 16){
   //   println();
