@@ -7297,24 +7297,39 @@ int main(int argc, int* argv) {
   println();
   print((int*) "prolog_Test(23): ");
   print(itoa(prolog_Test,string_buffer,10,0,0));
-  //prolog_Test = testVal[0] + testArr[0] - testArr[3] + testArr[4];
+
+ print((int*)"testVal[0] = ");
+ print(itoa(testVal[0],string_buffer,10,0,0));
+ println();
+ print((int*)"testVal[1] = ");
+ print(itoa(testVal[1],string_buffer,10,0,0));
+ prolog_Test = testVal[0] + testVal[1];
+ println();
+ print((int*)"testVal[0] + testVal[1] = ");
+ print(itoa(prolog_Test,string_buffer,10,0,0));
+ // println();
+ // print((int*)"testVal[2] = ");
+ // print(itoa(testVal[2],string_buffer,10,0,0));
+ // println();
+ // print((int*)"testVal[3] = ");
+ // print(itoa(testVal[3],string_buffer,10,0,0));
+ // println();
+ // print((int*)"testVal[4] = ");
+ // print(itoa(testVal[4],string_buffer,10,0,0));
+
+ println();
+
   // i = 0;
   // while (i < 16){
   //   println();
-  //   print((int*) "prolog_Test: ");
-  //   prolog_Test = testArr[i];
-  //   print(itoa(prolog_Test,string_buffer,10,0,0));
+  //   print((int*) "testArr[");
+  //   print(itoa(i,string_buffer,10,0,0));
+  //   print((int*) "] = ");
+  //   print(itoa(testArr[i],string_buffer,10,0,0));
   //   i = i + 1;
   // }
 
-//  print((int*)"testVal[0] = ");
-//  print(itoa(testVal[0],string_buffer,10,0,0));
-//  println();
-//  print((int*)"testVal[1] = ");
-//  print(itoa(testVal[1],string_buffer,10,0,0));
-
   println();
-
   // if (prolog_Test == 263)
   // {
   //   print((int*)"Checking in a if for equal: ");
