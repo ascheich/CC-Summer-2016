@@ -180,7 +180,7 @@ int outputFD    = 1;
 // Variable for Testing Purposes
 int prolog_Test = 42;
 int testVal[2];
-int testArr[16];
+int testArr[8];
 int prologDebug = 0;
 // ------------------------- INITIALIZATION ------------------------
 
@@ -290,7 +290,7 @@ int SYM_SRLV          = 29; // >>
 int SYM_LBRACKET      = 30; // [
 int SYM_RBRACKET      = 31; // ]
 
-int* SYMBOLS; // array of strings representing symbols
+int SYMBOLS[32]; // array of strings representing symbols
 
 int maxIdentifierLength = 64; // maximum number of characters in an identifier
 int maxIntegerLength    = 10; // maximum number of characters in an integer
@@ -320,41 +320,39 @@ int sourceFD    = 0;        // file descriptor of open source file
 // ------------------------- INITIALIZATION ------------------------
 
 void initScanner () {
-  SYMBOLS = malloc(33 * SIZEOFINTSTAR);
+  SYMBOLS[SYM_IDENTIFIER]   = (int) "identifier";
+  SYMBOLS[SYM_INTEGER]      = (int) "integer";
+  SYMBOLS[SYM_VOID]         = (int) "void";
+  SYMBOLS[SYM_INT]          = (int) "int";
+  SYMBOLS[SYM_SEMICOLON]    = (int) ";";
+  SYMBOLS[SYM_IF]           = (int) "if";
+  SYMBOLS[SYM_ELSE]         = (int) "else";
+  SYMBOLS[SYM_PLUS]         = (int) "+";
+  SYMBOLS[SYM_MINUS]        = (int) "-";
+  SYMBOLS[SYM_ASTERISK]     = (int) "*";
+  SYMBOLS[SYM_DIV]          = (int) "/";
+  SYMBOLS[SYM_EQUALITY]     = (int) "==";
+  SYMBOLS[SYM_ASSIGN]       = (int) "=";
+  SYMBOLS[SYM_LPARENTHESIS] = (int) "(";
+  SYMBOLS[SYM_RPARENTHESIS] = (int) ")";
+  SYMBOLS[SYM_LBRACE]       = (int) "{";
+  SYMBOLS[SYM_RBRACE]       = (int) "}";
+  SYMBOLS[SYM_WHILE]        = (int) "while";
+  SYMBOLS[SYM_RETURN]       = (int) "return";
+  SYMBOLS[SYM_COMMA]        = (int) ",";
+  SYMBOLS[SYM_LT]           = (int) "<";
+  SYMBOLS[SYM_LEQ]          = (int) "<=";
+  SYMBOLS[SYM_GT]           = (int) ">";
+  SYMBOLS[SYM_GEQ]          = (int) ">=";
+  SYMBOLS[SYM_NOTEQ]        = (int) "!=";
+  SYMBOLS[SYM_MOD]          = (int) "%";
+  SYMBOLS[SYM_CHARACTER]    = (int) "character";
+  SYMBOLS[SYM_STRING]       = (int) "string";
 
-  *(SYMBOLS + SYM_IDENTIFIER)   = (int) "identifier";
-  *(SYMBOLS + SYM_INTEGER)      = (int) "integer";
-  *(SYMBOLS + SYM_VOID)         = (int) "void";
-  *(SYMBOLS + SYM_INT)          = (int) "int";
-  *(SYMBOLS + SYM_SEMICOLON)    = (int) ";";
-  *(SYMBOLS + SYM_IF)           = (int) "if";
-  *(SYMBOLS + SYM_ELSE)         = (int) "else";
-  *(SYMBOLS + SYM_PLUS)         = (int) "+";
-  *(SYMBOLS + SYM_MINUS)        = (int) "-";
-  *(SYMBOLS + SYM_ASTERISK)     = (int) "*";
-  *(SYMBOLS + SYM_DIV)          = (int) "/";
-  *(SYMBOLS + SYM_EQUALITY)     = (int) "==";
-  *(SYMBOLS + SYM_ASSIGN)       = (int) "=";
-  *(SYMBOLS + SYM_LPARENTHESIS) = (int) "(";
-  *(SYMBOLS + SYM_RPARENTHESIS) = (int) ")";
-  *(SYMBOLS + SYM_LBRACE)       = (int) "{";
-  *(SYMBOLS + SYM_RBRACE)       = (int) "}";
-  *(SYMBOLS + SYM_WHILE)        = (int) "while";
-  *(SYMBOLS + SYM_RETURN)       = (int) "return";
-  *(SYMBOLS + SYM_COMMA)        = (int) ",";
-  *(SYMBOLS + SYM_LT)           = (int) "<";
-  *(SYMBOLS + SYM_LEQ)          = (int) "<=";
-  *(SYMBOLS + SYM_GT)           = (int) ">";
-  *(SYMBOLS + SYM_GEQ)          = (int) ">=";
-  *(SYMBOLS + SYM_NOTEQ)        = (int) "!=";
-  *(SYMBOLS + SYM_MOD)          = (int) "%";
-  *(SYMBOLS + SYM_CHARACTER)    = (int) "character";
-  *(SYMBOLS + SYM_STRING)       = (int) "string";
-
-  *(SYMBOLS + SYM_SLLV)          = (int) "<<";
-  *(SYMBOLS + SYM_SRLV)          = (int) ">>";
-  *(SYMBOLS + SYM_LBRACKET)      = (int) "[";
-  *(SYMBOLS + SYM_RBRACKET)      = (int) "]";
+  SYMBOLS[SYM_SLLV]         = (int) "<<";
+  SYMBOLS[SYM_SRLV]         = (int) ">>";
+  SYMBOLS[SYM_LBRACKET]     = (int) "[";
+  SYMBOLS[SYM_RBRACKET]     = (int) "]";
 
   character = CHAR_EOF;
   symbol    = SYM_EOF;
@@ -1546,7 +1544,7 @@ void printSymbol(int symbol) {
   if (symbol == SYM_EOF)
     print((int*) "end of file");
   else
-    print((int*) *(SYMBOLS + symbol));
+    print((int*) SYMBOLS[symbol]);
 
   putCharacter(CHAR_DOUBLEQUOTE);
 }
@@ -1706,7 +1704,7 @@ int isNotDoubleQuoteOrEOF() {
 }
 
 int identifierStringMatch(int keyword) {
-  return stringCompare(identifier, (int*) *(SYMBOLS + keyword));
+  return stringCompare(identifier, (int*) SYMBOLS[keyword]);
 }
 
 int identifierOrKeyword() {
@@ -2709,18 +2707,20 @@ int gr_factor(int* constantVal) {
               syntaxErrorMessage((int*) "array selector exceeds array size");
             else {
               talloc();
-              emitIFormat(OP_LW, getScope(entry), currentTemporary(), getAddress(entry) + *constantVal * typeSize);
+              emitIFormat(OP_LW, getScope(entry), currentTemporary(), getAddress(entry) - *constantVal * typeSize);
             }
             *(constantVal + 1) = 0;
           } else {
+
             // assert: allocatedTemporaries == n + 1
+
             load_integer(typeSize);
             emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), 0, FCT_MULTU);
             emitRFormat(OP_SPECIAL, 0, 0, previousTemporary(), FCT_MFLO);
             tfree(1);
 
             load_integer(getAddress(entry));
-            emitRFormat(OP_SPECIAL, currentTemporary(entry), previousTemporary(), previousTemporary(), FCT_ADDU);
+            emitRFormat(OP_SPECIAL, currentTemporary(entry), previousTemporary(), previousTemporary(), FCT_SUBU);
             tfree(1);
 
             emitIFormat(OP_ADDIU, currentTemporary(), currentTemporary(), getScope(entry));
@@ -3646,20 +3646,25 @@ void gr_statement() {
               // assert: allocatedTemporaries = 1
 
               talloc();
-              emitIFormat(OP_SW, getScope(entry), previousTemporary(), getAddress(entry) + *constantVal * ltype);
+              emitIFormat(OP_SW, getScope(entry), previousTemporary(), getAddress(entry) - *constantVal * ltype);
+
+              // assert: allocatedTemporaries = 2
+
             } else {
+
               // assert: allocatedTemporaries = 2
 
               load_integer(ltype);
               emitRFormat(OP_SPECIAL, previousTemporary() - 1, currentTemporary(), 0, FCT_MULTU);
+              emitRFormat(OP_SPECIAL, 0, 0, previousTemporary() - 1, FCT_MFLO);
               tfree(1);
-              emitRFormat(OP_SPECIAL, 0, 0, previousTemporary(), FCT_MFLO);
+
               load_integer(getAddress(entry));
-              emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary() - 1, previousTemporary() - 1, FCT_ADDU);
+              emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary() - 1, previousTemporary() - 1, FCT_SUBU);
               tfree(1);
-              emitIFormat(OP_ADDIU, previousTemporary(), previousTemporary(), getScope(entry));
-              emitIFormat(OP_SW, previousTemporary(), currentTemporary(), 0);
-              tfree(1);
+
+              emitRFormat(OP_SPECIAL, previousTemporary(), getScope(entry), previousTemporary(), FCT_ADDU);
+              //emitIFormat(OP_SW, previousTemporary(), currentTemporary(), 0);
             }
             tfree(2);
 
@@ -3717,8 +3722,8 @@ int gr_type() {
 int gr_variable(int offset) {
   int type;
   int selectorType;
-
   int size;
+
   int* variableOrProcedureName;
   int* entry;
   int* constantVal;
@@ -3782,24 +3787,15 @@ int gr_variable(int offset) {
           if (*(constantVal + 1) == 1) {
             if (*constantVal > 0) {
               createSymbolTableEntry(LOCAL_TABLE, variableOrProcedureName, lineNumber, ARRAY, type, 0, offset);
-              entry = searchSymbolTable(global_symbol_table, variableOrProcedureName, ARRAY);
+              entry = searchSymbolTable(local_symbol_table, variableOrProcedureName, ARRAY);
               setSize(entry, *constantVal);
-
-              if (type == INT_T)
-                offset = *constantVal * SIZEOFINT;
-              else
-                offset = *constantVal * SIZEOFINTSTAR;
-
-              if (symbol != SYM_SEMICOLON)
-                syntaxErrorSymbol(SYM_SEMICOLON);
-              else {
-                getSymbol();
-                return offset;
-              }
+              offset = *constantVal;
             } else
               syntaxErrorMessage((int*) "arraysize must be greater than 0");
           } else
             syntaxErrorMessage((int*) "expected integer as array size");
+
+          return offset;
         } else
           syntaxErrorSymbol(SYM_RBRACKET);
       }
@@ -3812,7 +3808,7 @@ int gr_variable(int offset) {
     createSymbolTableEntry(LOCAL_TABLE, (int*) "missing variable name", lineNumber, VARIABLE, type, 0, offset);
     return 1;
   }
-  return offset;
+  return 1;
 }
 
 void gr_initialization(int* name, int offset, int type) {
@@ -3928,7 +3924,12 @@ void gr_procedure(int* procedure, int returnType) {
         // 8 bytes offset to skip frame pointer and link
         setAddress(entry, parameters * WORDSIZE + 2 * WORDSIZE);
 
-        parameters = parameters + 1;
+
+        if (getClass(entry) == ARRAY)
+          parameters = parameters + getSize(entry);
+        else
+          parameters = parameters + 1;
+
         entry      = getNextEntry(entry);
       }
 
@@ -3980,12 +3981,14 @@ void gr_procedure(int* procedure, int returnType) {
 
     getSymbol();
 
+    offset = 0;
     localVariables = 0;
 
     while (symbol == SYM_INT) {
       localVariables = localVariables + 1;
 
-      gr_variable(-localVariables * WORDSIZE);
+      offset = gr_variable(-localVariables * WORDSIZE);
+      localVariables = localVariables + offset - 1;
 
       if (symbol == SYM_SEMICOLON)
         getSymbol();
@@ -7262,6 +7265,21 @@ int selfie(int argc, int* argv) {
 
 int main(int argc, int* argv) {
   int i;
+  int j;
+  int k;
+  int localArr[8];
+  int x;
+  int y;
+  int arrLocal[16];
+  int z;
+
+  i = 0;
+  j = 0;
+  k = 0;
+  x = 0;
+  y = 0;
+  z = 0;
+
   initLibrary();
 
   initScanner();
@@ -7283,20 +7301,21 @@ int main(int argc, int* argv) {
   print((int*)"Executing Test");
   println();
 
-  //print((int*)"testVal[2] initialized");
-  //println();
+  print((int*) "prolog_Test: ");
   print(itoa(prolog_Test,string_buffer,10,0,0));
+  println();
+
   testVal[0]=10;
   testVal[1]=5;
   testArr[2] = 4;
+
   prolog_Test = testArr[2];
-  testArr[7] = 25;
-  println();
   print((int*) "prolog_Test(4): ");
   print(itoa(prolog_Test,string_buffer,10,0,0));
-  prolog_Test = testVal[0] - testVal[1] * testArr[7];
   println();
-  print((int*) "prolog_Test(115): ");
+
+  prolog_Test = testVal[0] - testVal[1] * testArr[2];
+  print((int*) "prolog_Test(-10): ");
   print(itoa(prolog_Test,string_buffer,10,0,0));
   println();
   print((int*)"testVal[0] = ");
@@ -7304,12 +7323,13 @@ int main(int argc, int* argv) {
   println();
   print((int*)"testVal[1] = ");
   print(itoa(testVal[1],string_buffer,10,0,0));
-  prolog_Test = testVal[0] + testVal[1];
   println();
+  prolog_Test = testVal[0] + testVal[1];
   print((int*)"testVal[0] + testVal[1] = ");
   print(itoa(prolog_Test,string_buffer,10,0,0));
-  // i = 0;
-  // while (i < 16){
+  println();
+
+  // while (i < 8){
   //   println();
   //   print((int*) "testArr[");
   //   print(itoa(i,string_buffer,10,0,0));
@@ -7317,30 +7337,48 @@ int main(int argc, int* argv) {
   //   print(itoa(testArr[i],string_buffer,10,0,0));
   //   i = i + 1;
   // }
+  println();
+  println();
+
+  localArr[0] = 4;
+  localArr[7] = 4;
+  arrLocal[0] = 4;
+  arrLocal[15] = 4;
+
+  print((int*)"localArr[0] = ");
+  print(itoa(localArr[0],string_buffer,10,0,0));
+  println();
+  print((int*)"localArr[7] = ");
+  print(itoa(localArr[7],string_buffer,10,0,0));
+  println();
+  print((int*)"arrLocal[0] = ");
+  print(itoa(arrLocal[0],string_buffer,10,0,0));
+  println();
+  print((int*)"arrLocal[15] = ");
+  print(itoa(arrLocal[15],string_buffer,10,0,0));
+
+  localArr[1] = arrLocal[0] * arrLocal[0];
+  println();
+  print((int*)"localArr[1] = arrLocal[0] * arrLocal[0] = 16:  ");
+  print(itoa(localArr[1],string_buffer,10,0,0));
+  localArr[1] = localArr[1] + localArr[7];
+  println();
+  print((int*)"localArr[1] = localArr[1] + localArr[7] = 20:  ");
+  print(itoa(localArr[1],string_buffer,10,0,0));
 
   println();
-  // if (prolog_Test == 263)
-  // {
-  //   print((int*)"Checking in a if for equal: ");
-  //   println();
-  // }
-  // else if(testVal2 != 10)
-  // {
-  //   print((int*)"Checking in a if for a non equal: ");
-  //   println();
-  // }
-  //
-  // while(prolog_Test >= 260){
-  //   print((int*)"While ");
-  //   print(itoa(prolog_Test,string_buffer,10,0,0));
-  //   print((int*)" != 260");
-  //   println();
-  //   prolog_Test = prolog_Test -1;
-  // }
-  //
-   print((int*) "End of Test.");
-   println();
-   println();
+  print((int*) "there should be 5 zeros (00000):  ");
+  print(itoa(j,string_buffer,10,0,0));
+  print(itoa(k,string_buffer,10,0,0));
+  print(itoa(x,string_buffer,10,0,0));
+  print(itoa(y,string_buffer,10,0,0));
+  print(itoa(z,string_buffer,10,0,0));
+  println();
+
+
+  print((int*) "End of Test.");
+  println();
+  println();
 //  END OF TEST ENVIRONMENT
 
 
