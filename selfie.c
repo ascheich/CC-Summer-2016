@@ -3678,13 +3678,13 @@ void gr_statement() {
 
               // assert: allocatedTemporaries = 2
 
-              emitRFormat(OP_SPECIAL, 0, previousTemporary() - 1, previousTemporary() - 1, ltype);
+              load_integer(ltype);
+              emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary() - 1, previousTemporary() - 1, FCT_SLLV);
+              tfree(1);
 
               load_integer(getAddress(entry));
               emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary() - 1, previousTemporary() - 1, FCT_SUBU);
               tfree(1);
-
-              print((int*)"TESTSCHEISSE");
 
               talloc();
               emitIFormat(OP_LW, getScope(entry), currentTemporary(), 0);
