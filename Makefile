@@ -20,6 +20,10 @@ test: selfie
 	diff -q selfie1.m selfie3.m
 	diff -q selfie1.s selfie3.s
 
+fast: clean selfie
+	./selfie -c selfie.c -o selfie1.m -m 2 -c selfie.c -o selfie2.m 
+	diff -q selfie1.m selfie2.m
+	
 # Clean up
 clean:
 	rm -rf *.m
