@@ -290,7 +290,7 @@ int SYM_SRLV          = 29; // >>
 int SYM_LBRACKET      = 30; // [
 int SYM_RBRACKET      = 31; // ]
 
-int SYMBOLS[32]; // array of strings representing symbols
+int* SYMBOLS; // array of strings representing symbols
 
 int maxIdentifierLength = 64; // maximum number of characters in an identifier
 int maxIntegerLength    = 10; // maximum number of characters in an integer
@@ -320,39 +320,41 @@ int sourceFD    = 0;        // file descriptor of open source file
 // ------------------------- INITIALIZATION ------------------------
 
 void initScanner () {
-  SYMBOLS[SYM_IDENTIFIER]   = (int) "identifier";
-  SYMBOLS[SYM_INTEGER]      = (int) "integer";
-  SYMBOLS[SYM_VOID]         = (int) "void";
-  SYMBOLS[SYM_INT]          = (int) "int";
-  SYMBOLS[SYM_SEMICOLON]    = (int) ";";
-  SYMBOLS[SYM_IF]           = (int) "if";
-  SYMBOLS[SYM_ELSE]         = (int) "else";
-  SYMBOLS[SYM_PLUS]         = (int) "+";
-  SYMBOLS[SYM_MINUS]        = (int) "-";
-  SYMBOLS[SYM_ASTERISK]     = (int) "*";
-  SYMBOLS[SYM_DIV]          = (int) "/";
-  SYMBOLS[SYM_EQUALITY]     = (int) "==";
-  SYMBOLS[SYM_ASSIGN]       = (int) "=";
-  SYMBOLS[SYM_LPARENTHESIS] = (int) "(";
-  SYMBOLS[SYM_RPARENTHESIS] = (int) ")";
-  SYMBOLS[SYM_LBRACE]       = (int) "{";
-  SYMBOLS[SYM_RBRACE]       = (int) "}";
-  SYMBOLS[SYM_WHILE]        = (int) "while";
-  SYMBOLS[SYM_RETURN]       = (int) "return";
-  SYMBOLS[SYM_COMMA]        = (int) ",";
-  SYMBOLS[SYM_LT]           = (int) "<";
-  SYMBOLS[SYM_LEQ]          = (int) "<=";
-  SYMBOLS[SYM_GT]           = (int) ">";
-  SYMBOLS[SYM_GEQ]          = (int) ">=";
-  SYMBOLS[SYM_NOTEQ]        = (int) "!=";
-  SYMBOLS[SYM_MOD]          = (int) "%";
-  SYMBOLS[SYM_CHARACTER]    = (int) "character";
-  SYMBOLS[SYM_STRING]       = (int) "string";
+  SYMBOLS = malloc(32 * SIZEOFINTSTAR);
 
-  SYMBOLS[SYM_SLLV]         = (int) "<<";
-  SYMBOLS[SYM_SRLV]         = (int) ">>";
-  SYMBOLS[SYM_LBRACKET]     = (int) "[";
-  SYMBOLS[SYM_RBRACKET]     = (int) "]";
+  *(SYMBOLS + SYM_IDENTIFIER)   = (int) "identifier";
+  *(SYMBOLS + SYM_INTEGER)      = (int) "integer";
+  *(SYMBOLS + SYM_VOID)         = (int) "void";
+  *(SYMBOLS + SYM_INT)          = (int) "int";
+  *(SYMBOLS + SYM_SEMICOLON)    = (int) ";";
+  *(SYMBOLS + SYM_IF)           = (int) "if";
+  *(SYMBOLS + SYM_ELSE)         = (int) "else";
+  *(SYMBOLS + SYM_PLUS)         = (int) "+";
+  *(SYMBOLS + SYM_MINUS)        = (int) "-";
+  *(SYMBOLS + SYM_ASTERISK)     = (int) "*";
+  *(SYMBOLS + SYM_DIV)          = (int) "/";
+  *(SYMBOLS + SYM_EQUALITY)     = (int) "==";
+  *(SYMBOLS + SYM_ASSIGN)       = (int) "=";
+  *(SYMBOLS + SYM_LPARENTHESIS) = (int) "(";
+  *(SYMBOLS + SYM_RPARENTHESIS) = (int) ")";
+  *(SYMBOLS + SYM_LBRACE)       = (int) "{";
+  *(SYMBOLS + SYM_RBRACE)       = (int) "}";
+  *(SYMBOLS + SYM_WHILE)        = (int) "while";
+  *(SYMBOLS + SYM_RETURN)       = (int) "return";
+  *(SYMBOLS + SYM_COMMA)        = (int) ",";
+  *(SYMBOLS + SYM_LT)           = (int) "<";
+  *(SYMBOLS + SYM_LEQ)          = (int) "<=";
+  *(SYMBOLS + SYM_GT)           = (int) ">";
+  *(SYMBOLS + SYM_GEQ)          = (int) ">=";
+  *(SYMBOLS + SYM_NOTEQ)        = (int) "!=";
+  *(SYMBOLS + SYM_MOD)          = (int) "%";
+  *(SYMBOLS + SYM_CHARACTER)    = (int) "character";
+  *(SYMBOLS + SYM_STRING)       = (int) "string";
+
+  *(SYMBOLS + SYM_SLLV)         = (int) "<<";
+  *(SYMBOLS + SYM_SRLV)         = (int) ">>";
+  *(SYMBOLS + SYM_LBRACKET)     = (int) "[";
+  *(SYMBOLS + SYM_RBRACKET)     = (int) "]";
 
   character = CHAR_EOF;
   symbol    = SYM_EOF;
@@ -1544,7 +1546,7 @@ void printSymbol(int symbol) {
   if (symbol == SYM_EOF)
     print((int*) "end of file");
   else
-    print((int*) SYMBOLS[symbol]);
+    print((int*) *(SYMBOLS + symbol));
 
   putCharacter(CHAR_DOUBLEQUOTE);
 }
@@ -1704,7 +1706,7 @@ int isNotDoubleQuoteOrEOF() {
 }
 
 int identifierStringMatch(int keyword) {
-  return stringCompare(identifier, (int*) SYMBOLS[keyword]);
+  return stringCompare(identifier, (int*) *(SYMBOLS + keyword));
 }
 
 int identifierOrKeyword() {
@@ -2576,6 +2578,7 @@ int gr_factor(int* constantVal) {
   int type;
   int typeSize;
   int* entry;
+  int constantValLeft;
 
   int* variableOrProcedureName;
 
@@ -2686,49 +2689,63 @@ int gr_factor(int* constantVal) {
         if (type != INT_T)
           typeWarning(INT_T, type);
 
-        if (symbol == SYM_RBRACKET){
+        if (symbol == SYM_RBRACKET) {
           getSymbol();
 
-          entry = searchSymbolTable(local_symbol_table, variableOrProcedureName, ARRAY);
-          if (entry == (int*) 0)
-            entry = searchSymbolTable(global_symbol_table, variableOrProcedureName, ARRAY);
+          if (symbol == SYM_LBRACKET) {
+            getSymbol();
 
-          if (getType(entry) == INT_T)
-            typeSize = SIZEOFINT;
-          else
-            typeSize = SIZEOFINTSTAR;
+            if (*(constantVal + 1) == 1)
+              constantValLeft = *constantVal;
+            else
+              constantValLeft = -1;
 
-          if (*(constantVal + 1) == 1) {
-            // assert: allocatedTemporaries == n
+            gr_shiftExpression(constantVal);
 
-            if (*constantVal < 0)
-              syntaxErrorMessage((int*) "only positive integers as array selector allowed");
-            if (*constantVal >= getSize(entry))
-              syntaxErrorMessage((int*) "array selector exceeds array size");
-            else {
-              talloc();
-              emitIFormat(OP_LW, getScope(entry), currentTemporary(), getAddress(entry) - *constantVal * typeSize);
-            }
-            *(constantVal + 1) = 0;
+
+
+
           } else {
+            entry = searchSymbolTable(local_symbol_table, variableOrProcedureName, ARRAY);
+            if (entry == (int*) 0)
+              entry = searchSymbolTable(global_symbol_table, variableOrProcedureName, ARRAY);
 
+            if (getType(entry) == INT_T)
+              typeSize = SIZEOFINT;
+            else
+              typeSize = SIZEOFINTSTAR;
+
+            if (*(constantVal + 1) == 1) {
+              // assert: allocatedTemporaries == n
+
+              if (*constantVal < 0)
+                syntaxErrorMessage((int*) "only positive integers as array selector allowed");
+              if (*constantVal >= getSize(entry))
+                syntaxErrorMessage((int*) "array selector exceeds array size");
+              else {
+                talloc();
+                emitIFormat(OP_LW, getScope(entry), currentTemporary(), getAddress(entry) - *constantVal * typeSize);
+              }
+              *(constantVal + 1) = 0;
+            } else {
+
+              // assert: allocatedTemporaries == n + 1
+
+              load_integer(typeSize);
+              emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), 0, FCT_MULTU);
+              emitRFormat(OP_SPECIAL, 0, 0, previousTemporary(), FCT_MFLO);
+              tfree(1);
+
+              load_integer(getAddress(entry));
+              emitRFormat(OP_SPECIAL, currentTemporary(entry), previousTemporary(), previousTemporary(), FCT_SUBU);
+              tfree(1);
+
+              emitIFormat(OP_ADDIU, currentTemporary(), currentTemporary(), getScope(entry));
+              emitIFormat(OP_LW, currentTemporary(), currentTemporary(), 0);
+            }
             // assert: allocatedTemporaries == n + 1
 
-            load_integer(typeSize);
-            emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), 0, FCT_MULTU);
-            emitRFormat(OP_SPECIAL, 0, 0, previousTemporary(), FCT_MFLO);
-            tfree(1);
-
-            load_integer(getAddress(entry));
-            emitRFormat(OP_SPECIAL, currentTemporary(entry), previousTemporary(), previousTemporary(), FCT_SUBU);
-            tfree(1);
-
-            emitIFormat(OP_ADDIU, currentTemporary(), currentTemporary(), getScope(entry));
-            emitIFormat(OP_LW, currentTemporary(), currentTemporary(), 0);
           }
-
-          // assert: allocatedTemporaries == n + 1
-
         } else
           syntaxErrorSymbol(SYM_RBRACKET);
 
@@ -4032,9 +4049,12 @@ void gr_cstar() {
 
   int size;
   int* entry;
-  int* constantVal;
-  constantVal = malloc(2 * SIZEOFINT);
-  *constantVal = 0;
+  int* constantValLeft;
+  int* constantValRight;
+  constantValLeft = malloc(2 * SIZEOFINT);
+  *constantValLeft = 0;
+  constantValRight = malloc(2 * SIZEOFINT);
+  *constantValRight = 0;
 
   while (symbol != SYM_EOF) {
     while (lookForType()) {
@@ -4123,33 +4143,68 @@ void gr_cstar() {
               } else
                 syntaxErrorSymbol(SYM_ASSIGN);
             } else {
-              gr_shiftExpression(constantVal);
+              gr_shiftExpression(constantValLeft);
 
               if (symbol == SYM_RBRACKET) {
                 getSymbol();
-                if (*(constantVal + 1) == 1) {
-                  if (*constantVal > 0) {
 
-                    createSymbolTableEntry(GLOBAL_TABLE, variableOrProcedureName, lineNumber, ARRAY, type, 0, 0);
-                    entry = searchSymbolTable(global_symbol_table, variableOrProcedureName, ARRAY);
-                    setSize(entry, *constantVal);
+                if (symbol == SYM_LBRACKET){
+                getSymbol();
 
-                    if (type == INT_T) {
-                      allocatedMemory = allocatedMemory + *constantVal * SIZEOFINT;
-                      setAddress(entry, - allocatedMemory);
-                    } else {
-                      allocatedMemory = allocatedMemory  + *constantVal * SIZEOFINTSTAR;
-                      setAddress(entry, - allocatedMemory);
-                    }
+                gr_shiftExpression(constantValRight);
+                  if (*(constantValLeft + 1) == 1){
+                    if (*(constantValRight + 1) == 1) {
+                      if(*constantValLeft > 0) {
+                        if (*constantValRight > 0) {
+                          createSymbolTableEntry(GLOBAL_TABLE, variableOrProcedureName, lineNumber, ARRAY, type, 0, 0);
+                          entry = searchSymbolTable(global_symbol_table, variableOrProcedureName, ARRAY);
+                          setSize(entry, *constantValLeft * *constantValRight);
 
-                    if (symbol != SYM_SEMICOLON)
-                      syntaxErrorSymbol(SYM_SEMICOLON);
+                          if (type == INT_T) {
+                            allocatedMemory = allocatedMemory + *constantValLeft * *constantValRight * SIZEOFINT;
+                            setAddress(entry, - allocatedMemory);
+                          } else {
+                            allocatedMemory = allocatedMemory  + *constantValLeft * *constantValRight * SIZEOFINTSTAR;
+                            setAddress(entry, - allocatedMemory);
+                          }
 
-                    getSymbol();
+                          if (symbol != SYM_SEMICOLON)
+                            syntaxErrorSymbol(SYM_SEMICOLON);
+
+                          getSymbol();
+                        } else
+                          syntaxErrorMessage((int*) "arraysize must be greater than 0");
+                      } else
+                        syntaxErrorMessage((int*) "arraysize must be greater than 0");
+                    } else
+                      syntaxErrorMessage((int*) "expected integer as array selector");
                   } else
-                    syntaxErrorMessage((int*) "arraysize must be greater than 0");
-                } else
-                  syntaxErrorMessage((int*) "expected integer as array selector");
+                    syntaxErrorMessage((int*) "expected integer as array selector");
+                } else {
+                  if (*(constantValLeft + 1) == 1) {
+                    if (*constantValLeft > 0) {
+
+                      createSymbolTableEntry(GLOBAL_TABLE, variableOrProcedureName, lineNumber, ARRAY, type, 0, 0);
+                      entry = searchSymbolTable(global_symbol_table, variableOrProcedureName, ARRAY);
+                      setSize(entry, *constantValLeft);
+
+                      if (type == INT_T) {
+                        allocatedMemory = allocatedMemory + *constantValLeft * SIZEOFINT;
+                        setAddress(entry, - allocatedMemory);
+                      } else {
+                        allocatedMemory = allocatedMemory  + *constantValLeft * SIZEOFINTSTAR;
+                        setAddress(entry, - allocatedMemory);
+                      }
+
+                      if (symbol != SYM_SEMICOLON)
+                        syntaxErrorSymbol(SYM_SEMICOLON);
+
+                      getSymbol();
+                    } else
+                      syntaxErrorMessage((int*) "arraysize must be greater than 0");
+                  } else
+                    syntaxErrorMessage((int*) "expected integer as array selector");
+                }
               } else
                 syntaxErrorSymbol(SYM_RBRACKET);
             }
