@@ -2702,6 +2702,10 @@ int gr_factor(int* constantVal) {
 
             gr_shiftExpression(constantVal);
 
+            if (symbol == SYM_RBRACKET) {
+
+            }
+
             //PROLOG 2D arrays
 
           } else {
@@ -2723,7 +2727,7 @@ int gr_factor(int* constantVal) {
 
               if (*constantVal < 0)
                 syntaxErrorMessage((int*) "only positive integers as array selector allowed");
-              if (*constantVal >= getSize(entry))
+              else if (*constantVal >= getSize(entry))
                 syntaxErrorMessage((int*) "array selector exceeds array size");
               else {
                 talloc();
@@ -2734,16 +2738,19 @@ int gr_factor(int* constantVal) {
 
               // assert: allocatedTemporaries == n + 1
 
-              load_integer(typeSize);
-              emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), 0, FCT_MULTU);
-              emitRFormat(OP_SPECIAL, 0, 0, previousTemporary(), FCT_MFLO);
+              load_integer(2);
+              emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary(), previousTemporary(), FCT_SLLV);
               tfree(1);
 
               load_integer(getAddress(entry));
               emitRFormat(OP_SPECIAL, currentTemporary(entry), previousTemporary(), previousTemporary(), FCT_SUBU);
               tfree(1);
 
-              emitIFormat(OP_ADDIU, currentTemporary(), currentTemporary(), getScope(entry));
+              talloc();
+              emitIFormat(OP_LW, getScope(entry), currentTemporary(), 0);
+              emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary(), previousTemporary(), FCT_ADDU);
+              tfree(1);
+
               emitIFormat(OP_LW, currentTemporary(), currentTemporary(), 0);
             }
             // assert: allocatedTemporaries == n + 1
@@ -3678,7 +3685,7 @@ void gr_statement() {
 
               // assert: allocatedTemporaries = 2
 
-              load_integer(ltype);
+              load_integer(2);
               emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary() - 1, previousTemporary() - 1, FCT_SLLV);
               tfree(1);
 
@@ -3693,6 +3700,8 @@ void gr_statement() {
               emitIFormat(OP_SW, previousTemporary(), currentTemporary(), 0);
             }
             tfree(2);
+
+            // assert: allocatedTemporaries = 0;
 
             if (symbol == SYM_SEMICOLON)
               getSymbol();
@@ -7398,11 +7407,34 @@ int main(int argc, int* argv) {
     print((int*) "testArr[");
     print(itoa(i,string_buffer,10,0,0));
     print((int*) "] = ");
-    testArr[i] = i;
-    print(itoa(testArr[i],string_buffer,10,0,0));
+    //testArr[i] = i + 7;
+    //print(itoa(testArr[i],string_buffer,10,0,0));
     i = i + 1;
   }
   println();
+  prolog_Test = testArr[0];
+  print(itoa(prolog_Test, string_buffer,10,0,0));
+  println();
+  prolog_Test = testArr[1];
+  print(itoa(prolog_Test, string_buffer,10,0,0));
+  println();
+  prolog_Test = testArr[2];
+  print(itoa(prolog_Test, string_buffer,10,0,0));
+  println();
+  prolog_Test = testArr[3];
+  print(itoa(prolog_Test, string_buffer,10,0,0));
+  println();
+  prolog_Test = testArr[4];
+  print(itoa(prolog_Test, string_buffer,10,0,0));
+  println();
+  prolog_Test = testArr[5];
+  print(itoa(prolog_Test, string_buffer,10,0,0));
+  println();
+  prolog_Test = testArr[6];
+  print(itoa(prolog_Test, string_buffer,10,0,0));
+  println();
+  prolog_Test = testArr[7];
+  print(itoa(prolog_Test, string_buffer,10,0,0));
   println();
 
   localArr[0] = 4;
