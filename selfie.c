@@ -3766,20 +3766,16 @@ int gr_variable(int offset) {
 
           if (symbol == SYM_LBRACE) {
             getSymbol();
-
             while (isIntegerList()){
               if (symbol == SYM_INTEGER) {
                 getSymbol();
 
                 size = size + 1;
-                if (symbol == SYM_COMMA)
-                  getSymbol();
-                else
-                  syntaxErrorSymbol(SYM_COMMA);
-              } else
-                syntaxErrorSymbol(SYM_INTEGER);
+                 if (symbol == SYM_COMMA)
+                   getSymbol();
+              }
             }
-
+            
             //PROLOG
             printLineNumber((int*) "direct array initialization not implemented right now (local)", lineNumber);
             println();
@@ -3789,7 +3785,6 @@ int gr_variable(int offset) {
 
               if (symbol != SYM_SEMICOLON)
                 syntaxErrorSymbol(SYM_SEMICOLON);
-              getSymbol();
             }
           } else
             syntaxErrorSymbol(SYM_LBRACE);
@@ -7327,6 +7322,7 @@ int main(int argc, int* argv) {
   int y;
   int arrLocal[16];
   int z;
+  int directInit[] = {2,3,5,7,11};
 
   i = 0;
   j = 0;
@@ -7360,8 +7356,8 @@ int main(int argc, int* argv) {
   print(itoa(prolog_Test,string_buffer,10,0,0));
   println();
 
-  testVal[0]=10;
-  testVal[1]=5;
+  testVal[0] = 10;
+  testVal[1] = 5;
   testArr[2] = 4;
 
   prolog_Test = testArr[2];
