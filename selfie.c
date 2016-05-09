@@ -2702,13 +2702,16 @@ int gr_factor(int* constantVal) {
 
             gr_shiftExpression(constantVal);
 
-
-
+            //PROLOG 2D arrays
 
           } else {
             entry = searchSymbolTable(local_symbol_table, variableOrProcedureName, ARRAY);
             if (entry == (int*) 0)
               entry = searchSymbolTable(global_symbol_table, variableOrProcedureName, ARRAY);
+            else if (entry == (int*) 0)
+              entry = searchSymbolTable(local_symbol_table, variableOrProcedureName, VARIABLE);
+            else if (entry == (int*) 0)
+              entry = searchSymbolTable(global_symbol_table, variableOrProcedureName, VARIABLE);
 
             if (getType(entry) == INT_T)
               typeSize = SIZEOFINT;
@@ -3638,12 +3641,16 @@ void gr_statement() {
         if (symbol == SYM_RBRACKET) {
           getSymbol();
 
-          if (symbol == SYM_ASSIGN)  {
+          if (symbol == SYM_ASSIGN) {
             getSymbol();
 
             entry = searchSymbolTable(local_symbol_table, variableOrProcedureName, ARRAY);
             if (entry == (int*) 0)
               entry = searchSymbolTable(global_symbol_table, variableOrProcedureName, ARRAY);
+            else if (entry == (int*) 0)
+                entry = searchSymbolTable(local_symbol_table, variableOrProcedureName, VARIABLE);
+            else if (entry == (int*) 0)
+                entry = searchSymbolTable(global_symbol_table, variableOrProcedureName, VARIABLE);
 
             ltype = getType(entry);
 
@@ -3671,17 +3678,19 @@ void gr_statement() {
 
               // assert: allocatedTemporaries = 2
 
-              load_integer(ltype);
-              emitRFormat(OP_SPECIAL, previousTemporary() - 1, currentTemporary(), 0, FCT_MULTU);
-              emitRFormat(OP_SPECIAL, 0, 0, previousTemporary() - 1, FCT_MFLO);
-              tfree(1);
+              emitRFormat(OP_SPECIAL, 0, previousTemporary() - 1, previousTemporary() - 1, ltype);
 
               load_integer(getAddress(entry));
               emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary() - 1, previousTemporary() - 1, FCT_SUBU);
               tfree(1);
 
-              emitRFormat(OP_SPECIAL, previousTemporary(), getScope(entry), previousTemporary(), FCT_ADDU);
-              //emitIFormat(OP_SW, previousTemporary(), currentTemporary(), 0);
+              print((int*)"TESTSCHEISSE");
+
+              talloc();
+              emitIFormat(OP_LW, getScope(entry), currentTemporary(), 0);
+              emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary() - 1, previousTemporary() - 1, FCT_ADDU);
+              tfree(1);
+              emitIFormat(OP_SW, previousTemporary(), currentTemporary(), 0);
             }
             tfree(2);
 
@@ -7380,14 +7389,15 @@ int main(int argc, int* argv) {
   print(itoa(prolog_Test,string_buffer,10,0,0));
   println();
 
-  // while (i < 8){
-  //   println();
-  //   print((int*) "testArr[");
-  //   print(itoa(i,string_buffer,10,0,0));
-  //   print((int*) "] = ");
-  //   print(itoa(testArr[i],string_buffer,10,0,0));
-  //   i = i + 1;
-  // }
+  while (i < 8){
+    println();
+    print((int*) "testArr[");
+    print(itoa(i,string_buffer,10,0,0));
+    print((int*) "] = ");
+    testArr[i] = i;
+    print(itoa(testArr[i],string_buffer,10,0,0));
+    i = i + 1;
+  }
   println();
   println();
 
