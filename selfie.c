@@ -3789,21 +3789,19 @@ int gr_variable(int offset) {
                 getSymbol();
 
                 size = size + 1;
-                 if (symbol == SYM_COMMA)
+                if (symbol == SYM_COMMA)
                    getSymbol();
               }
             }
-            
+
             //PROLOG
             printLineNumber((int*) "direct array initialization not implemented right now (local)", lineNumber);
             println();
 
-            if (symbol == SYM_RBRACE) {
+            if (symbol == SYM_RBRACE)
               getSymbol();
-
-              if (symbol != SYM_SEMICOLON)
-                syntaxErrorSymbol(SYM_SEMICOLON);
-            }
+            else
+              syntaxErrorSymbol(SYM_RBRACE);
           } else
             syntaxErrorSymbol(SYM_LBRACE);
         } else
