@@ -2732,10 +2732,6 @@ int gr_factor(int* constantVal) {
                   syntaxErrorMessage((int*) "array selector exceeds array size");
                 else {
                   talloc();
-                  // emitIFormat(OP_ADDIU, REG_ZR, nextTemporary(), getAddress(entry) - *constantVal * typeSize);
-                  // emitRFormat(OP_SPECIAL, nextTemporary(), currentTemporary(), currentTemporary(), FCT_ADDU);
-
-
                   emitIFormat(OP_LW, getScope(entry), currentTemporary(), getAddress(entry) - *constantVal * typeSize);
                 }
               *(constantVal + 1) = 0;
@@ -3685,15 +3681,13 @@ void gr_statement() {
 
               // assert: allocatedTemporaries = 2
 
-              load_integer(2);
-              emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary() - 1, previousTemporary() - 1, FCT_SLLV);
-              tfree(1);
+              emitIFormat(OP_ADDIU, REG_ZR, nextTemporary(), 2);
+              emitRFormat(OP_SPECIAL, nextTemporary(), previousTemporary(), previousTemporary(), FCT_SLLV);
 
-              load_integer(getAddress(entry));
-              emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary() - 1, previousTemporary() - 1, FCT_SUBU);
-              tfree(1);
+              emitIFormat(OP_ADDIU, REG_ZR, nextTemporary(), getAddress(entry));
+              emitRFormat(OP_SPECIAL, nextTemporary(), previousTemporary(), previousTemporary(), FCT_SUBU);
 
-              emitRFormat(OP_SPECIAL, getScope(entry), previousTemporary() - 1, previousTemporary() - 1, FCT_ADDU);
+              emitRFormat(OP_SPECIAL, getScope(entry), previousTemporary(), previousTemporary(), FCT_ADDU);
               emitIFormat(OP_SW, previousTemporary(), currentTemporary(), 0);
             }
             tfree(2);
@@ -7489,7 +7483,7 @@ int main(int argc, int* argv) {
     print((int*) "localArr[");
     print(itoa(i,string_buffer,10,0,0));
     print((int*) "] = ");
-    //localArr[i] = i;
+    localArr[i] = i;
     print(itoa(localArr[i],string_buffer,10,0,0));
     i = i + 1;
   }
