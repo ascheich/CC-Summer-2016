@@ -2727,31 +2727,37 @@ int gr_factor(int* constantVal) {
 
               if (*constantVal < 0)
                 syntaxErrorMessage((int*) "only positive integers as array selector allowed");
-              else if (*constantVal >= getSize(entry))
-                syntaxErrorMessage((int*) "array selector exceeds array size");
-              else {
-                talloc();
-                emitIFormat(OP_LW, getScope(entry), currentTemporary(), getAddress(entry) - *constantVal * typeSize);
-              }
+              else
+                if (*constantVal >= getSize(entry))
+                  syntaxErrorMessage((int*) "array selector exceeds array size");
+                else {
+                  talloc();
+                  print((int*)"factor");
+                  print(itoa(getScope(entry) + getAddress(entry) - *constantVal * typeSize, string_buffer,10,0,0));
+                  println();
+                  emitIFormat(OP_LW, getScope(entry), currentTemporary(), getAddress(entry) - *constantVal * typeSize);
+                }
               *(constantVal + 1) = 0;
             } else {
 
               // assert: allocatedTemporaries == n + 1
 
-              load_integer(2);
-              emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary(), previousTemporary(), FCT_SLLV);
-              tfree(1);
+              emitIFormat(OP_ADDIU, REG_ZR, nextTemporary(), 2);
+              emitRFormat(OP_SPECIAL, nextTemporary(), currentTemporary(), currentTemporary(), FCT_SLLV);
 
-              load_integer(getAddress(entry));
-              emitRFormat(OP_SPECIAL, currentTemporary(entry), previousTemporary(), previousTemporary(), FCT_SUBU);
-              tfree(1);
+              emitIFormat(OP_ADDIU, REG_ZR, nextTemporary(), getAddress(entry));
+              emitRFormat(OP_SPECIAL, nextTemporary(), currentTemporary(), currentTemporary(), FCT_SUBU);
 
-              talloc();
-              emitIFormat(OP_LW, getScope(entry), currentTemporary(), 0);
-              emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary(), previousTemporary(), FCT_ADDU);
-              tfree(1);
+              // emitIFormat(OP_ADDIU, REG_ZR, nextTemporary(), 1);
+              // emitRFormat(OP_SPECIAL, REG_ZR, nextTemporary(), nextTemporary(), FCT_SUBU);
+              // emitRFormat(OP_SPECIAL, currentTemporary(), nextTemporary(), 0, FCT_MULTU);
+              // emitRFormat(OP_SPECIAL, 0, 0, currentTemporary(), FCT_MFLO);
 
-              emitIFormat(OP_LW, currentTemporary(), currentTemporary(), 0);
+              emitIFormat(OP_LW, getScope(entry), nextTemporary(), 0);
+              emitRFormat(OP_SPECIAL, nextTemporary(), currentTemporary(), currentTemporary(), FCT_ADDU);
+
+              //emitIFormat(OP_LW, getScope(entry), currentTemporary(), -200);
+              //emitIFormat(OP_LW, currentTemporary(), currentTemporary(), 0);
             }
             // assert: allocatedTemporaries == n + 1
 
@@ -3697,7 +3703,7 @@ void gr_statement() {
               emitIFormat(OP_LW, getScope(entry), currentTemporary(), 0);
               emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary() - 1, previousTemporary() - 1, FCT_ADDU);
               tfree(1);
-              emitIFormat(OP_SW, previousTemporary(), currentTemporary(), 0);
+              //emitIFormat(OP_SW, previousTemporary(), currentTemporary(), 0);
             }
             tfree(2);
 
@@ -4063,9 +4069,7 @@ void gr_cstar() {
   int* constantValLeft;
   int* constantValRight;
   constantValLeft = malloc(2 * SIZEOFINT);
-  *constantValLeft = 0;
   constantValRight = malloc(2 * SIZEOFINT);
-  *constantValRight = 0;
 
   while (symbol != SYM_EOF) {
     while (lookForType()) {
@@ -4160,9 +4164,10 @@ void gr_cstar() {
                 getSymbol();
 
                 if (symbol == SYM_LBRACKET){
-                getSymbol();
+                  getSymbol();
 
-                gr_shiftExpression(constantValRight);
+                  gr_shiftExpression(constantValRight);
+
                   if (*(constantValLeft + 1) == 1){
                     if (*(constantValRight + 1) == 1) {
                       if(*constantValLeft > 0) {
@@ -4194,17 +4199,16 @@ void gr_cstar() {
                 } else {
                   if (*(constantValLeft + 1) == 1) {
                     if (*constantValLeft > 0) {
-
                       createSymbolTableEntry(GLOBAL_TABLE, variableOrProcedureName, lineNumber, ARRAY, type, 0, 0);
                       entry = searchSymbolTable(global_symbol_table, variableOrProcedureName, ARRAY);
                       setSize(entry, *constantValLeft);
 
                       if (type == INT_T) {
+                        setAddress(entry, - (allocatedMemory + SIZEOFINT));
                         allocatedMemory = allocatedMemory + *constantValLeft * SIZEOFINT;
-                        setAddress(entry, - allocatedMemory);
                       } else {
+                        setAddress(entry, - (allocatedMemory + SIZEOFINTSTAR));
                         allocatedMemory = allocatedMemory  + *constantValLeft * SIZEOFINTSTAR;
-                        setAddress(entry, - allocatedMemory);
                       }
 
                       if (symbol != SYM_SEMICOLON)
@@ -4711,10 +4715,7 @@ void emitGlobalsStrings() {
         storeBinary(binaryLength + i * type, 0);
         i = i + 1;
       }
-      if (type == SIZEOFINT)
-        binaryLength = binaryLength + size * SIZEOFINT;
-      else
-        binaryLength = binaryLength + size * SIZEOFINTSTAR;
+      binaryLength = binaryLength + size * type;
       i = 0;
     }
 
@@ -6370,7 +6371,7 @@ void fct_subu() {
 void op_lw() {
   int vaddr;
 
-  if (debug) {
+  if (prologDebug) {
     printOpcode(opcode);
     print((int*) " ");
     printRegister(rt);
@@ -6410,7 +6411,7 @@ void op_lw() {
       throwException(EXCEPTION_ADDRESSERROR, vaddr);
   }
 
-  if (debug) {
+  if (prologDebug) {
     if (interpret) {
       print((int*) " -> ");
       printRegister(rt);
@@ -7333,19 +7334,31 @@ int main(int argc, int* argv) {
   int i;
   int j;
   int k;
+  int jj;
+  int kk;
   int localArr[8];
   int x;
   int y;
+  int xx;
+  int yy;
   int arrLocal[16];
   int z;
-  int directInit[] = {2,3,5,7,11};
+  int zz;
+  int zzz;
+  // int directInit[] = {2,3,5,7,11};
 
   i = 0;
   j = 0;
   k = 0;
+  jj = 0;
+  kk = 0;
   x = 0;
   y = 0;
+  xx = 0;
+  yy = 0;
   z = 0;
+  zz = 0;
+  zzz = 0;
 
   initLibrary();
 
@@ -7368,43 +7381,45 @@ int main(int argc, int* argv) {
   print((int*)"Executing Test");
   println();
 
-  print((int*) "prolog_Test: ");
-  print(itoa(prolog_Test,string_buffer,10,0,0));
-  println();
+  // print((int*) "prolog_Test: ");
+  // print(itoa(prolog_Test,string_buffer,10,0,0));
+  // println();
 
   testVal[0] = 10;
   testVal[1] = 5;
   testArr[2] = 4;
 
-  prolog_Test = testArr[2];
-  print((int*) "prolog_Test(4): ");
-  print(itoa(prolog_Test,string_buffer,10,0,0));
-  println();
+  // prolog_Test = testArr[2];
+  // print((int*) "prolog_Test(4): ");
+  // print(itoa(prolog_Test,string_buffer,10,0,0));
+  // println();
+  //
+  // prolog_Test = testVal[0] - testVal[1] * testArr[2];
+  // print((int*) "prolog_Test(-10): ");
+  // print(itoa(prolog_Test,string_buffer,10,0,0));
+  // println();
+  // print((int*)"testVal[0] = ");
+  // print(itoa(testVal[0],string_buffer,10,0,0));
+  // println();
+  // print((int*)"testVal[1] = ");
+  // print(itoa(testVal[1],string_buffer,10,0,0));
+  // println();
+  // prolog_Test = testVal[0] + testVal[1];
+  // print((int*)"testVal[0] + testVal[1] = ");
+  // print(itoa(prolog_Test,string_buffer,10,0,0));
+  // println();
 
-  prolog_Test = testVal[0] - testVal[1] * testArr[2];
-  print((int*) "prolog_Test(-10): ");
-  print(itoa(prolog_Test,string_buffer,10,0,0));
-  println();
-  print((int*)"testVal[0] = ");
-  print(itoa(testVal[0],string_buffer,10,0,0));
-  println();
-  print((int*)"testVal[1] = ");
-  print(itoa(testVal[1],string_buffer,10,0,0));
-  println();
-  prolog_Test = testVal[0] + testVal[1];
-  print((int*)"testVal[0] + testVal[1] = ");
-  print(itoa(prolog_Test,string_buffer,10,0,0));
-  println();
+  // while (i < 8){
+  //   println();
+  //   print((int*) "testArr[");
+  //   print(itoa(i,string_buffer,10,0,0));
+  //   print((int*) "] = ");
+  //   testArr[i] = i + 7;
+  //   print(itoa(testArr[i],string_buffer,10,0,0));
+  //   i = i + 1;
+  // }
+  i = 2;
 
-  while (i < 8){
-    println();
-    print((int*) "testArr[");
-    print(itoa(i,string_buffer,10,0,0));
-    print((int*) "] = ");
-    //testArr[i] = i + 7;
-    //print(itoa(testArr[i],string_buffer,10,0,0));
-    i = i + 1;
-  }
   println();
   prolog_Test = testArr[0];
   print(itoa(prolog_Test, string_buffer,10,0,0));
@@ -7413,6 +7428,9 @@ int main(int argc, int* argv) {
   print(itoa(prolog_Test, string_buffer,10,0,0));
   println();
   prolog_Test = testArr[2];
+  print(itoa(prolog_Test, string_buffer,10,0,0));
+  println();
+  prolog_Test = testArr[i];
   print(itoa(prolog_Test, string_buffer,10,0,0));
   println();
   prolog_Test = testArr[3];
@@ -7431,39 +7449,57 @@ int main(int argc, int* argv) {
   print(itoa(prolog_Test, string_buffer,10,0,0));
   println();
 
-  localArr[0] = 4;
-  localArr[7] = 4;
-  arrLocal[0] = 4;
-  arrLocal[15] = 4;
+  // localArr[0] = 4;
+  // localArr[7] = 4;
+  // arrLocal[0] = 4;
+  // arrLocal[15] = 4;
 
-  print((int*)"localArr[0] = ");
-  print(itoa(localArr[0],string_buffer,10,0,0));
-  println();
-  print((int*)"localArr[7] = ");
-  print(itoa(localArr[7],string_buffer,10,0,0));
-  println();
-  print((int*)"arrLocal[0] = ");
-  print(itoa(arrLocal[0],string_buffer,10,0,0));
-  println();
-  print((int*)"arrLocal[15] = ");
-  print(itoa(arrLocal[15],string_buffer,10,0,0));
+  // print((int*)"localArr[0] = ");
+  // print(itoa(localArr[0],string_buffer,10,0,0));
+  // println();
+  // print((int*)"localArr[7] = ");
+  // print(itoa(localArr[7],string_buffer,10,0,0));
+  // println();
+  // print((int*)"arrLocal[0] = ");
+  // print(itoa(arrLocal[0],string_buffer,10,0,0));
+  // println();
+  // print((int*)"arrLocal[15] = ");
+  // print(itoa(arrLocal[15],string_buffer,10,0,0));
+  //
+  // localArr[1] = arrLocal[0] * arrLocal[0];
+  // println();
+  // print((int*)"localArr[1] = arrLocal[0] * arrLocal[0] = 16:  ");
+  // print(itoa(localArr[1],string_buffer,10,0,0));
+  // localArr[1] = localArr[1] + localArr[7];
+  // println();
+  // print((int*)"localArr[1] = localArr[1] + localArr[7] = 20:  ");
+  // print(itoa(localArr[1],string_buffer,10,0,0));
 
-  localArr[1] = arrLocal[0] * arrLocal[0];
-  println();
-  print((int*)"localArr[1] = arrLocal[0] * arrLocal[0] = 16:  ");
-  print(itoa(localArr[1],string_buffer,10,0,0));
-  localArr[1] = localArr[1] + localArr[7];
-  println();
-  print((int*)"localArr[1] = localArr[1] + localArr[7] = 20:  ");
-  print(itoa(localArr[1],string_buffer,10,0,0));
+  // while (i < 8){
+  //   println();
+  //   print((int*) "localArr[");
+  //   print(itoa(i,string_buffer,10,0,0));
+  //   print((int*) "] = ");
+  //   localArr[i] = i;
+  //   print(itoa(localArr[i],string_buffer,10,0,0));
+  //   i = i + 1;
+  // }
 
   println();
-  print((int*) "there should be 5 zeros (00000):  ");
+  print((int*) "there should be 11 zeros (0000 0000 000):  ");
   print(itoa(j,string_buffer,10,0,0));
   print(itoa(k,string_buffer,10,0,0));
+  print(itoa(jj,string_buffer,10,0,0));
+  print(itoa(kk,string_buffer,10,0,0));
+  print((int*) " ");
   print(itoa(x,string_buffer,10,0,0));
   print(itoa(y,string_buffer,10,0,0));
+  print(itoa(xx,string_buffer,10,0,0));
+  print(itoa(yy,string_buffer,10,0,0));
+  print((int*) " ");
   print(itoa(z,string_buffer,10,0,0));
+  print(itoa(zz,string_buffer,10,0,0));
+  print(itoa(zzz,string_buffer,10,0,0));
   println();
 
 
