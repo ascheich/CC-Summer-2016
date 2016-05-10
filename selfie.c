@@ -6371,7 +6371,7 @@ void fct_subu() {
 void op_lw() {
   int vaddr;
 
-  if (prologDebug) {
+  if (debug) {
     printOpcode(opcode);
     print((int*) " ");
     printRegister(rt);
@@ -6411,7 +6411,7 @@ void op_lw() {
       throwException(EXCEPTION_ADDRESSERROR, vaddr);
   }
 
-  if (prologDebug) {
+  if (debug) {
     if (interpret) {
       print((int*) " -> ");
       printRegister(rt);
