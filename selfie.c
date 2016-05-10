@@ -4695,7 +4695,7 @@ void emitGlobalsStrings() {
         type = SIZEOFINTSTAR;
 
       while (i < size){
-        storeBinary(binaryLength + i * type, 19);
+        storeBinary(binaryLength + i * type, 0);
         i = i + 1;
       }
       binaryLength = binaryLength + size * type;
