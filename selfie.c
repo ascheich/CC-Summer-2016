@@ -3766,7 +3766,7 @@ void gr_statement() {
 
             // assert: allocatedTemporaries = 2
 
-          } else 
+          } else {
 
             // assert: allocatedTemporaries = 2
 
@@ -3840,6 +3840,7 @@ void gr_statement() {
 
                   // t1 = constantVal
                   // t2 = Value
+                  // t1 = t1 * t2 (MFLO gets the lower part of the 32 bits)
 
                   talloc();
                   emitIFormat(OP_ADDIU, REG_ZR, currentTemporary(), *constantValLeft);
@@ -3848,14 +3849,21 @@ void gr_statement() {
                   emitRFormat(OP_SPECIAL, 0, 0, currentTemporary(), FCT_MFLO);
                   tfree(1);
 
+                  // t0 = t2 + t0
+                  // t2 = type
+                  // t0 = t0 * t2 (MFLO gets the lower part of the 32 bits)
                   emitRFormat(OP_SPECIAL, nextTemporary(), previousTemporary(), previousTemporary(), FCT_ADDU);
                   emitIFormat(OP_ADDIU, REG_ZR, nextTemporary(), ltype);
                   emitRFormat(OP_SPECIAL, previousTemporary(), nextTemporary(), 0, FCT_MULTU);
                   emitRFormat(OP_SPECIAL, 0, 0, previousTemporary(), FCT_MFLO);
 
+                  // t2 = address
+                  // t0 = t2 - t0
                   emitIFormat(OP_ADDIU, REG_ZR, nextTemporary(), getAddress(entry));
                   emitRFormat(OP_SPECIAL, nextTemporary(), previousTemporary(), previousTemporary(), FCT_SUBU);
 
+                  // t0 = scope + t0
+                  // t0 + 0 = t1
                   emitRFormat(OP_SPECIAL, getScope(entry), previousTemporary(), previousTemporary(), FCT_ADDU);
                   emitIFormat(OP_SW, previousTemporary(), currentTemporary(), 0);
 
@@ -3864,6 +3872,13 @@ void gr_statement() {
               } else {
                 if (*(constantValRight + 1) == 1) {
                   // assert: allocatedTemporaries == 2
+
+                  // previousTemporary = t0
+                  // currentTemporary  = t1
+                  // nextTemporary     = t2
+
+                  // t2 = value
+                  
 
                   emitIFormat(OP_ADDIU, REG_ZR, nextTemporary(), getValue(entry));
                   emitRFormat(OP_SPECIAL, previousTemporary(), nextTemporary(), 0, FCT_MULTU);
