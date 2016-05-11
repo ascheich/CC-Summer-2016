@@ -3769,16 +3769,26 @@ void gr_statement() {
 
             // assert: allocatedTemporaries = 2
 
-          } else {
+          } else 
 
             // assert: allocatedTemporaries = 2
 
+            // previousTemporary = t0
+            // currentTemporary  = t1
+            // nextTemporary     = t2
+
+            // t2 = 2
+            // t0 = t0 * 2^t2
             emitIFormat(OP_ADDIU, REG_ZR, nextTemporary(), 2);
             emitRFormat(OP_SPECIAL, nextTemporary(), previousTemporary(), previousTemporary(), FCT_SLLV);
 
+            // t2 = Address 
+            // t0 = t2 - t0
             emitIFormat(OP_ADDIU, REG_ZR, nextTemporary(), getAddress(entry));
             emitRFormat(OP_SPECIAL, nextTemporary(), previousTemporary(), previousTemporary(), FCT_SUBU);
 
+            // t0 = scope + t0
+            // t0 + 0 = t1
             emitRFormat(OP_SPECIAL, getScope(entry), previousTemporary(), previousTemporary(), FCT_ADDU);
             emitIFormat(OP_SW, previousTemporary(), currentTemporary(), 0);
             tfree(1);
@@ -3826,6 +3836,13 @@ void gr_statement() {
                   tfree(1);
                 } else {
                   // assert: allocatedTemporaries == 2
+
+                  // previousTemporary = t0
+                  // currentTemporary  = t1
+                  // nextTemporary     = t2
+
+                  // t1 = constantVal
+                  // t2 = Value
 
                   talloc();
                   emitIFormat(OP_ADDIU, REG_ZR, currentTemporary(), *constantValLeft);
@@ -7624,48 +7641,48 @@ int main(int argc, int* argv) {
   println();
   print((int*)"This is Prolog Selfie.");
 
-  //################### TEST ENVIRONMENT #####################
-  println(); println();
-  print((int*)"Executing Test");
-  println();
-  print((int*) "Var: prolog_Test: ");
-  print(itoa(prolog_Test,string_buffer,10,0,0));
-  println();
-  //------------------
+  // //################### TEST ENVIRONMENT #####################
+  // println(); println();
+  // print((int*)"Executing Test");
+  // println();
+  // print((int*) "Var: prolog_Test: ");
+  // print(itoa(prolog_Test,string_buffer,10,0,0));
+  // println();
+  // //------------------
 
-  i = 0;
-  j = 0;
-  println();
-  print((int*) "twoDarrayGlobal[i][j] = (i + 1) * 3 % (j + 1)");
-  println();
-  print((int*) "twoDarrayLocal[i][j] = twoDarrayGlobal[i][j]");
+  // i = 0;
+  // j = 0;
+  // println();
+  // print((int*) "twoDarrayGlobal[i][j] = (i + 1) * 3 % (j + 1)");
+  // println();
+  // print((int*) "twoDarrayLocal[i][j] = twoDarrayGlobal[i][j]");
 
-  while (i < 4) {
-    while (j < 8) {
-      println();
-      twoDarrayGlobal[i][j] = (i + 1) * 3 % (j + 1);
-      twoDarrayLocal[i][j] = twoDarrayGlobal[i][j];
-      print((int*) "twoDarrayLocal[");
-      print(itoa(i,string_buffer,10,0,0));
-      print((int*) "][");
-      print(itoa(j,string_buffer,10,0,0));
-      print((int*) "] (=");
-      print(itoa((i + 1) * 3 % (j + 1),string_buffer,10,0,0));
-      print((int*) ") = ");
-      print(itoa(twoDarrayLocal[i][j],string_buffer,10,0,0));
-      j = j + 1;
-    }
-    j = 0;
-    i = i + 1;
-  }
-  i = 0;
+  // while (i < 4) {
+  //   while (j < 8) {
+  //     println();
+  //     twoDarrayGlobal[i][j] = (i + 1) * 3 % (j + 1);
+  //     twoDarrayLocal[i][j] = twoDarrayGlobal[i][j];
+  //     print((int*) "twoDarrayLocal[");
+  //     print(itoa(i,string_buffer,10,0,0));
+  //     print((int*) "][");
+  //     print(itoa(j,string_buffer,10,0,0));
+  //     print((int*) "] (=");
+  //     print(itoa((i + 1) * 3 % (j + 1),string_buffer,10,0,0));
+  //     print((int*) ") = ");
+  //     print(itoa(twoDarrayLocal[i][j],string_buffer,10,0,0));
+  //     j = j + 1;
+  //   }
+  //   j = 0;
+  //   i = i + 1;
+  // }
+  // i = 0;
 
 
-  //------------------
-  println(); println();
-  print((int*) "End of Test.");
-  println(); println();
-  //############### END OF TEST ENVIRONMENT ##################
+  // //------------------
+  // println(); println();
+  // print((int*) "End of Test.");
+  // println(); println();
+  // //############### END OF TEST ENVIRONMENT ##################
 
   if (selfie(argc, (int*) argv) != 0) {
     print(selfieName);
