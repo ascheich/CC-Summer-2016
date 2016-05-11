@@ -181,7 +181,7 @@ int* outputName = (int*) 0;
 int outputFD    = 1;
 // Variable for Testing Purposes
 int prolog_Test = 42;
-int twoDarrayGlobal[4][8];
+int TwoDarrayGlobal[4][8];
 //---------------------
 int prologDebug = 0;
 // ------------------------- INITIALIZATION ------------------------
@@ -2465,8 +2465,8 @@ int help_call_codegen(int* entry, int* procedure) {
 }
 
 void help_procedure_prologue(int localVariables) {
-  int i;
-  i = 0;
+  // int i;
+  // i = 0;
 
   // allocate space for return address
   emitIFormat(OP_ADDIU, REG_SP, REG_SP, -WORDSIZE);
@@ -2738,7 +2738,7 @@ int gr_factor(int* constantVal) {
                   // assert: allocatedTemporaries == n
 
                   talloc();
-                  emitIFormat(OP_LW, getScope(entry), currentTemporary(), getAddress(entry) - (constantValLeft * getValue(entry) + *constantVal)  * typeSize);
+                  emitIFormat(OP_LW, getScope(entry), currentTemporary(), getAddress(entry) - ((constantValLeft * getValue(entry) + *constantVal)  * typeSize));
                 } else {
                   // assert: allocatedTemporaries == n + 1
 
@@ -2803,10 +2803,8 @@ int gr_factor(int* constantVal) {
                 }
                 // assert: allocatedTemporaries == n + 1
               }
-              *(constantVal + 1) = 0;
             } else
               syntaxErrorSymbol(SYM_RBRACKET);
-            *(constantVal + 1) = 0;
           } else {
             // identifier "[" expression "]"
 
@@ -2822,7 +2820,6 @@ int gr_factor(int* constantVal) {
                   talloc();
                   emitIFormat(OP_LW, getScope(entry), currentTemporary(), getAddress(entry) - *constantVal * typeSize);
                 }
-              *(constantVal + 1) = 0;
             } else {
 
               // assert: allocatedTemporaries == n + 1
@@ -2842,7 +2839,7 @@ int gr_factor(int* constantVal) {
           }
         } else
           syntaxErrorSymbol(SYM_RBRACKET);
-
+        *(constantVal + 1) = 0;
     } else {
         // variable access: identifier
         type = load_variable(variableOrProcedureName);
@@ -2901,7 +2898,7 @@ int gr_term(int* constantVal) {
   int leftVal;
   int operatorSymbol;
   int rtype;
-  int sign;
+  //int sign;
 
   // assert: n = allocatedTemporaries
 
@@ -3832,7 +3829,7 @@ void gr_statement() {
                 if (*(constantValRight + 1) == 1) {
                   // assert: allocatedTemporaries == 1
 
-                  emitIFormat(OP_SW, getScope(entry), currentTemporary(), getAddress(entry) - (*constantValLeft * getValue(entry) + *constantValRight)  * ltype);
+                  emitIFormat(OP_SW, getScope(entry), currentTemporary(), getAddress(entry) - ((*constantValLeft * getValue(entry) + *constantValRight)  * ltype));
                   tfree(1);
                 } else {
                   // assert: allocatedTemporaries == 2
@@ -3968,7 +3965,7 @@ int gr_type() {
 
 int gr_variable(int offset) {
   int type;
-  int selectorType;
+//  int selectorType;
   int size;
 
   int* variableOrProcedureName;
@@ -4045,6 +4042,9 @@ int gr_variable(int offset) {
                       entry = searchSymbolTable(local_symbol_table, variableOrProcedureName, ARRAY);
                       setSize(entry, *constantValLeft * *constantValRight);
                       offset = *constantValLeft * *constantValRight;
+                      println();
+                      print(itoa(offset,string_buffer,10,0,0));
+                      println();
                     } else
                       syntaxErrorMessage((int*) "arraysize must be greater than 0");
                   } else
@@ -4053,6 +4053,7 @@ int gr_variable(int offset) {
                   syntaxErrorMessage((int*) "expected integer as array size");
               } else
                 syntaxErrorMessage((int*) "expected integer as array size");
+              return offset;
             } else
               syntaxErrorSymbol(SYM_RBRACKET);
           } else {
@@ -4446,11 +4447,11 @@ void gr_cstar() {
                             setSize(entry, *constantValLeft * *constantValRight);
 
                             if (type == INT_T) {
-                              allocatedMemory = allocatedMemory + *constantValLeft * *constantValRight * SIZEOFINT;
-                              setAddress(entry, - allocatedMemory);
+                              setAddress(entry, - (allocatedMemory + SIZEOFINT));
+                              allocatedMemory = allocatedMemory + getSize(entry) * SIZEOFINT;
                             } else {
-                              allocatedMemory = allocatedMemory  + *constantValLeft * *constantValRight * SIZEOFINTSTAR;
-                              setAddress(entry, - allocatedMemory);
+                              setAddress(entry, - (allocatedMemory + SIZEOFINTSTAR));
+                              allocatedMemory = allocatedMemory  + getSize(entry) * SIZEOFINTSTAR;
                             }
 
                             if (symbol != SYM_SEMICOLON)
@@ -7621,7 +7622,7 @@ int selfie(int argc, int* argv) {
 int main(int argc, int* argv) {
   int i;
   int j;
-  int twoDarrayLocal[4][8];
+  int TwoDarrayLocal[4][8];
   // int localArr[] = {1,2,3,4,5,6,7,8};
 
   initLibrary();
@@ -7641,41 +7642,43 @@ int main(int argc, int* argv) {
   println();
   print((int*)"This is Prolog Selfie.");
 
-  // //################### TEST ENVIRONMENT #####################
-  // println(); println();
-  // print((int*)"Executing Test");
-  // println();
-  // print((int*) "Var: prolog_Test: ");
-  // print(itoa(prolog_Test,string_buffer,10,0,0));
-  // println();
-  // //------------------
 
-  // i = 0;
-  // j = 0;
-  // println();
-  // print((int*) "twoDarrayGlobal[i][j] = (i + 1) * 3 % (j + 1)");
-  // println();
-  // print((int*) "twoDarrayLocal[i][j] = twoDarrayGlobal[i][j]");
+  //################### TEST ENVIRONMENT #####################
+  println(); println();
+  print((int*)"Executing Test");
+  println();
+  print((int*) "Var: prolog_Test: ");
+  print(itoa(prolog_Test,string_buffer,10,0,0));
+  println();
+  //------------------
 
-  // while (i < 4) {
-  //   while (j < 8) {
-  //     println();
-  //     twoDarrayGlobal[i][j] = (i + 1) * 3 % (j + 1);
-  //     twoDarrayLocal[i][j] = twoDarrayGlobal[i][j];
-  //     print((int*) "twoDarrayLocal[");
-  //     print(itoa(i,string_buffer,10,0,0));
-  //     print((int*) "][");
-  //     print(itoa(j,string_buffer,10,0,0));
-  //     print((int*) "] (=");
-  //     print(itoa((i + 1) * 3 % (j + 1),string_buffer,10,0,0));
-  //     print((int*) ") = ");
-  //     print(itoa(twoDarrayLocal[i][j],string_buffer,10,0,0));
-  //     j = j + 1;
-  //   }
-  //   j = 0;
-  //   i = i + 1;
-  // }
-  // i = 0;
+  println();
+  print((int*) "TwoDarrayLocal[i][j] = (i + 1) * 3 % (j + 1)");
+  println();
+  print((int*) "TwoDarrayLocal[i][j] = TwoDarrayLocal[i][j]");
+  i = 0;
+  j = 0;
+  while (i < 4) {
+    while (j < 8) {
+      println();
+      TwoDarrayLocal[i][j] = (i + 1) * 3 % (j + 1);
+      TwoDarrayLocal[i][j] = TwoDarrayLocal[i][j];
+      print((int*) "TwoDarrayLocal[");
+      print(itoa(i,string_buffer,10,0,0));
+      print((int*) "][");
+      print(itoa(j,string_buffer,10,0,0));
+      print((int*) "] (=");
+      print(itoa((i + 1) * 3 % (j + 1),string_buffer,10,0,0));
+      print((int*) ") = ");
+      print(itoa(TwoDarrayLocal[i][j],string_buffer,10,0,0));
+      print((int*) " ");
+      j = j + 1;
+    }
+    println();
+    j = 0;
+    i = i + 1;
+  }
+  i = 0;
 
 
   // //------------------
