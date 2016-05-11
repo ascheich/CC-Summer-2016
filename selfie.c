@@ -2739,21 +2739,71 @@ int gr_factor(int* constantVal) {
 
                   talloc();
                   emitIFormat(OP_LW, getScope(entry), currentTemporary(), getAddress(entry) - (constantValLeft * getValue(entry) + *constantVal)  * typeSize);
-                  *(constantVal + 1) = 0;
                 } else {
                   // assert: allocatedTemporaries == n + 1
 
+                  talloc();
+                  emitIFormat(OP_ADDIU, REG_ZR, currentTemporary(), constantValLeft);
+                  emitIFormat(OP_ADDIU, REG_ZR, nextTemporary(), getValue(entry));
+                  emitRFormat(OP_SPECIAL, currentTemporary(), nextTemporary(), 0, FCT_MULTU);
+                  emitRFormat(OP_SPECIAL, 0, 0, currentTemporary(), FCT_MFLO);
 
+                  emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary(), previousTemporary(), FCT_ADDU);
+                  tfree(1);
+
+                  emitIFormat(OP_ADDIU, REG_ZR, nextTemporary(), typeSize);
+                  emitRFormat(OP_SPECIAL, currentTemporary(), nextTemporary(), 0, FCT_MULTU);
+                  emitRFormat(OP_SPECIAL, 0, 0, currentTemporary(), FCT_MFLO);
+
+                  emitIFormat(OP_ADDIU, REG_ZR, nextTemporary(), getAddress(entry));
+                  emitRFormat(OP_SPECIAL, nextTemporary(), currentTemporary(), currentTemporary(), FCT_SUBU);
+
+                  emitRFormat(OP_SPECIAL, getScope(entry), currentTemporary(), currentTemporary(), FCT_ADDU);
+                  emitIFormat(OP_LW, currentTemporary(), currentTemporary(), 0);
                 }
               } else {
                 if (*(constantVal + 1) == 1) {
                   // assert: allocatedTemporaries == n + 1
 
+                  emitIFormat(OP_ADDIU, REG_ZR, nextTemporary(), getValue(entry));
+                  emitRFormat(OP_SPECIAL, currentTemporary(), nextTemporary(), 0, FCT_MULTU);
+                  emitRFormat(OP_SPECIAL, 0, 0, currentTemporary(), FCT_MFLO);
+
+                  emitIFormat(OP_ADDIU, REG_ZR, nextTemporary(), *constantVal);
+                  emitRFormat(OP_SPECIAL, currentTemporary(), nextTemporary(), nextTemporary(), FCT_ADDU);
+
+                  emitIFormat(OP_ADDIU, REG_ZR, nextTemporary(), typeSize);
+                  emitRFormat(OP_SPECIAL, currentTemporary(), nextTemporary(), 0, FCT_MULTU);
+                  emitRFormat(OP_SPECIAL, 0, 0, currentTemporary(), FCT_MFLO);
+
+                  emitIFormat(OP_ADDIU, REG_ZR, nextTemporary(), getAddress(entry));
+                  emitRFormat(OP_SPECIAL, nextTemporary(), currentTemporary(), currentTemporary(), FCT_SUBU);
+
+                  emitRFormat(OP_SPECIAL, getScope(entry), currentTemporary(), currentTemporary(), FCT_ADDU);
+                  emitIFormat(OP_LW, currentTemporary(), currentTemporary(), 0);
                 } else {
                   // assert: allocatedTemporaries == n + 2
 
+                  emitIFormat(OP_ADDIU, REG_ZR, nextTemporary(), getValue(entry));
+                  emitRFormat(OP_SPECIAL, previousTemporary(), nextTemporary(), 0, FCT_MULTU);
+                  emitRFormat(OP_SPECIAL, 0, 0, previousTemporary(), FCT_MFLO);
+
+                  emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), FCT_ADDU);
+
+                  emitIFormat(OP_ADDIU, REG_ZR, currentTemporary(), typeSize);
+                  emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), 0, FCT_MULTU);
+                  emitRFormat(OP_SPECIAL, 0, 0, previousTemporary(), FCT_MFLO);
+
+                  emitIFormat(OP_ADDIU, REG_ZR, currentTemporary(), getAddress(entry));
+                  emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary(), previousTemporary(), FCT_SUBU);
+                  tfree(1);
+
+                  emitRFormat(OP_SPECIAL, getScope(entry), currentTemporary(), currentTemporary(), FCT_ADDU);
+                  emitIFormat(OP_LW, currentTemporary(), currentTemporary(), 0);
                 }
+                // assert: allocatedTemporaries == n + 1
               }
+              *(constantVal + 1) = 0;
             } else
               syntaxErrorSymbol(SYM_RBRACKET);
             *(constantVal + 1) = 0;
