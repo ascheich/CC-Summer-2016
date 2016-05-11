@@ -2692,6 +2692,7 @@ int gr_factor(int* constantVal) {
       // reset return register
       emitIFormat(OP_ADDIU, REG_ZR, REG_V0, 0);
     } else
+      // identifier "[" expression "]"
       if (symbol == SYM_LBRACKET) {
         getSymbol();
 
@@ -2705,6 +2706,20 @@ int gr_factor(int* constantVal) {
         if (symbol == SYM_RBRACKET) {
           getSymbol();
 
+          entry = searchSymbolTable(local_symbol_table, variableOrProcedureName, ARRAY);
+          if (entry == (int*) 0)
+            entry = searchSymbolTable(global_symbol_table, variableOrProcedureName, ARRAY);
+          else if (entry == (int*) 0)
+            entry = searchSymbolTable(local_symbol_table, variableOrProcedureName, VARIABLE);
+          else if (entry == (int*) 0)
+            entry = searchSymbolTable(global_symbol_table, variableOrProcedureName, VARIABLE);
+
+          if (getType(entry) == INT_T)
+            typeSize = SIZEOFINT;
+          else
+            typeSize = SIZEOFINTSTAR;
+
+          // identifier "[" expression "]" "[" expression "]"
           if (symbol == SYM_LBRACKET) {
             getSymbol();
 
@@ -2723,7 +2738,7 @@ int gr_factor(int* constantVal) {
                   // assert: allocatedTemporaries == n
 
                   talloc();
-                  emitIFormat(OP_LW, getScope(entry), currentTemporary(), getAddress(entry) - (constantValLeft * getValue(entry) + *constantVal)  * ltype);
+                  emitIFormat(OP_LW, getScope(entry), currentTemporary(), getAddress(entry) - (constantValLeft * getValue(entry) + *constantVal)  * typeSize);
                   *(constantVal + 1) = 0;
                 } else {
                   // assert: allocatedTemporaries == n + 1
@@ -2743,18 +2758,7 @@ int gr_factor(int* constantVal) {
               syntaxErrorSymbol(SYM_RBRACKET);
             *(constantVal + 1) = 0;
           } else {
-            entry = searchSymbolTable(local_symbol_table, variableOrProcedureName, ARRAY);
-            if (entry == (int*) 0)
-              entry = searchSymbolTable(global_symbol_table, variableOrProcedureName, ARRAY);
-            else if (entry == (int*) 0)
-              entry = searchSymbolTable(local_symbol_table, variableOrProcedureName, VARIABLE);
-            else if (entry == (int*) 0)
-              entry = searchSymbolTable(global_symbol_table, variableOrProcedureName, VARIABLE);
-
-            if (getType(entry) == INT_T)
-              typeSize = SIZEOFINT;
-            else
-              typeSize = SIZEOFINTSTAR;
+            // identifier "[" expression "]"
 
             if (*(constantVal + 1) == 1) {
               // assert: allocatedTemporaries == n
@@ -3774,7 +3778,7 @@ void gr_statement() {
               else
                 ltype = SIZEOFINTSTAR;
 
-              if (*(constantValLeft + 1) ) {
+              if (*(constantValLeft + 1) == 1) {
                 if (*(constantValRight + 1) == 1) {
                   // assert: allocatedTemporaries == 1
 
@@ -3791,7 +3795,7 @@ void gr_statement() {
                   tfree(1);
 
                   emitRFormat(OP_SPECIAL, nextTemporary(), previousTemporary(), previousTemporary(), FCT_ADDU);
-                  emitIFormat(OP_ADDIA, REG_ZR, nextTemporary(), ltype);
+                  emitIFormat(OP_ADDIU, REG_ZR, nextTemporary(), ltype);
                   emitRFormat(OP_SPECIAL, previousTemporary(), nextTemporary(), 0, FCT_MULTU);
                   emitRFormat(OP_SPECIAL, 0, 0, previousTemporary(), FCT_MFLO);
 
