@@ -3878,23 +3878,29 @@ void gr_statement() {
                   // nextTemporary     = t2
 
                   // t2 = value
-                  
-
+                  // t0 = t0 * t2 (MFLO gets the lower part of the 32 bits) 
                   emitIFormat(OP_ADDIU, REG_ZR, nextTemporary(), getValue(entry));
                   emitRFormat(OP_SPECIAL, previousTemporary(), nextTemporary(), 0, FCT_MULTU);
                   emitRFormat(OP_SPECIAL, 0, 0, previousTemporary(), FCT_MFLO);
 
+                  // t2 = constantValRight
+                  // t0 = t0 + t2
                   emitIFormat(OP_ADDIU, REG_ZR, nextTemporary(), *constantValRight);
                   emitRFormat(OP_SPECIAL, previousTemporary(), nextTemporary(), previousTemporary(), FCT_ADDU);
 
-
+                  // t2 = ltype
+                  // t0 = t0 * t2 (MFLO gets the lower part of the 32 bits) 
                   emitIFormat(OP_ADDIU, REG_ZR, nextTemporary(), ltype);
                   emitRFormat(OP_SPECIAL, previousTemporary(), nextTemporary(), 0, FCT_MULTU);
                   emitRFormat(OP_SPECIAL, 0, 0, previousTemporary(), FCT_MFLO);
 
+                  // t2 = address
+                  // t0 = t2 - t0
                   emitIFormat(OP_ADDIU, REG_ZR, nextTemporary(), getAddress(entry));
                   emitRFormat(OP_SPECIAL, nextTemporary(), previousTemporary(), previousTemporary(), FCT_SUBU);
 
+                  // t0 = scope + t0
+                  // t0 + 0 = t1
                   emitRFormat(OP_SPECIAL, getScope(entry), previousTemporary(), previousTemporary(), FCT_ADDU);
                   emitIFormat(OP_SW, previousTemporary(), currentTemporary(), 0);
 
