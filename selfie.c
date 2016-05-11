@@ -2803,10 +2803,8 @@ int gr_factor(int* constantVal) {
                 }
                 // assert: allocatedTemporaries == n + 1
               }
-              *(constantVal + 1) = 0;
             } else
               syntaxErrorSymbol(SYM_RBRACKET);
-            *(constantVal + 1) = 0;
           } else {
             // identifier "[" expression "]"
 
@@ -2822,7 +2820,6 @@ int gr_factor(int* constantVal) {
                   talloc();
                   emitIFormat(OP_LW, getScope(entry), currentTemporary(), getAddress(entry) - *constantVal * typeSize);
                 }
-              *(constantVal + 1) = 0;
             } else {
 
               // assert: allocatedTemporaries == n + 1
@@ -2842,7 +2839,7 @@ int gr_factor(int* constantVal) {
           }
         } else
           syntaxErrorSymbol(SYM_RBRACKET);
-
+        *(constantVal + 1) = 0;
     } else {
         // variable access: identifier
         type = load_variable(variableOrProcedureName);
@@ -7640,11 +7637,38 @@ int main(int argc, int* argv) {
   println();
   print((int*) "twoDarrayLocal[i][j] = twoDarrayGlobal[i][j]");
 
+  twoDarrayLocal[0][0] = 0;
+  print(itoa(twoDarrayLocal[0][1],string_buffer,10,0,0));
+  println();
+  twoDarrayLocal[0][1] = 0;
+  twoDarrayLocal[0][2] = 0;
+  twoDarrayLocal[0][3] = 0;
+  twoDarrayLocal[0][4] = 0;
+  twoDarrayLocal[0][5] = 0;
+  twoDarrayLocal[0][6] = 0;
+  twoDarrayLocal[0][7] = 0;
+  twoDarrayLocal[1][0] = 0;
+  twoDarrayLocal[1][1] = 0;
+  twoDarrayLocal[1][2] = 0;
+  twoDarrayLocal[1][3] = 0;
+  twoDarrayLocal[1][4] = 0;
+  twoDarrayLocal[1][5] = 0;
+  twoDarrayLocal[1][6] = 0;
+  twoDarrayLocal[1][7] = 0;
+  twoDarrayLocal[2][0] = 0;
+  twoDarrayLocal[2][1] = 0;
+  twoDarrayLocal[2][2] = 0;
+  twoDarrayLocal[2][3] = 0;
+  twoDarrayLocal[2][4] = 0;
+  twoDarrayLocal[2][5] = 0;
+  twoDarrayLocal[2][6] = 0;
+  twoDarrayLocal[2][7] = 0;
   while (i < 4) {
     while (j < 8) {
       println();
-      twoDarrayGlobal[i][j] = (i + 1) * 3 % (j + 1);
-      twoDarrayLocal[i][j] = twoDarrayGlobal[i][j];
+      //twoDarrayGlobal[i][j] = (i + 1) * 3 % (j + 1);
+      //twoDarrayLocal[i][j] = twoDarrayGlobal[i][j];
+      //twoDarrayLocal[i][j] = 0;
       print((int*) "twoDarrayLocal[");
       print(itoa(i,string_buffer,10,0,0));
       print((int*) "][");
