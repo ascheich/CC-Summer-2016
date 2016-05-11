@@ -2722,7 +2722,9 @@ int gr_factor(int* constantVal) {
                 if (*(constantVal + 1) == 1) {
                   // assert: allocatedTemporaries == n
 
-
+                  talloc();
+                  emitIFormat(OP_LW, getScope(entry), currentTemporary(), getAddress(entry) - (constantValLeft * getValue(entry) + *constantVal)  * ltype);
+                  *(constantVal + 1) = 0;
                 } else {
                   // assert: allocatedTemporaries == n + 1
 
