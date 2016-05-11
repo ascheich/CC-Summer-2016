@@ -3736,19 +3736,19 @@ void gr_statement() {
       if (symbol == SYM_RBRACKET) {
         getSymbol();
 
+        entry = searchSymbolTable(local_symbol_table, variableOrProcedureName, ARRAY);
+        if (entry == (int*) 0)
+          entry = searchSymbolTable(global_symbol_table, variableOrProcedureName, ARRAY);
+        else if (entry == (int*) 0)
+            entry = searchSymbolTable(local_symbol_table, variableOrProcedureName, VARIABLE);
+        else if (entry == (int*) 0)
+            entry = searchSymbolTable(global_symbol_table, variableOrProcedureName, VARIABLE);
+
+        ltype = getType(entry);
+
         // identifier "[" expression "]" "=" expression;
         if (symbol == SYM_ASSIGN) {
           getSymbol();
-
-          entry = searchSymbolTable(local_symbol_table, variableOrProcedureName, ARRAY);
-          if (entry == (int*) 0)
-            entry = searchSymbolTable(global_symbol_table, variableOrProcedureName, ARRAY);
-          else if (entry == (int*) 0)
-              entry = searchSymbolTable(local_symbol_table, variableOrProcedureName, VARIABLE);
-          else if (entry == (int*) 0)
-              entry = searchSymbolTable(global_symbol_table, variableOrProcedureName, VARIABLE);
-
-          ltype = getType(entry);
 
           rtype = gr_expression();
 
@@ -3805,16 +3805,6 @@ void gr_statement() {
 
             if (symbol == SYM_ASSIGN) {
               getSymbol();
-
-              entry = searchSymbolTable(local_symbol_table, variableOrProcedureName, ARRAY);
-              if (entry == (int*) 0)
-                entry = searchSymbolTable(global_symbol_table, variableOrProcedureName, ARRAY);
-              else if (entry == (int*) 0)
-                  entry = searchSymbolTable(local_symbol_table, variableOrProcedureName, VARIABLE);
-              else if (entry == (int*) 0)
-                  entry = searchSymbolTable(global_symbol_table, variableOrProcedureName, VARIABLE);
-
-              ltype = getType(entry);
 
               rtype = gr_expression();
 
