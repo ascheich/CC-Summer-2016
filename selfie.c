@@ -2465,8 +2465,8 @@ int help_call_codegen(int* entry, int* procedure) {
 }
 
 void help_procedure_prologue(int localVariables) {
-  int i;
-  i = 0;
+  // int i;
+  // i = 0;
 
   // allocate space for return address
   emitIFormat(OP_ADDIU, REG_SP, REG_SP, -WORDSIZE);
@@ -2901,7 +2901,7 @@ int gr_term(int* constantVal) {
   int leftVal;
   int operatorSymbol;
   int rtype;
-  int sign;
+  //int sign;
 
   // assert: n = allocatedTemporaries
 
@@ -3951,7 +3951,7 @@ int gr_type() {
 
 int gr_variable(int offset) {
   int type;
-  int selectorType;
+//  int selectorType;
   int size;
 
   int* variableOrProcedureName;
@@ -7638,23 +7638,68 @@ int main(int argc, int* argv) {
   println();
   print((int*) "twoDarrayGlobal[i][j] = (i + 1) * 3 % (j + 1)");
   println();
+
   print((int*) "twoDarrayLocal[i][j] = twoDarrayGlobal[i][j]");
 
+  println();
+  print((int*) "global content");
+  println();
   while (i < 4) {
     while (j < 8) {
-      println();
-      twoDarrayGlobal[i][j] = (i + 1) * 3 % (j + 1);
-      twoDarrayLocal[i][j] = twoDarrayGlobal[i][j];
-      print((int*) "twoDarrayLocal[");
-      print(itoa(i,string_buffer,10,0,0));
-      print((int*) "][");
-      print(itoa(j,string_buffer,10,0,0));
-      print((int*) "] (=");
+      twoDarrayGlobal[i][j] = 0; // not necessary, but test to make sure
+      print(itoa(twoDarrayGlobal[i][j],string_buffer,10,0,0));
+      j = j + 1;
+
+      print((int*) " ");
+    }
+    println();
+    j = 0;
+    i = i + 1;
+  }
+  i = 0;
+
+  print((int*) "local content");
+  println();
+  while (i < 4) {
+    while (j < 8) {
+      twoDarrayLocal[i][j] = 0; // not necessary, but test to make sure
+      print(itoa(twoDarrayGlobal[i][j],string_buffer,10,0,0));
+      j = j + 1;
+      print((int*) " ");
+    }
+    println();
+    j = 0;
+    i = i + 1;
+  }
+  i = 0;
+
+
+
+  print((int*) "Local array intended");
+  println();
+  while (i < 4) {
+    while (j < 8) {
       print(itoa((i + 1) * 3 % (j + 1),string_buffer,10,0,0));
-      print((int*) ") = ");
-      print(itoa(twoDarrayLocal[i][j],string_buffer,10,0,0));
+      print((int*) " ");
       j = j + 1;
     }
+    println();
+    j = 0;
+    i = i + 1;
+  }
+  i = 0;
+
+  print((int*) "Local array actually");
+  println();
+  while (i < 4) {
+    while (j < 8) {
+      twoDarrayGlobal[i][j] = (i + 1) * 3 % (j + 1);
+      twoDarrayLocal[i][j] = twoDarrayGlobal[i][j];
+      print(itoa(twoDarrayLocal[i][j],string_buffer,10,0,0));
+      print((int*) " ");
+      j = j + 1;
+    }
+    println();
     j = 0;
     i = i + 1;
   }
