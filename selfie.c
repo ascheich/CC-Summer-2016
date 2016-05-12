@@ -396,10 +396,10 @@ void initScanner () {
   character = CHAR_EOF;
   symbol    = SYM_EOF;
 
-  i = SYM_IDENTIFIER;
+  i = 0;
   while (i < 32) {
     SYMBOLS[i][1] = 0;
-    i= i+1;
+    i = i + 1;
   }
 }
 
@@ -2878,7 +2878,7 @@ int gr_factor(int* constantVal) {
                   emitRFormat(OP_SPECIAL, 0, 0, currentTemporary(), FCT_MFLO);
 
                   emitIFormat(OP_ADDIU, REG_ZR, nextTemporary(), *constantVal);
-                  emitRFormat(OP_SPECIAL, currentTemporary(), nextTemporary(), nextTemporary(), FCT_ADDU);
+                  emitRFormat(OP_SPECIAL, currentTemporary(), nextTemporary(), currentTemporary(), FCT_ADDU);
 
                   emitIFormat(OP_ADDIU, REG_ZR, nextTemporary(), typeSize);
                   emitRFormat(OP_SPECIAL, currentTemporary(), nextTemporary(), 0, FCT_MULTU);
@@ -7599,7 +7599,7 @@ int selfie(int argc, int* argv) {
         i = 0;
         while (i < 32){
             print((int*) "SYMBOL ");
-            print(SYMBOLS[i][0]);
+            print((int*) SYMBOLS[i][0]);
             print((int*) " # ");
             print(itoa(SYMBOLS[i][1],string_buffer,10,0,0));
             println();
@@ -7722,7 +7722,7 @@ int selfie(int argc, int* argv) {
 }
 
 int main(int argc, int* argv) {
-  int i;
+  // int i;
   // int j;
   // int TwoDarrayLocal[4][8];
   // int localArr[] = {1,2,3,4,5,6,7,8};
