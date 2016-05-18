@@ -575,7 +575,7 @@ void gr_return(int returnType);
 void gr_statement();
 int  gr_type();
 int  gr_variable(int offset);
-int  gr_struct(int* table, int symbol);
+int  gr_struct(int* table);
 void gr_initialization(int* name, int offset, int type);
 void gr_procedure(int* procedure, int returnType);
 void gr_cstar();
@@ -4145,9 +4145,41 @@ int gr_type() {
   } else if (symbol == SYM_STRUCT) {
       type = STRUCT_T;
       getSymbol();
-  } else syntaxErrorSymbol(SYM_INT);
+  } else {
+      printLineNumber();
+      syntaxErrorMessage((int*)"invalid type, int or struct required");
+      printSymbol(symbol);
+      println();
+  }
 
   return type;
+}
+
+// "{" type identifier ";" { type identifier ";" } "}" ";"
+int gr_struct(int* table){
+  int type;
+  int* variableOrProcedureName;
+
+  if (symbol == SYM_LBRACE) {
+
+    getSymbol();
+
+
+    while (symbol != SYM_RBRACE) {
+      type = gr_type();
+      if (symbol == SYM_IDENTIFIER) {
+        getSymbol();
+
+        if (symbol == SYM_SEMICOLON);{
+          getSymbol();
+          // PROLOG insert magic here
+        }
+        else syntaxErrorSymbol(SYM_SEMICOLON);
+      }
+      else syntaxErrorSymbol(SYM_IDENTIFIER);
+    }
+  }
+
 }
 
 int gr_variable(int offset) {
@@ -4172,7 +4204,7 @@ int gr_variable(int offset) {
     if (symbol == SYM_STRUCT) {
       getSymbol();
 
-      gr_struct(LOCAL_TABLE, symbol);
+      gr_struct(LOCAL_TABLE);
     }
 
     else if (symbol == SYM_LBRACKET) {
@@ -4548,7 +4580,7 @@ void gr_cstar() {
         else {
           if (symbol == SYM_STRUCT) { // ( "{" type identifier ";" { type identifier ";" } "}" ";" ) ";"
             getSymbol();
-            gr_struct(GLOBAL_TABLE, symbol);
+            gr_struct(GLOBAL_TABLE);
           }
           // type identifier "[" ...
           else if (symbol == SYM_LBRACKET) {

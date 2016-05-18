@@ -67,14 +67,16 @@ statement                     = ( [ "*" ] identifier [ selector ] | "*" "(" expr
                                   if |
                                   return ";" .
 
+struct                        = "{" type identifier ";" { type identifier ";" } "}" ";"
+
 variable                      = type identifier ( [ selector [ "=" integerList ] ] ) |
-                                                ( "{" type identifier ";" { type identifier ";" } "}" ";" )  .
+                                                ( struct )  .
 
 procedure                     = "(" [ variable { "," variable } ] ")"
                                 ( ";" | "{" { variable ";" } { statement } "}" ) .
 
 cstar                         = { type identifier
                                                   ([ selector ] [ "=" ( ([ cast ] [ "-" ] literal) | integerList ) ]) |
-                                                  ( "{" type identifier ";" { type identifier ";" } "}" ";" ) ";" |
+                                                  ( struct ) ";" |
                                 ( "void" | type ) identifier procedure } .
 ```
