@@ -431,7 +431,7 @@ int reportUndefinedProcedures();
 // |  1 | string  | identifier string, string literal
 // |  2 | line#   | source line number
 // |  3 | class   | VARIABLE, PROCEDURE, STRING, ARRAY
-// |  4 | type    | INT_T, INTSTAR_T, VOID_T
+// |  4 | type    | INT_T, INTSTAR_T, VOID_T, STRUCT_T
 // |  5 | value   | VARIABLE: initial value  2D-ARRAY: length of 2nd dimension
 // |  6 | address | VARIABLE: offset, PROCEDURE: address, STRING: offset
 // |  7 | scope   | REG_GP, REG_FP
@@ -506,6 +506,7 @@ int ARRAY     = 4;
 int INT_T           = 1;
 int INTSTAR_T       = 2;
 int VOID_T          = 3;
+int STRUCT_T        = 4;
 
 // symbol tables
 int GLOBAL_TABLE  = 1;
@@ -574,6 +575,7 @@ void gr_return(int returnType);
 void gr_statement();
 int  gr_type();
 int  gr_variable(int offset);
+int  gr_struct(int* table, int symbol);
 void gr_initialization(int* name, int offset, int type);
 void gr_procedure(int* procedure, int returnType);
 void gr_cstar();
@@ -4140,8 +4142,10 @@ int gr_type() {
 
       getSymbol();
     }
-  } else
-    syntaxErrorSymbol(SYM_INT);
+  } else if (symbol == SYM_STRUCT) {
+      type = STRUCT_T;
+      getSymbol();
+  } else syntaxErrorSymbol(SYM_INT);
 
   return type;
 }
@@ -4165,7 +4169,13 @@ int gr_variable(int offset) {
   if (symbol == SYM_IDENTIFIER) {
     getSymbol();
 
-    if (symbol == SYM_LBRACKET) {
+    if (symbol == SYM_STRUCT) {
+      getSymbol();
+
+      gr_struct(LOCAL_TABLE, symbol);
+    }
+
+    else if (symbol == SYM_LBRACKET) {
       getSymbol();
 
       variableOrProcedureName = identifier;
@@ -4536,8 +4546,12 @@ void gr_cstar() {
         if (symbol == SYM_LPARENTHESIS)
           gr_procedure(variableOrProcedureName, type);
         else {
+          if (symbol == SYM_STRUCT) { // ( "{" type identifier ";" { type identifier ";" } "}" ";" ) ";"
+            getSymbol();
+            gr_struct(GLOBAL_TABLE, symbol);
+          }
           // type identifier "[" ...
-          if (symbol == SYM_LBRACKET) {
+          else if (symbol == SYM_LBRACKET) {
             getSymbol();
 
             // type identifier "[" "]" "=" "{" integer [ "," integer ] "}""
