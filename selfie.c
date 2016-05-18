@@ -286,13 +286,14 @@ int SYM_NOTEQ        = 24; // !=
 int SYM_MOD          = 25; // %
 int SYM_CHARACTER    = 26; // character
 int SYM_STRING       = 27; // string
+int SYM_STRUCT       = 28; // struct
 
-int SYM_SLLV          = 28; // <<
-int SYM_SRLV          = 29; // >>
-int SYM_LBRACKET      = 30; // [
-int SYM_RBRACKET      = 31; // ]
+int SYM_SLLV          = 29; // <<
+int SYM_SRLV          = 30; // >>
+int SYM_LBRACKET      = 31; // [
+int SYM_RBRACKET      = 32; // ]
 
-int* SYMBOLS; // array of strings representing symbols
+int SYMBOLS[33][2]; // array of strings representing symbols
 
 int maxIdentifierLength = 64; // maximum number of characters in an identifier
 int maxIntegerLength    = 10; // maximum number of characters in an integer
@@ -322,44 +323,86 @@ int sourceFD    = 0;        // file descriptor of open source file
 // ------------------------- INITIALIZATION ------------------------
 
 void initScanner () {
-  SYMBOLS = malloc(32 * SIZEOFINTSTAR);
+  int i;
+  // SYMBOLS = malloc(32 * SIZEOFINTSTAR);
+  //
+  // *(SYMBOLS + SYM_IDENTIFIER)   = (int) "identifier";
+  // *(SYMBOLS + SYM_INTEGER)      = (int) "integer";
+  // *(SYMBOLS + SYM_VOID)         = (int) "void";
+  // *(SYMBOLS + SYM_INT)          = (int) "int";
+  // *(SYMBOLS + SYM_SEMICOLON)    = (int) ";";
+  // *(SYMBOLS + SYM_IF)           = (int) "if";
+  // *(SYMBOLS + SYM_ELSE)         = (int) "else";
+  // *(SYMBOLS + SYM_PLUS)         = (int) "+";
+  // *(SYMBOLS + SYM_MINUS)        = (int) "-";
+  // *(SYMBOLS + SYM_ASTERISK)     = (int) "*";
+  // *(SYMBOLS + SYM_DIV)          = (int) "/";
+  // *(SYMBOLS + SYM_EQUALITY)     = (int) "==";
+  // *(SYMBOLS + SYM_ASSIGN)       = (int) "=";
+  // *(SYMBOLS + SYM_LPARENTHESIS) = (int) "(";
+  // *(SYMBOLS + SYM_RPARENTHESIS) = (int) ")";
+  // *(SYMBOLS + SYM_LBRACE)       = (int) "{";
+  // *(SYMBOLS + SYM_RBRACE)       = (int) "}";
+  // *(SYMBOLS + SYM_WHILE)        = (int) "while";
+  // *(SYMBOLS + SYM_RETURN)       = (int) "return";
+  // *(SYMBOLS + SYM_COMMA)        = (int) ",";
+  // *(SYMBOLS + SYM_LT)           = (int) "<";
+  // *(SYMBOLS + SYM_LEQ)          = (int) "<=";
+  // *(SYMBOLS + SYM_GT)           = (int) ">";
+  // *(SYMBOLS + SYM_GEQ)          = (int) ">=";
+  // *(SYMBOLS + SYM_NOTEQ)        = (int) "!=";
+  // *(SYMBOLS + SYM_MOD)          = (int) "%";
+  // *(SYMBOLS + SYM_CHARACTER)    = (int) "character";
+  // *(SYMBOLS + SYM_STRING)       = (int) "string";
+  //
+  // *(SYMBOLS + SYM_SLLV)         = (int) "<<";
+  // *(SYMBOLS + SYM_SRLV)         = (int) ">>";
+  // *(SYMBOLS + SYM_LBRACKET)     = (int) "[";
+  // *(SYMBOLS + SYM_RBRACKET)     = (int) "]";
 
-  *(SYMBOLS + SYM_IDENTIFIER)   = (int) "identifier";
-  *(SYMBOLS + SYM_INTEGER)      = (int) "integer";
-  *(SYMBOLS + SYM_VOID)         = (int) "void";
-  *(SYMBOLS + SYM_INT)          = (int) "int";
-  *(SYMBOLS + SYM_SEMICOLON)    = (int) ";";
-  *(SYMBOLS + SYM_IF)           = (int) "if";
-  *(SYMBOLS + SYM_ELSE)         = (int) "else";
-  *(SYMBOLS + SYM_PLUS)         = (int) "+";
-  *(SYMBOLS + SYM_MINUS)        = (int) "-";
-  *(SYMBOLS + SYM_ASTERISK)     = (int) "*";
-  *(SYMBOLS + SYM_DIV)          = (int) "/";
-  *(SYMBOLS + SYM_EQUALITY)     = (int) "==";
-  *(SYMBOLS + SYM_ASSIGN)       = (int) "=";
-  *(SYMBOLS + SYM_LPARENTHESIS) = (int) "(";
-  *(SYMBOLS + SYM_RPARENTHESIS) = (int) ")";
-  *(SYMBOLS + SYM_LBRACE)       = (int) "{";
-  *(SYMBOLS + SYM_RBRACE)       = (int) "}";
-  *(SYMBOLS + SYM_WHILE)        = (int) "while";
-  *(SYMBOLS + SYM_RETURN)       = (int) "return";
-  *(SYMBOLS + SYM_COMMA)        = (int) ",";
-  *(SYMBOLS + SYM_LT)           = (int) "<";
-  *(SYMBOLS + SYM_LEQ)          = (int) "<=";
-  *(SYMBOLS + SYM_GT)           = (int) ">";
-  *(SYMBOLS + SYM_GEQ)          = (int) ">=";
-  *(SYMBOLS + SYM_NOTEQ)        = (int) "!=";
-  *(SYMBOLS + SYM_MOD)          = (int) "%";
-  *(SYMBOLS + SYM_CHARACTER)    = (int) "character";
-  *(SYMBOLS + SYM_STRING)       = (int) "string";
+  SYMBOLS[SYM_IDENTIFIER][0]   = (int) "identifier";
+  SYMBOLS[SYM_INTEGER][0]      = (int) "integer";
+  SYMBOLS[SYM_VOID][0]         = (int) "void";
+  SYMBOLS[SYM_INT][0]          = (int) "int";
+  SYMBOLS[SYM_SEMICOLON][0]    = (int) ";";
+  SYMBOLS[SYM_IF][0]           = (int) "if";
+  SYMBOLS[SYM_ELSE][0]         = (int) "else";
+  SYMBOLS[SYM_PLUS][0]         = (int) "+";
+  SYMBOLS[SYM_MINUS][0]        = (int) "-";
+  SYMBOLS[SYM_ASTERISK][0]     = (int) "*";
+  SYMBOLS[SYM_DIV][0]          = (int) "/";
+  SYMBOLS[SYM_EQUALITY][0]     = (int) "==";
+  SYMBOLS[SYM_ASSIGN][0]       = (int) "=";
+  SYMBOLS[SYM_LPARENTHESIS][0] = (int) "(";
+  SYMBOLS[SYM_RPARENTHESIS][0] = (int) ")";
+  SYMBOLS[SYM_LBRACE][0]       = (int) "{";
+  SYMBOLS[SYM_RBRACE][0]       = (int) "}";
+  SYMBOLS[SYM_WHILE][0]        = (int) "while";
+  SYMBOLS[SYM_RETURN][0]       = (int) "return";
+  SYMBOLS[SYM_COMMA][0]        = (int) ",";
+  SYMBOLS[SYM_LT][0]           = (int) "<";
+  SYMBOLS[SYM_LEQ][0]          = (int) "<=";
+  SYMBOLS[SYM_GT][0]           = (int) ">";
+  SYMBOLS[SYM_GEQ][0]          = (int) ">=";
+  SYMBOLS[SYM_NOTEQ][0]        = (int) "!=";
+  SYMBOLS[SYM_MOD][0]          = (int) "%";
+  SYMBOLS[SYM_CHARACTER][0]    = (int) "character";
+  SYMBOLS[SYM_STRING][0]       = (int) "string";
+  SYMBOLS[SYM_STRUCT][0]       = (int) "struct";
 
-  *(SYMBOLS + SYM_SLLV)         = (int) "<<";
-  *(SYMBOLS + SYM_SRLV)         = (int) ">>";
-  *(SYMBOLS + SYM_LBRACKET)     = (int) "[";
-  *(SYMBOLS + SYM_RBRACKET)     = (int) "]";
+  SYMBOLS[SYM_SLLV][0]         = (int) "<<";
+  SYMBOLS[SYM_SRLV][0]         = (int) ">>";
+  SYMBOLS[SYM_LBRACKET][0]     = (int) "[";
+  SYMBOLS[SYM_RBRACKET][0]     = (int) "]";
 
   character = CHAR_EOF;
   symbol    = SYM_EOF;
+
+  i = 0;
+  while (i < 33) {
+    SYMBOLS[i][1] = 0;
+    i = i + 1;
+  }
 }
 
 void resetScanner() {
@@ -494,7 +537,7 @@ void gr_if();
 void gr_return(int returnType);
 void gr_statement();
 int  gr_type();
-int gr_variable(int offset);
+int  gr_variable(int offset);
 void gr_initialization(int* name, int offset, int type);
 void gr_procedure(int* procedure, int returnType);
 void gr_cstar();
@@ -1548,7 +1591,8 @@ void printSymbol(int symbol) {
   if (symbol == SYM_EOF)
     print((int*) "end of file");
   else
-    print((int*) *(SYMBOLS + symbol));
+    // print((int*) *(SYMBOLS + symbol));
+    print((int*) SYMBOLS[symbol][0]);
 
   putCharacter(CHAR_DOUBLEQUOTE);
 }
@@ -1708,7 +1752,8 @@ int isNotDoubleQuoteOrEOF() {
 }
 
 int identifierStringMatch(int keyword) {
-  return stringCompare(identifier, (int*) *(SYMBOLS + keyword));
+  // return stringCompare(identifier, (int*) *(SYMBOLS + keyword));
+  return stringCompare(identifier, (int*) SYMBOLS[keyword][0]);
 }
 
 int identifierOrKeyword() {
@@ -1976,6 +2021,71 @@ int getSymbol() {
 
     exit(-1);
   }
+
+  if (symbol == SYM_IDENTIFIER)
+    SYMBOLS[SYM_IDENTIFIER][1] = SYMBOLS[SYM_IDENTIFIER][1] + 1;
+    else if (symbol == SYM_INTEGER)
+      SYMBOLS[SYM_INTEGER][1] = SYMBOLS[SYM_INTEGER][1] + 1;
+    else if (symbol == SYM_VOID)
+      SYMBOLS[SYM_VOID][1] = SYMBOLS[SYM_VOID][1] + 1;
+    else if (symbol == SYM_INT)
+      SYMBOLS[SYM_INT][1] = SYMBOLS[SYM_INT][1] + 1;
+    else if (symbol == SYM_SEMICOLON)
+      SYMBOLS[SYM_SEMICOLON][1] = SYMBOLS[SYM_SEMICOLON][1] + 1;
+    else if (symbol == SYM_IF)
+      SYMBOLS[SYM_IF][1] = SYMBOLS[SYM_IF][1] + 1;
+    else if (symbol == SYM_ELSE)
+      SYMBOLS[SYM_ELSE][1] = SYMBOLS[SYM_ELSE][1] + 1;
+    else if (symbol == SYM_PLUS)
+      SYMBOLS[SYM_PLUS][1] = SYMBOLS[SYM_PLUS][1] + 1;
+    else if (symbol == SYM_MINUS)
+      SYMBOLS[SYM_MINUS][1] = SYMBOLS[SYM_MINUS][1] + 1;
+    else if (symbol == SYM_ASTERISK)
+      SYMBOLS[SYM_ASTERISK][1] = SYMBOLS[SYM_ASTERISK][1] + 1;
+    else if (symbol == SYM_DIV)
+      SYMBOLS[SYM_DIV][1] = SYMBOLS[SYM_DIV][1] + 1;
+    else if (symbol == SYM_EQUALITY)
+      SYMBOLS[SYM_EQUALITY][1] = SYMBOLS[SYM_EQUALITY][1] + 1;
+    else if (symbol == SYM_ASSIGN)
+      SYMBOLS[SYM_ASSIGN][1] = SYMBOLS[SYM_ASSIGN][1] + 1;
+    else if (symbol == SYM_LPARENTHESIS)
+      SYMBOLS[SYM_LPARENTHESIS][1] = SYMBOLS[SYM_LPARENTHESIS][1] + 1;
+    else if (symbol == SYM_RPARENTHESIS)
+      SYMBOLS[SYM_RPARENTHESIS][1] = SYMBOLS[SYM_RPARENTHESIS][1] + 1;
+    else if (symbol == SYM_LBRACE)
+      SYMBOLS[SYM_LBRACE][1] = SYMBOLS[SYM_LBRACE][1] + 1;
+    else if (symbol == SYM_RBRACE)
+      SYMBOLS[SYM_RBRACE][1] = SYMBOLS[SYM_RBRACE][1] + 1;
+    else if (symbol == SYM_WHILE)
+      SYMBOLS[SYM_WHILE][1] = SYMBOLS[SYM_WHILE][1] + 1;
+    else if (symbol == SYM_RETURN)
+      SYMBOLS[SYM_RETURN][1] = SYMBOLS[SYM_RETURN][1] + 1;
+    else if (symbol == SYM_COMMA)
+      SYMBOLS[SYM_COMMA][1] = SYMBOLS[SYM_COMMA][1] + 1;
+    else if (symbol == SYM_LT)
+      SYMBOLS[SYM_LT][1] = SYMBOLS[SYM_LT][1] + 1;
+    else if (symbol == SYM_LEQ)
+      SYMBOLS[SYM_LEQ][1] = SYMBOLS[SYM_LEQ][1] + 1;
+    else if (symbol == SYM_GT)
+      SYMBOLS[SYM_GT][1] = SYMBOLS[SYM_GT][1] + 1;
+    else if (symbol == SYM_GEQ)
+      SYMBOLS[SYM_GEQ][1] = SYMBOLS[SYM_GEQ][1] + 1;
+    else if (symbol == SYM_NOTEQ)
+      SYMBOLS[SYM_NOTEQ][1] = SYMBOLS[SYM_NOTEQ][1] + 1;
+    else if (symbol == SYM_MOD)
+      SYMBOLS[SYM_MOD][1] = SYMBOLS[SYM_MOD][1] + 1;
+    else if (symbol == SYM_CHARACTER)
+      SYMBOLS[SYM_CHARACTER][1] = SYMBOLS[SYM_CHARACTER][1] + 1;
+    else if (symbol == SYM_STRING)
+      SYMBOLS[SYM_STRING][1] = SYMBOLS[SYM_STRING][1] + 1;
+    else if (symbol == SYM_SLLV)
+      SYMBOLS[SYM_SLLV][1] = SYMBOLS[SYM_SLLV][1] + 1;
+    else if (symbol == SYM_SRLV)
+      SYMBOLS[SYM_SRLV][1] = SYMBOLS[SYM_SRLV][1] + 1;
+    else if (symbol == SYM_LBRACKET)
+      SYMBOLS[SYM_LBRACKET][1] = SYMBOLS[SYM_LBRACKET][1] + 1;
+    else if (symbol == SYM_RBRACKET)
+      SYMBOLS[SYM_RBRACKET][1] = SYMBOLS[SYM_RBRACKET][1] + 1;
 
   return symbol;
 }
@@ -2770,7 +2880,7 @@ int gr_factor(int* constantVal) {
                   emitRFormat(OP_SPECIAL, 0, 0, currentTemporary(), FCT_MFLO);
 
                   emitIFormat(OP_ADDIU, REG_ZR, nextTemporary(), *constantVal);
-                  emitRFormat(OP_SPECIAL, currentTemporary(), nextTemporary(), nextTemporary(), FCT_ADDU);
+                  emitRFormat(OP_SPECIAL, currentTemporary(), nextTemporary(), currentTemporary(), FCT_ADDU);
 
                   emitIFormat(OP_ADDIU, REG_ZR, nextTemporary(), typeSize);
                   emitRFormat(OP_SPECIAL, currentTemporary(), nextTemporary(), 0, FCT_MULTU);
@@ -3770,22 +3880,12 @@ void gr_statement() {
 
             // assert: allocatedTemporaries = 2
 
-            // previousTemporary = t0
-            // currentTemporary  = t1
-            // nextTemporary     = t2
-
-            // t2 = 2
-            // t0 = t0 * 2^t2
             emitIFormat(OP_ADDIU, REG_ZR, nextTemporary(), 2);
             emitRFormat(OP_SPECIAL, nextTemporary(), previousTemporary(), previousTemporary(), FCT_SLLV);
 
-            // t2 = Address 
-            // t0 = t2 - t0
             emitIFormat(OP_ADDIU, REG_ZR, nextTemporary(), getAddress(entry));
             emitRFormat(OP_SPECIAL, nextTemporary(), previousTemporary(), previousTemporary(), FCT_SUBU);
 
-            // t0 = scope + t0
-            // t0 + 0 = t1
             emitRFormat(OP_SPECIAL, getScope(entry), previousTemporary(), previousTemporary(), FCT_ADDU);
             emitIFormat(OP_SW, previousTemporary(), currentTemporary(), 0);
             tfree(1);
@@ -3834,14 +3934,6 @@ void gr_statement() {
                 } else {
                   // assert: allocatedTemporaries == 2
 
-                  // previousTemporary = t0
-                  // currentTemporary  = t1
-                  // nextTemporary     = t2
-
-                  // t1 = constantVal
-                  // t2 = Value
-                  // t1 = t1 * t2 (MFLO gets the lower part of the 32 bits)
-
                   talloc();
                   emitIFormat(OP_ADDIU, REG_ZR, currentTemporary(), *constantValLeft);
                   emitIFormat(OP_ADDIU, REG_ZR, nextTemporary(), getValue(entry));
@@ -3849,21 +3941,14 @@ void gr_statement() {
                   emitRFormat(OP_SPECIAL, 0, 0, currentTemporary(), FCT_MFLO);
                   tfree(1);
 
-                  // t0 = t2 + t0
-                  // t2 = type
-                  // t0 = t0 * t2 (MFLO gets the lower part of the 32 bits)
                   emitRFormat(OP_SPECIAL, nextTemporary(), previousTemporary(), previousTemporary(), FCT_ADDU);
                   emitIFormat(OP_ADDIU, REG_ZR, nextTemporary(), ltype);
                   emitRFormat(OP_SPECIAL, previousTemporary(), nextTemporary(), 0, FCT_MULTU);
                   emitRFormat(OP_SPECIAL, 0, 0, previousTemporary(), FCT_MFLO);
 
-                  // t2 = address
-                  // t0 = t2 - t0
                   emitIFormat(OP_ADDIU, REG_ZR, nextTemporary(), getAddress(entry));
                   emitRFormat(OP_SPECIAL, nextTemporary(), previousTemporary(), previousTemporary(), FCT_SUBU);
 
-                  // t0 = scope + t0
-                  // t0 + 0 = t1
                   emitRFormat(OP_SPECIAL, getScope(entry), previousTemporary(), previousTemporary(), FCT_ADDU);
                   emitIFormat(OP_SW, previousTemporary(), currentTemporary(), 0);
 
@@ -3873,34 +3958,21 @@ void gr_statement() {
                 if (*(constantValRight + 1) == 1) {
                   // assert: allocatedTemporaries == 2
 
-                  // previousTemporary = t0
-                  // currentTemporary  = t1
-                  // nextTemporary     = t2
-
-                  // t2 = value
-                  // t0 = t0 * t2 (MFLO gets the lower part of the 32 bits) 
                   emitIFormat(OP_ADDIU, REG_ZR, nextTemporary(), getValue(entry));
                   emitRFormat(OP_SPECIAL, previousTemporary(), nextTemporary(), 0, FCT_MULTU);
                   emitRFormat(OP_SPECIAL, 0, 0, previousTemporary(), FCT_MFLO);
 
-                  // t2 = constantValRight
-                  // t0 = t0 + t2
                   emitIFormat(OP_ADDIU, REG_ZR, nextTemporary(), *constantValRight);
                   emitRFormat(OP_SPECIAL, previousTemporary(), nextTemporary(), previousTemporary(), FCT_ADDU);
 
-                  // t2 = ltype
-                  // t0 = t0 * t2 (MFLO gets the lower part of the 32 bits) 
+
                   emitIFormat(OP_ADDIU, REG_ZR, nextTemporary(), ltype);
                   emitRFormat(OP_SPECIAL, previousTemporary(), nextTemporary(), 0, FCT_MULTU);
                   emitRFormat(OP_SPECIAL, 0, 0, previousTemporary(), FCT_MFLO);
 
-                  // t2 = address
-                  // t0 = t2 - t0
                   emitIFormat(OP_ADDIU, REG_ZR, nextTemporary(), getAddress(entry));
                   emitRFormat(OP_SPECIAL, nextTemporary(), previousTemporary(), previousTemporary(), FCT_SUBU);
 
-                  // t0 = scope + t0
-                  // t0 + 0 = t1
                   emitRFormat(OP_SPECIAL, getScope(entry), previousTemporary(), previousTemporary(), FCT_ADDU);
                   emitIFormat(OP_SW, previousTemporary(), currentTemporary(), 0);
 
@@ -7513,6 +7585,7 @@ void boot(int argc, int* argv) {
 // -----------------------------------------------------------------
 
 int selfie(int argc, int* argv) {
+  int i;
   if (argc < 2)
     return -1;
   else {
@@ -7525,6 +7598,16 @@ int selfie(int argc, int* argv) {
         argv = argv + 2;
 
         selfie_compile();
+        i = 0;
+        while (i < 32){
+            print((int*) "SYMBOL ");
+            print((int*) SYMBOLS[i][0]);
+            print((int*) " # ");
+            print(itoa(SYMBOLS[i][1],string_buffer,10,0,0));
+            println();
+          i = i+1;
+        }
+        i = 0;
       } else if (stringCompare((int*) *argv, (int*) "-o")) {
         binaryName = (int*) *(argv+1);
 
@@ -7641,9 +7724,9 @@ int selfie(int argc, int* argv) {
 }
 
 int main(int argc, int* argv) {
-  int i;
-  int j;
-  int TwoDarrayLocal[4][8];
+  // int i;
+  // int j;
+  // int TwoDarrayLocal[4][8];
   // int localArr[] = {1,2,3,4,5,6,7,8};
 
   initLibrary();
@@ -7663,50 +7746,49 @@ int main(int argc, int* argv) {
   println();
   print((int*)"This is Prolog Selfie.");
 
-
   //################### TEST ENVIRONMENT #####################
-  println(); println();
-  print((int*)"Executing Test");
-  println();
-  print((int*) "Var: prolog_Test: ");
-  print(itoa(prolog_Test,string_buffer,10,0,0));
-  println();
-  //------------------
-
-  println();
-  print((int*) "TwoDarrayLocal[i][j] = (i + 1) * 3 % (j + 1)");
-  println();
-  print((int*) "TwoDarrayLocal[i][j] = TwoDarrayLocal[i][j]");
-  i = 0;
-  j = 0;
-  while (i < 4) {
-    while (j < 8) {
-      println();
-      TwoDarrayLocal[i][j] = (i + 1) * 3 % (j + 1);
-      TwoDarrayLocal[i][j] = TwoDarrayLocal[i][j];
-      print((int*) "TwoDarrayLocal[");
-      print(itoa(i,string_buffer,10,0,0));
-      print((int*) "][");
-      print(itoa(j,string_buffer,10,0,0));
-      print((int*) "] (=");
-      print(itoa((i + 1) * 3 % (j + 1),string_buffer,10,0,0));
-      print((int*) ") = ");
-      print(itoa(TwoDarrayLocal[i][j],string_buffer,10,0,0));
-      print((int*) " ");
-      j = j + 1;
-    }
-    println();
-    j = 0;
-    i = i + 1;
-  }
-  i = 0;
-
-
+  // println(); println();
+  // print((int*)"Executing Test");
+  // println();
+  // print((int*) "Var: prolog_Test: ");
+  // print(itoa(prolog_Test,string_buffer,10,0,0));
+  // println();
+  // //------------------
+  //
+  // println();
+  // print((int*) "TwoDarrayLocal[i][j] = (i + 1) * 3 % (j + 1)");
+  // println();
+  // print((int*) "TwoDarrayLocal[i][j] = TwoDarrayLocal[i][j]");
+  // i = 0;
+  // j = 0;
+  // while (i < 4) {
+  //   while (j < 8) {
+  //     println();
+  //     TwoDarrayLocal[i][j] = (i + 1) * 3 % (j + 1);
+  //     TwoDarrayLocal[i][j] = TwoDarrayLocal[i][j];
+  //     print((int*) "TwoDarrayLocal[");
+  //     print(itoa(i,string_buffer,10,0,0));
+  //     print((int*) "][");
+  //     print(itoa(j,string_buffer,10,0,0));
+  //     print((int*) "] (=");
+  //     print(itoa((i + 1) * 3 % (j + 1),string_buffer,10,0,0));
+  //     print((int*) ") = ");
+  //     print(itoa(TwoDarrayLocal[i][j],string_buffer,10,0,0));
+  //     print((int*) " ");
+  //     j = j + 1;
+  //   }
+  //   println();
+  //   j = 0;
+  //   i = i + 1;
+  // }
+  // i = 0;
+  //
+  //
   // //------------------
   // println(); println();
   // print((int*) "End of Test.");
   // println(); println();
-  // //############### END OF TEST ENVIRONMENT ##################
+  //############### END OF TEST ENVIRONMENT ##################
 
   if (selfie(argc, (int*) argv) != 0) {
     print(selfieName);
