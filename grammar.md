@@ -8,7 +8,7 @@ This is the grammar of the C Star (C*) programming language.
 
 C* is a small Turing-complete subset of C that includes dereferencing (the * operator) but excludes data structures, bitwise and Boolean operators, and many other features. C* is supposed to be close to the minimum necessary for implementing a self-compiling, single-pass, recursive-descent compiler.
 
-Keywords: int, while, if, else, return, void
+Keywords: int, while, if, else, return, void, struct
 
 ```
 digit                         = "0" | ... | "9" .
@@ -19,7 +19,7 @@ letter                        = "a" | ... | "z" | "A" | ... | "Z" .
 
 identifier                    = letter { letter | digit | "_" } .
 
-type                          = "int" [ "*" ] .
+type                          = "int" [ "*" ] | "struct".
 
 cast                          = "(" type ")" .
 
@@ -30,6 +30,8 @@ literal                       = integer | "'" ascii_character "'" .
 selector                      = "[" [ expression ] "]" .
 
 integerList                     = "{" integer { "," integer } "}" .
+
+
 
 factor<constantVal>           = [ cast ]
                                 ( [ "*" ] ( identifier [ selector ]  | "(" expression ")" ) |
@@ -65,11 +67,14 @@ statement                     = ( [ "*" ] identifier [ selector ] | "*" "(" expr
                                   if |
                                   return ";" .
 
-variable                      = type identifier [ selector [ "=" integerList ] ] .
+variable                      = type identifier ( [ selector [ "=" integerList ] ] ) |
+                                                ( "{" type identifier ";" { type identifier ";" } "}" ";" )  .
 
 procedure                     = "(" [ variable { "," variable } ] ")"
                                 ( ";" | "{" { variable ";" } { statement } "}" ) .
 
-cstar                         = { type identifier [ selector ] [ "=" ( ([ cast ] [ "-" ] literal) | integerList ) ] ";" |
+cstar                         = { type identifier
+                                                  ([ selector ] [ "=" ( ([ cast ] [ "-" ] literal) | integerList ) ]) |
+                                                  ( "{" type identifier ";" { type identifier ";" } "}" ";" ) ";" |
                                 ( "void" | type ) identifier procedure } .
 ```
