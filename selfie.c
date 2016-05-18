@@ -458,6 +458,42 @@ void setAddress(int* entry, int address)    { *(entry + 6) = address; }
 void setScope(int* entry, int scope)        { *(entry + 7) = scope; }
 void setSize(int* entry, int size)        { *(entry + 8) = size; }
 
+// -----------------------------------------------------------------
+// ---------------------------- STRUCT ----------------------------
+// -----------------------------------------------------------------
+
+void resetStructTables();
+
+void createStructTableEntry(int which, int* name, int line);
+int* getStructTableEntry(int* name);
+
+// struct table entry:
+// +----+------------+
+// |  0 | next       | pointer to next entry
+// |  1 | name       | the name of the defined data type
+// |  2 | line#      | source line number
+// |  3 | scope      | REG_GP, REG_FP
+// |  4 | fieldCount | # of fields in this struct
+// |  5 | fields     | pointer to the first field of the struct
+// |  6 | size       | size of all fields of the struct in Byte
+// +----+------------+
+
+int* getNextStructEntry(int* entry)               { return (int*) *entry; }
+int* getStructName(int* entry)                    { return (int*) *(entry + 1); }
+int  getStructLineNumber(int* entry)              { return        *(entry + 2); }
+int  getStructScope(int* entry)                   { return        *(entry + 3); }
+int  getFieldCount(int* entry)                    { return        *(entry + 4); }
+int* getStructFields(int* entry)                  { return (int*) *(entry + 5); }
+int  getStructSize(int* entry)                    { return        *(entry + 6); }
+
+void setNextStructEntry(int* entry, int* next)    { *entry       = (int) next; }
+void setStructName(int* entry, int* name)         { *(entry + 1) = (int) name; }
+void setStructLineNumber(int* entry, int line)    { *(entry + 2) = line; }
+void setStructScope(int* entry, int scope)        { *(entry + 3) = scope; }
+void setFieldCount(int* entry, int fieldCount)    { *(entry + 4) = fieldCount; }
+void setStructFields(int* entry, int* fields)     { *(entry + 5) = (int) fields; }
+void setStructSize(int* entry, int size)          { *(entry + 6) = size; }
+
 // ------------------------ GLOBAL CONSTANTS -----------------------
 
 // classes
@@ -1769,6 +1805,8 @@ int identifierOrKeyword() {
     return SYM_RETURN;
   if (identifierStringMatch(SYM_VOID))
     return SYM_VOID;
+  if (identifierStringMatch(SYM_STRUCT))
+    return SYM_STRUCT;
   else
     return SYM_IDENTIFIER;
 }
@@ -2194,6 +2232,56 @@ int reportUndefinedProcedures() {
   return undefined;
 }
 
+
+// -----------------------------------------------------------------
+// ---------------------------- STRUCT -----------------------------
+// -----------------------------------------------------------------
+
+void createStructTableEntry(int whichTable, int* name, int line) {
+  int* newEntry;
+
+  newEntry = malloc(3 * SIZEOFINTSTAR + 4 * SIZEOFINT);
+
+  setStructName(newEntry, name);
+  setStructLineNumber(newEntry, line);
+  setStructSize(newEntry, 0);
+  setFieldCount(newEntry, 0);
+
+  // create entry at head of struct table
+  if (whichTable == GLOBAL_TABLE) {
+    setStructScope(newEntry, REG_GP);
+    setNextStructEntry(newEntry, global_struct_table);
+    global_struct_table = newEntry;
+  } else if (whichTable == LOCAL_TABLE) {
+    setStructScope(newEntry, REG_FP);
+    setNextStructEntry(newEntry, local_struct_table);
+    local_struct_table = newEntry;
+  }
+}
+
+int* getStructTableEntry(int* name) {
+  int* entry;
+
+  entry = local_struct_table;
+  while (entry != (int*) 0) {
+    if (stringCompare(name, getStructName(entry)))
+      return entry;
+
+    // keep looking
+    entry = getNextStructEntry(entry);
+  }
+
+  entry = global_struct_table;
+  while (entry != (int*) 0) {
+    if (stringCompare(name, getStructName(entry)))
+      return entry;
+
+    // keep looking
+    entry = getNextStructEntry(entry);
+  }
+
+  return (int*) 0;
+}
 // -----------------------------------------------------------------
 // ---------------------------- PARSER -----------------------------
 // -----------------------------------------------------------------
@@ -2332,6 +2420,8 @@ int lookForType() {
   else if (symbol == SYM_VOID)
     return 0;
   else if (symbol == SYM_EOF)
+    return 0;
+  else if (symbol == SYM_STRUCT)
     return 0;
   else
     return 1;
