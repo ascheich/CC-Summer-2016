@@ -362,10 +362,12 @@ void initScanner () {
   character = CHAR_EOF;
   symbol    = SYM_EOF;
 
-  i = 0;
-  while (i < 33) {
-    SYMBOLS[i][1] = 0;
-    i = i + 1;
+  if (prologDebug) {
+    i = 0;
+    while (i < 33) {
+      SYMBOLS[i][1] = 0;
+      i = i + 1;
+    }
   }
 }
 
@@ -2028,8 +2030,9 @@ int getSymbol() {
     exit(-1);
   }
 
-  if (symbol == SYM_IDENTIFIER)
-    SYMBOLS[SYM_IDENTIFIER][1] = SYMBOLS[SYM_IDENTIFIER][1] + 1;
+  if (prologDebug) {
+    if (symbol == SYM_IDENTIFIER)
+      SYMBOLS[SYM_IDENTIFIER][1] = SYMBOLS[SYM_IDENTIFIER][1] + 1;
     else if (symbol == SYM_INTEGER)
       SYMBOLS[SYM_INTEGER][1] = SYMBOLS[SYM_INTEGER][1] + 1;
     else if (symbol == SYM_VOID)
@@ -2092,6 +2095,7 @@ int getSymbol() {
       SYMBOLS[SYM_LBRACKET][1] = SYMBOLS[SYM_LBRACKET][1] + 1;
     else if (symbol == SYM_RBRACKET)
       SYMBOLS[SYM_RBRACKET][1] = SYMBOLS[SYM_RBRACKET][1] + 1;
+  }
 
   return symbol;
 }
@@ -2870,12 +2874,15 @@ int gr_factor(int* constantVal) {
           getSymbol();
 
           entry = searchSymbolTable(local_symbol_table, variableOrProcedureName, ARRAY);
-          if (entry == (int*) 0)
+          if (entry == (int*) 0) {
             entry = searchSymbolTable(global_symbol_table, variableOrProcedureName, ARRAY);
-          else if (entry == (int*) 0)
+          } else if (entry == (int*) 0) {
+            print((int*)"oanerg");
             entry = searchSymbolTable(local_symbol_table, variableOrProcedureName, VARIABLE);
-          else if (entry == (int*) 0)
+          } else if (entry == (int*) 0) {
             entry = searchSymbolTable(global_symbol_table, variableOrProcedureName, VARIABLE);
+            print((int*)"rneb");
+          }
 
           if (getClass(entry) == VARIABLE)
             load_variable(identifier);
@@ -2941,21 +2948,18 @@ int gr_factor(int* constantVal) {
                 if (*(constantVal + 1) == 1) {
                   // assert: allocatedTemporaries == n + 2
 
-                  print((int*)"TEST_v_rc");
-                  println();
-
                   emitIFormat(OP_ADDIU, REG_ZR, nextTemporary(), getValue(entry));
-                  emitRFormat(OP_SPECIAL, currentTemporary(), nextTemporary(), 0, FCT_MULTU);
-                  emitRFormat(OP_SPECIAL, 0, 0, currentTemporary(), FCT_MFLO);
+                  emitRFormat(OP_SPECIAL, previousTemporary(), nextTemporary(), 0, FCT_MULTU);
+                  emitRFormat(OP_SPECIAL, 0, 0, previousTemporary(), FCT_MFLO);
 
                   emitIFormat(OP_ADDIU, REG_ZR, nextTemporary(), *constantVal);
-                  emitRFormat(OP_SPECIAL, currentTemporary(), nextTemporary(), currentTemporary(), FCT_ADDU);
+                  emitRFormat(OP_SPECIAL, previousTemporary(), nextTemporary(), previousTemporary(), FCT_ADDU);
 
                   emitIFormat(OP_ADDIU, REG_ZR, nextTemporary(), typeSize);
-                  emitRFormat(OP_SPECIAL, currentTemporary(), nextTemporary(), 0, FCT_MULTU);
-                  emitRFormat(OP_SPECIAL, 0, 0, currentTemporary(), FCT_MFLO);
+                  emitRFormat(OP_SPECIAL, previousTemporary(), nextTemporary(), 0, FCT_MULTU);
+                  emitRFormat(OP_SPECIAL, 0, 0, previousTemporary(), FCT_MFLO);
 
-                  emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), FCT_SUBU);
+                  emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary(), previousTemporary(), FCT_SUBU);
                   tfree(1);
 
                   // assert: allocatedTemporaries == n + 1
@@ -2963,17 +2967,17 @@ int gr_factor(int* constantVal) {
                   // assert: allocatedTemporaries == n + 3
 
                   emitIFormat(OP_ADDIU, REG_ZR, nextTemporary(), getValue(entry));
-                  emitRFormat(OP_SPECIAL, previousTemporary(), nextTemporary(), 0, FCT_MULTU);
-                  emitRFormat(OP_SPECIAL, 0, 0, previousTemporary(), FCT_MFLO);
+                  emitRFormat(OP_SPECIAL, previousTemporary() - 1, nextTemporary(), 0, FCT_MULTU);
+                  emitRFormat(OP_SPECIAL, 0, 0, previousTemporary() - 1, FCT_MFLO);
 
-                  emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), FCT_ADDU);
+                  emitRFormat(OP_SPECIAL, previousTemporary() - 1, currentTemporary(), previousTemporary() - 1, FCT_ADDU);
 
                   emitIFormat(OP_ADDIU, REG_ZR, currentTemporary(), typeSize);
-                  emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), 0, FCT_MULTU);
-                  emitRFormat(OP_SPECIAL, 0, 0, previousTemporary(), FCT_MFLO);
+                  emitRFormat(OP_SPECIAL, previousTemporary() - 1, currentTemporary(), 0, FCT_MULTU);
+                  emitRFormat(OP_SPECIAL, 0, 0, previousTemporary() - 1, FCT_MFLO);
                   tfree(1);
 
-                  emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), FCT_SUBU);
+                  emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary(), previousTemporary(), FCT_SUBU);
                   tfree(1);
 
                   // assert: allocatedTemporaries == n + 1
@@ -4290,7 +4294,8 @@ int gr_variable(int offset) {
     createSymbolTableEntry(LOCAL_TABLE, identifier, lineNumber, VARIABLE, type, 0, offset);
     return 1;
   } else if (symbol == SYM_STRUCT) {
-    gr_struct(LOCAL_TABLE);
+    offset = gr_struct(LOCAL_TABLE);
+    return offset;
   } else {
     syntaxErrorSymbol(SYM_IDENTIFIER);
 
@@ -4664,10 +4669,10 @@ void gr_cstar() {
 
                             if (type == INT_T) {
                               setAddress(entry, - (allocatedMemory + SIZEOFINT));
-                              allocatedMemory = allocatedMemory + getSize(entry) * SIZEOFINT;
+                              allocatedMemory = allocatedMemory + *constantValLeft * *constantValRight * SIZEOFINT;
                             } else {
                               setAddress(entry, - (allocatedMemory + SIZEOFINTSTAR));
-                              allocatedMemory = allocatedMemory  + getSize(entry) * SIZEOFINTSTAR;
+                              allocatedMemory = allocatedMemory  + *constantValLeft * *constantValRight * SIZEOFINTSTAR;
                             }
 
                             if (symbol != SYM_SEMICOLON)
@@ -7710,6 +7715,7 @@ void boot(int argc, int* argv) {
 
 int selfie(int argc, int* argv) {
   int i;
+
   if (argc < 2)
     return -1;
   else {
@@ -7722,16 +7728,20 @@ int selfie(int argc, int* argv) {
         argv = argv + 2;
 
         selfie_compile();
-        i = 0;
-        while (i < 32){
-            print((int*) "SYMBOL ");
-            print((int*) SYMBOLS[i][0]);
-            print((int*) " # ");
-            print(itoa(SYMBOLS[i][1],string_buffer,10,0,0));
-            println();
-          i = i+1;
+
+        if (prologDebug) {
+          i = 0;
+          while (i < 32){
+              print((int*) "SYMBOL ");
+              print((int*) SYMBOLS[i][0]);
+              print((int*) " # ");
+              print(itoa(SYMBOLS[i][1],string_buffer,10,0,0));
+              println();
+            i = i + 1;
+          }
+          i = 0;
         }
-        i = 0;
+
       } else if (stringCompare((int*) *argv, (int*) "-o")) {
         binaryName = (int*) *(argv+1);
 
@@ -7888,8 +7898,8 @@ int main(int argc, int* argv) {
   while (i < 4) {
     while (j < 8) {
       println();
-      // TwoDarrayLocal[i][j] = (i + 1) * 3 % (j + 1);
-      // TwoDarrayLocal[i][j] = TwoDarrayLocal[i][j];
+      TwoDarrayLocal[i][j] = (i + 1) * 3 % (j + 1);
+      TwoDarrayLocal[i][j] = TwoDarrayLocal[i][j];
       print((int*) "TwoDarrayLocal[");
       print(itoa(i,string_buffer,10,0,0));
       print((int*) "][");
@@ -7897,7 +7907,7 @@ int main(int argc, int* argv) {
       print((int*) "] (=");
       print(itoa((i + 1) * 3 % (j + 1),string_buffer,10,0,0));
       print((int*) ") = ");
-      print(itoa(TwoDarrayLocal[i][0],string_buffer,10,0,0));
+      print(itoa(TwoDarrayLocal[i][j],string_buffer,10,0,0));
       print((int*) " ");
       j = j + 1;
     }
@@ -7907,6 +7917,54 @@ int main(int argc, int* argv) {
   }
   i = 0;
 
+  // print(itoa(TwoDarrayLocal[0][0],string_buffer,10,0,0));
+  // println();
+  // print(itoa(TwoDarrayLocal[0][1],string_buffer,10,0,0));
+  // println();
+  // print(itoa(TwoDarrayLocal[0][2],string_buffer,10,0,0));
+  // println();
+  // print(itoa(TwoDarrayLocal[0][3],string_buffer,10,0,0));
+  // println();
+  // print(itoa(TwoDarrayLocal[0][4],string_buffer,10,0,0));
+  // println();
+  // print(itoa(TwoDarrayLocal[0][5],string_buffer,10,0,0));
+  // println();
+  // print(itoa(TwoDarrayLocal[0][6],string_buffer,10,0,0));
+  // println();
+  // print(itoa(TwoDarrayLocal[0][7],string_buffer,10,0,0));
+  // println();
+  // print(itoa(TwoDarrayLocal[1][0],string_buffer,10,0,0));
+  // println();
+  // print(itoa(TwoDarrayLocal[1][1],string_buffer,10,0,0));
+  // println();
+  // print(itoa(TwoDarrayLocal[1][2],string_buffer,10,0,0));
+  // println();
+  // print(itoa(TwoDarrayLocal[1][3],string_buffer,10,0,0));
+  // println();
+  // print(itoa(TwoDarrayLocal[1][4],string_buffer,10,0,0));
+  // println();
+  // print(itoa(TwoDarrayLocal[1][5],string_buffer,10,0,0));
+  // println();
+  // print(itoa(TwoDarrayLocal[1][6],string_buffer,10,0,0));
+  // println();
+  // print(itoa(TwoDarrayLocal[1][7],string_buffer,10,0,0));
+  // println();
+  // print(itoa(TwoDarrayLocal[3][0],string_buffer,10,0,0));
+  // println();
+  // print(itoa(TwoDarrayLocal[3][1],string_buffer,10,0,0));
+  // println();
+  // print(itoa(TwoDarrayLocal[3][2],string_buffer,10,0,0));
+  // println();
+  // print(itoa(TwoDarrayLocal[3][3],string_buffer,10,0,0));
+  // println();
+  // print(itoa(TwoDarrayLocal[3][4],string_buffer,10,0,0));
+  // println();
+  // print(itoa(TwoDarrayLocal[3][5],string_buffer,10,0,0));
+  // println();
+  // print(itoa(TwoDarrayLocal[3][6],string_buffer,10,0,0));
+  // println();
+  // print(itoa(TwoDarrayLocal[3][7],string_buffer,10,0,0));
+  // println();
 
   //------------------
   println(); println();
