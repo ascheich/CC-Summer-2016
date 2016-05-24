@@ -7917,55 +7917,6 @@ int main(int argc, int* argv) {
   }
   i = 0;
 
-  // print(itoa(TwoDarrayLocal[0][0],string_buffer,10,0,0));
-  // println();
-  // print(itoa(TwoDarrayLocal[0][1],string_buffer,10,0,0));
-  // println();
-  // print(itoa(TwoDarrayLocal[0][2],string_buffer,10,0,0));
-  // println();
-  // print(itoa(TwoDarrayLocal[0][3],string_buffer,10,0,0));
-  // println();
-  // print(itoa(TwoDarrayLocal[0][4],string_buffer,10,0,0));
-  // println();
-  // print(itoa(TwoDarrayLocal[0][5],string_buffer,10,0,0));
-  // println();
-  // print(itoa(TwoDarrayLocal[0][6],string_buffer,10,0,0));
-  // println();
-  // print(itoa(TwoDarrayLocal[0][7],string_buffer,10,0,0));
-  // println();
-  // print(itoa(TwoDarrayLocal[1][0],string_buffer,10,0,0));
-  // println();
-  // print(itoa(TwoDarrayLocal[1][1],string_buffer,10,0,0));
-  // println();
-  // print(itoa(TwoDarrayLocal[1][2],string_buffer,10,0,0));
-  // println();
-  // print(itoa(TwoDarrayLocal[1][3],string_buffer,10,0,0));
-  // println();
-  // print(itoa(TwoDarrayLocal[1][4],string_buffer,10,0,0));
-  // println();
-  // print(itoa(TwoDarrayLocal[1][5],string_buffer,10,0,0));
-  // println();
-  // print(itoa(TwoDarrayLocal[1][6],string_buffer,10,0,0));
-  // println();
-  // print(itoa(TwoDarrayLocal[1][7],string_buffer,10,0,0));
-  // println();
-  // print(itoa(TwoDarrayLocal[3][0],string_buffer,10,0,0));
-  // println();
-  // print(itoa(TwoDarrayLocal[3][1],string_buffer,10,0,0));
-  // println();
-  // print(itoa(TwoDarrayLocal[3][2],string_buffer,10,0,0));
-  // println();
-  // print(itoa(TwoDarrayLocal[3][3],string_buffer,10,0,0));
-  // println();
-  // print(itoa(TwoDarrayLocal[3][4],string_buffer,10,0,0));
-  // println();
-  // print(itoa(TwoDarrayLocal[3][5],string_buffer,10,0,0));
-  // println();
-  // print(itoa(TwoDarrayLocal[3][6],string_buffer,10,0,0));
-  // println();
-  // print(itoa(TwoDarrayLocal[3][7],string_buffer,10,0,0));
-  // println();
-
   //------------------
   println(); println();
   print((int*) "End of Test.");
