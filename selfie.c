@@ -3582,6 +3582,7 @@ int gr_expression(int* constantVal) {
   }
   if (*(constantVal + 1) == 1)
     load_integer(*constantVal);
+  *(constantVal + 1) = 0;
 
   // assert: allocatedTemporaries == n + 1
 
@@ -4201,8 +4202,8 @@ int gr_variable(int offset) {
   int* constantValRight;
   constantValLeft = malloc(2 * SIZEOFINT);
   constantValRight = malloc(2 * SIZEOFINT);
-  *constantValLeft = 0;
-  *constantValRight = 0;
+  *(constantValLeft + 1) = 0;
+  *(constantValRight + 1) = 0;
 
   type = gr_type();
 
@@ -4546,11 +4547,9 @@ void gr_cstar() {
   //1st is for value
   //2nd is the constant folding flag
   int* constantVal;
-  constantVal = malloc(2 * SIZEOFINT);
-  *constantVal = 0;
-  *(constantVal + 1) = 0;
-
   int* constantValRight;
+  constantVal = malloc(2 * SIZEOFINT);
+  *(constantVal + 1) = 0;
   constantValRight = malloc(2 * SIZEOFINT);
   size = 0;
 
