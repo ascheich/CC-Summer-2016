@@ -2996,43 +2996,38 @@ int gr_factor(int* constantVal) {
               else
                 // assert: allocatedTemporaries == n + 1
 
+                emitIFormat(OP_ADDIU, REG_ZR, nextTemporary(), *constantVal * typeSize);
                 if (getClass(entry) == ARRAY) {
                   if (*constantVal >= getSize(entry))
                     syntaxErrorMessage((int*) "array selector exceeds array size");
                   else {
-
-                    emitIFormat(OP_ADDIU, REG_ZR, nextTemporary(), *constantVal * typeSize);
                     emitRFormat(OP_SPECIAL, currentTemporary(), nextTemporary(), currentTemporary(), FCT_SUBU);
 
                     emitRFormat(OP_SPECIAL, getScope(entry), currentTemporary(), currentTemporary(), FCT_ADDU);
-                    emitIFormat(OP_LW, currentTemporary(), currentTemporary(), 0);
                   }
                 } else {
-                  emitIFormat(OP_ADDIU, REG_ZR, nextTemporary(), *constantVal * typeSize);
-                  emitRFormat(OP_SPECIAL, currentTemporary(), nextTemporary(), currentTemporary(), FCT_SUBU);
-
-                  emitIFormat(OP_LW, currentTemporary(), currentTemporary(), 0);
+                  print((int*)"CONST"); println();
+                  emitRFormat(OP_SPECIAL, currentTemporary(), nextTemporary(), currentTemporary(), FCT_ADDU);
                 }
+                emitIFormat(OP_LW, currentTemporary(), currentTemporary(), 0);
             } else {
 
               // assert: allocatedTemporaries == n + 2
 
               emitIFormat(OP_ADDIU, REG_ZR, nextTemporary(), 2);
-              emitRFormat(OP_SPECIAL, nextTemporary(), currentTemporary(), currentTemporary(), FCT_SLLV);
+              emitRFormat(OP_SPECIAL, nextTemporary(), previousTemporary(), previousTemporary(), FCT_SLLV);
 
               if (getClass(entry) == ARRAY) {
-                emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), FCT_SUBU);
+                emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary(), previousTemporary(), FCT_SUBU);
                 tfree(1);
 
                 emitRFormat(OP_SPECIAL, getScope(entry), currentTemporary(), currentTemporary(), FCT_ADDU);
-                emitIFormat(OP_LW, currentTemporary(), currentTemporary(), 0);
               } else {
-                emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), FCT_SUBU);
+                print((int*)"VAR"); println();
+                emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary(), previousTemporary(), FCT_ADDU);
                 tfree(1);
-
-                emitIFormat(OP_LW, currentTemporary(), currentTemporary(), 0);
-
               }
+              emitIFormat(OP_LW, currentTemporary(), currentTemporary(), 0);
             }
             // assert: allocatedTemporaries == n + 1
           }
@@ -3964,8 +3959,12 @@ void gr_statement(int* constantVal) {
             // assert: allocatedTemporaries = 2
 
             emitIFormat(OP_ADDIU, REG_ZR, nextTemporary(), (*constantValLeft * ltype));
-            emitRFormat(OP_SPECIAL, previousTemporary(), nextTemporary(), previousTemporary(), FCT_SUBU);
-            emitRFormat(OP_SPECIAL, getScope(entry), previousTemporary(), previousTemporary(), FCT_ADDU);
+            if (getClass(entry) == ARRAY) {
+              emitRFormat(OP_SPECIAL, previousTemporary(), nextTemporary(), previousTemporary(), FCT_SUBU);
+              emitRFormat(OP_SPECIAL, getScope(entry), previousTemporary(), previousTemporary(), FCT_ADDU);
+            } else
+              emitRFormat(OP_SPECIAL, previousTemporary(), nextTemporary(), previousTemporary(), FCT_ADDU);
+
             emitIFormat(OP_SW, previousTemporary(), currentTemporary(), 0);
 
             // assert: allocatedTemporaries = 2
@@ -3977,9 +3976,13 @@ void gr_statement(int* constantVal) {
             emitIFormat(OP_ADDIU, REG_ZR, nextTemporary(), 2);
             emitRFormat(OP_SPECIAL, nextTemporary(), previousTemporary() - 1, previousTemporary() - 1, FCT_SLLV);
 
-            emitRFormat(OP_SPECIAL, previousTemporary(), previousTemporary() - 1, previousTemporary() - 1, FCT_SUBU);
+            if (getClass(entry) == ARRAY) {
+              emitRFormat(OP_SPECIAL, previousTemporary(), previousTemporary() - 1, previousTemporary() - 1, FCT_SUBU);
 
-            emitRFormat(OP_SPECIAL, getScope(entry), previousTemporary() - 1, previousTemporary(), FCT_ADDU);
+              emitRFormat(OP_SPECIAL, getScope(entry), previousTemporary() - 1, previousTemporary(), FCT_ADDU);
+            } else {
+              emitRFormat(OP_SPECIAL, previousTemporary(), previousTemporary() - 1, previousTemporary(), FCT_ADDU);
+            }
             emitIFormat(OP_SW, previousTemporary(), currentTemporary(), 0);
             tfree(1);
           }
@@ -7876,6 +7879,7 @@ int main(int argc, int* argv) {
   int j;
   // int localArr[] = {1,2,3,4,5,6,7,8};
   int TwoDarrayLocal[4][8];
+  int array[12];
   int* testArr;
   testArr = malloc(32 * SIZEOFINT);
 
@@ -7905,6 +7909,68 @@ int main(int argc, int* argv) {
   println();
   //------------------
 
+  array[0] = 31;
+  array[11] = 31;
+  i = 0;
+  print((int*)"array[0] (31): ");
+  print(itoa(array[0],string_buffer,10,0,0));
+  println();
+  print((int*)"array[11] (31): ");
+  print(itoa(array[11],string_buffer,10,0,0));
+  println();
+  print((int*)"array[0] - [11] (37): ");
+  println();
+  while(i < 12){
+    array[i] = 37;
+    print(itoa(array[i],string_buffer,10,0,0));
+    println();
+    i = i + 1;
+  }
+  print((int*)"-----");
+  println();
+
+  testArr[0] = 3;
+  testArr[1] = 5;
+  testArr[2] = 7;
+  testArr[3] = 11;
+  testArr[4] = 13;
+  testArr[5] = 17;
+  testArr[6] = 19;
+  testArr[7] = 23;
+
+  print(itoa(*(testArr + 0),string_buffer,10,0,0));
+  print((int*) "_____");
+  print(itoa(testArr[0],string_buffer,10,0,0));
+  println();
+  print(itoa(*(testArr + 1),string_buffer,10,0,0));
+  print((int*) "_____");
+  print(itoa(testArr[1],string_buffer,10,0,0));
+  println();
+  print(itoa(*(testArr + 2),string_buffer,10,0,0));
+  print((int*) "_____");
+  print(itoa(testArr[2],string_buffer,10,0,0));
+  println();
+  print(itoa(*(testArr + 3),string_buffer,10,0,0));
+  print((int*) "_____");
+  print(itoa(testArr[3],string_buffer,10,0,0));
+  println();
+  print(itoa(*(testArr + 4),string_buffer,10,0,0));
+  print((int*) "_____");
+  print(itoa(testArr[4],string_buffer,10,0,0));
+  println();
+  print(itoa(*(testArr + 5),string_buffer,10,0,0));
+  print((int*) "_____");
+  print(itoa(testArr[5],string_buffer,10,0,0));
+  println();
+  print(itoa(*(testArr + 6),string_buffer,10,0,0));
+  print((int*) "_____");
+  print(itoa(testArr[6],string_buffer,10,0,0));
+  println();
+  print(itoa(*(testArr + 7),string_buffer,10,0,0));
+  print((int*) "_____");
+  print(itoa(testArr[7],string_buffer,10,0,0));
+  println();
+
   println();
   print((int*) "Test for pointer usage as arrays:");
   println();
@@ -7920,7 +7986,7 @@ int main(int argc, int* argv) {
     while (j < 8) {
       println();
       TwoDarrayLocal[i][j] = (i + 1) * 3 % (j + 1);
-      // testArr[i] = TwoDarrayLocal[i][j];
+      testArr[i * 8 + j] = TwoDarrayLocal[i][j];
       print((int*) "testArr[");
       print(itoa(i,string_buffer,10,0,0));
       print((int*) "][");
@@ -7928,7 +7994,9 @@ int main(int argc, int* argv) {
       print((int*) "] (=");
       print(itoa((i + 1) * 3 % (j + 1),string_buffer,10,0,0));
       print((int*) ") = ");
-      print(itoa(testArr[i],string_buffer,10,0,0));
+      // print(itoa(testArr[i],string_buffer,10,0,0));
+      print(itoa(testArr[i * 8 + j],string_buffer,10,0,0));
+      // print(itoa(TwoDarrayLocal[i][j],string_buffer,10,0,0));
       print((int*) " ");
       j = j + 1;
     }
