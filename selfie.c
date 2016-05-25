@@ -2882,10 +2882,10 @@ int gr_factor(int* constantVal) {
             entry = searchSymbolTable(global_symbol_table, variableOrProcedureName, VARIABLE);
 
           talloc();
-          // if (getClass(entry) == VARIABLE) {
-          //   emitIFormat(OP_LW, REG_ZR, currentTemporary(), getAddress(entry));
-          //   // emitIFormat(OP_LW, getScope(entry), currentTemporary(), getAddress(entry));
-          // } else
+          if (getClass(entry) == VARIABLE) {
+            emitIFormat(OP_LW, REG_ZR, currentTemporary(), getAddress(entry));
+            // emitIFormat(OP_LW, getScope(entry), currentTemporary(), getAddress(entry));
+          } else
             emitIFormat(OP_ADDIU, REG_ZR, currentTemporary(), getAddress(entry));
 
           // assert: allocatedTemporaries == n(+1) + 1
@@ -2995,11 +2995,16 @@ int gr_factor(int* constantVal) {
               if (*constantVal < 0)
                 syntaxErrorMessage((int*) "only positive integers as array selector allowed");
               else
-                if (*constantVal >= getSize(entry))
-                  syntaxErrorMessage((int*) "array selector exceeds array size");
-                else {
-                  // assert: allocatedTemporaries == n + 1
+                if (getClass(entry) == ARRAY) {
+                  if (*constantVal >= getSize(entry))
+                    syntaxErrorMessage((int*) "array selector exceeds array size");
+                  else {
+                    // assert: allocatedTemporaries == n + 1
 
+                    emitIFormat(OP_ADDIU, REG_ZR, nextTemporary(), *constantVal * typeSize);
+                    emitRFormat(OP_SPECIAL, currentTemporary(), nextTemporary(), currentTemporary(), FCT_SUBU);
+                  }
+                } else {
                   emitIFormat(OP_ADDIU, REG_ZR, nextTemporary(), *constantVal * typeSize);
                   emitRFormat(OP_SPECIAL, currentTemporary(), nextTemporary(), currentTemporary(), FCT_SUBU);
                 }
@@ -3010,10 +3015,7 @@ int gr_factor(int* constantVal) {
               emitIFormat(OP_ADDIU, REG_ZR, nextTemporary(), 2);
               emitRFormat(OP_SPECIAL, nextTemporary(), currentTemporary(), currentTemporary(), FCT_SLLV);
 
-              if (getClass(entry) == VARIABLE) {
-                emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), FCT_ADDU);
-              } else
-                emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), FCT_SUBU);
+              emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), FCT_SUBU);
               tfree(1);
 
             }
@@ -7865,8 +7867,17 @@ int main(int argc, int* argv) {
   int j;
   // int localArr[] = {1,2,3,4,5,6,7,8};
   int TwoDarrayLocal[4][8];
+  int a;
+  int b;
+  int c;
+  int* abc;
+  int x;
+  int y;
+  int z;
+
   int* testArr;
   testArr = malloc(32 * SIZEOFINT);
+  abc = malloc(8 * SIZEOFINT);
 
   initLibrary();
 
@@ -7893,6 +7904,45 @@ int main(int argc, int* argv) {
   print(itoa(prolog_Test,string_buffer,10,0,0));
   println();
   //------------------
+  *abc = 3;
+  *(abc + 1) = 7;
+  *(abc + 2) = 17;
+  *(abc + 3) = 19;
+  a = 11;
+  b = 11;
+  c = 11;
+  x = 13;
+  y = 13;
+  z = 13;
+
+  print(itoa(a,string_buffer,10,0,0));
+  println();
+  print(itoa(b,string_buffer,10,0,0));
+  println();
+  print(itoa(c,string_buffer,10,0,0));
+  println();
+  print(itoa(*abc,string_buffer,10,0,0));
+  print((int*)"_____");
+  print(itoa(abc[0],string_buffer,10,0,0));
+  println();
+  print(itoa(*abc,string_buffer,10,0,0));
+  print((int*)"_____");
+  print(itoa(abc[1],string_buffer,10,0,0));
+  println();
+  print(itoa(*abc,string_buffer,10,0,0));
+  print((int*)"_____");
+  print(itoa(abc[2],string_buffer,10,0,0));
+  println();
+  print(itoa(*abc,string_buffer,10,0,0));
+  print((int*)"_____");
+  print(itoa(abc[3],string_buffer,10,0,0));
+  println();
+  print(itoa(x,string_buffer,10,0,0));
+  println();
+  print(itoa(y,string_buffer,10,0,0));
+  println();
+  print(itoa(z,string_buffer,10,0,0));
+  println();
 
   println();
   print((int*) "Test for pointer usage as arrays:");
