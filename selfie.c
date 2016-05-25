@@ -2858,9 +2858,9 @@ int gr_factor(int* constantVal) {
 
       // reset return register
       emitIFormat(OP_ADDIU, REG_ZR, REG_V0, 0);
-    } else
+
       // identifier "[" expression "]"
-      if (symbol == SYM_LBRACKET) {
+    } else if (symbol == SYM_LBRACKET) {
         getSymbol();
 
         // assert: allocatedTemporaries == n
@@ -2882,10 +2882,9 @@ int gr_factor(int* constantVal) {
             entry = searchSymbolTable(global_symbol_table, variableOrProcedureName, VARIABLE);
 
           talloc();
-          // if (getClass(entry) == VARIABLE) {
-          //   emitIFormat(OP_LW, REG_ZR, currentTemporary(), getAddress(entry));
-          //   // emitIFormat(OP_LW, getScope(entry), currentTemporary(), getAddress(entry));
-          // } else
+          if (getClass(entry) == VARIABLE)
+            emitIFormat(OP_LW, getScope(entry), currentTemporary(), getAddress(entry));
+          else
             emitIFormat(OP_ADDIU, REG_ZR, currentTemporary(), getAddress(entry));
 
           // assert: allocatedTemporaries == n(+1) + 1
@@ -2995,13 +2994,24 @@ int gr_factor(int* constantVal) {
               if (*constantVal < 0)
                 syntaxErrorMessage((int*) "only positive integers as array selector allowed");
               else
-                if (*constantVal >= getSize(entry))
-                  syntaxErrorMessage((int*) "array selector exceeds array size");
-                else {
-                  // assert: allocatedTemporaries == n + 1
+                // assert: allocatedTemporaries == n + 1
 
+                if (getClass(entry) == ARRAY) {
+                  if (*constantVal >= getSize(entry))
+                    syntaxErrorMessage((int*) "array selector exceeds array size");
+                  else {
+
+                    emitIFormat(OP_ADDIU, REG_ZR, nextTemporary(), *constantVal * typeSize);
+                    emitRFormat(OP_SPECIAL, currentTemporary(), nextTemporary(), currentTemporary(), FCT_SUBU);
+
+                    emitRFormat(OP_SPECIAL, getScope(entry), currentTemporary(), currentTemporary(), FCT_ADDU);
+                    emitIFormat(OP_LW, currentTemporary(), currentTemporary(), 0);
+                  }
+                } else {
                   emitIFormat(OP_ADDIU, REG_ZR, nextTemporary(), *constantVal * typeSize);
                   emitRFormat(OP_SPECIAL, currentTemporary(), nextTemporary(), currentTemporary(), FCT_SUBU);
+
+                  emitIFormat(OP_LW, currentTemporary(), currentTemporary(), 0);
                 }
             } else {
 
@@ -3010,18 +3020,21 @@ int gr_factor(int* constantVal) {
               emitIFormat(OP_ADDIU, REG_ZR, nextTemporary(), 2);
               emitRFormat(OP_SPECIAL, nextTemporary(), currentTemporary(), currentTemporary(), FCT_SLLV);
 
-              if (getClass(entry) == VARIABLE) {
-                emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), FCT_ADDU);
-              } else
+              if (getClass(entry) == ARRAY) {
                 emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), FCT_SUBU);
-              tfree(1);
+                tfree(1);
 
+                emitRFormat(OP_SPECIAL, getScope(entry), currentTemporary(), currentTemporary(), FCT_ADDU);
+                emitIFormat(OP_LW, currentTemporary(), currentTemporary(), 0);
+              } else {
+                emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), FCT_SUBU);
+                tfree(1);
+
+                emitIFormat(OP_LW, currentTemporary(), currentTemporary(), 0);
+
+              }
             }
-            emitRFormat(OP_SPECIAL, getScope(entry), currentTemporary(), currentTemporary(), FCT_ADDU);
-            emitIFormat(OP_LW, currentTemporary(), currentTemporary(), 0);
-
             // assert: allocatedTemporaries == n + 1
-
           }
         } else
           syntaxErrorSymbol(SYM_RBRACKET);
