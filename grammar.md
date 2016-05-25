@@ -45,7 +45,7 @@ simpleExpression<constantVal> = [ "-" ] term<constantVal> { ( "+" | "-" ) term<c
 
 shiftExpression<constantVal>  = simpleExpression<constantVal> { ( "<<" | ">>" ) simpleExpression<constantVal> }.
 
-expression<constantVal>       = shiftExpression [ ( "==" | "!=" | "<" | ">" | "<=" | ">=" ) shiftExpression ] .
+expression<constantVal>       = shiftExpression<constantVal> [ ( "==" | "!=" | "<" | ">" | "<=" | ">=" ) shiftExpression<constantVal> ] .
 
 while                         = "while" "(" expression<constantVal> ")"
                                           ( statement |
