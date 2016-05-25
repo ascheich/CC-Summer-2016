@@ -3006,7 +3006,6 @@ int gr_factor(int* constantVal) {
                     emitRFormat(OP_SPECIAL, getScope(entry), currentTemporary(), currentTemporary(), FCT_ADDU);
                   }
                 } else {
-                  print((int*)"CONST"); println();
                   emitRFormat(OP_SPECIAL, currentTemporary(), nextTemporary(), currentTemporary(), FCT_ADDU);
                 }
                 emitIFormat(OP_LW, currentTemporary(), currentTemporary(), 0);
@@ -3023,7 +3022,6 @@ int gr_factor(int* constantVal) {
 
                 emitRFormat(OP_SPECIAL, getScope(entry), currentTemporary(), currentTemporary(), FCT_ADDU);
               } else {
-                print((int*)"VAR"); println();
                 emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary(), previousTemporary(), FCT_ADDU);
                 tfree(1);
               }
@@ -7879,7 +7877,6 @@ int main(int argc, int* argv) {
   int j;
   // int localArr[] = {1,2,3,4,5,6,7,8};
   int TwoDarrayLocal[4][8];
-  int array[12];
   int* testArr;
   testArr = malloc(32 * SIZEOFINT);
 
@@ -7909,68 +7906,6 @@ int main(int argc, int* argv) {
   println();
   //------------------
 
-  array[0] = 31;
-  array[11] = 31;
-  i = 0;
-  print((int*)"array[0] (31): ");
-  print(itoa(array[0],string_buffer,10,0,0));
-  println();
-  print((int*)"array[11] (31): ");
-  print(itoa(array[11],string_buffer,10,0,0));
-  println();
-  print((int*)"array[0] - [11] (37): ");
-  println();
-  while(i < 12){
-    array[i] = 37;
-    print(itoa(array[i],string_buffer,10,0,0));
-    println();
-    i = i + 1;
-  }
-  print((int*)"-----");
-  println();
-
-  testArr[0] = 3;
-  testArr[1] = 5;
-  testArr[2] = 7;
-  testArr[3] = 11;
-  testArr[4] = 13;
-  testArr[5] = 17;
-  testArr[6] = 19;
-  testArr[7] = 23;
-
-  print(itoa(*(testArr + 0),string_buffer,10,0,0));
-  print((int*) "_____");
-  print(itoa(testArr[0],string_buffer,10,0,0));
-  println();
-  print(itoa(*(testArr + 1),string_buffer,10,0,0));
-  print((int*) "_____");
-  print(itoa(testArr[1],string_buffer,10,0,0));
-  println();
-  print(itoa(*(testArr + 2),string_buffer,10,0,0));
-  print((int*) "_____");
-  print(itoa(testArr[2],string_buffer,10,0,0));
-  println();
-  print(itoa(*(testArr + 3),string_buffer,10,0,0));
-  print((int*) "_____");
-  print(itoa(testArr[3],string_buffer,10,0,0));
-  println();
-  print(itoa(*(testArr + 4),string_buffer,10,0,0));
-  print((int*) "_____");
-  print(itoa(testArr[4],string_buffer,10,0,0));
-  println();
-  print(itoa(*(testArr + 5),string_buffer,10,0,0));
-  print((int*) "_____");
-  print(itoa(testArr[5],string_buffer,10,0,0));
-  println();
-  print(itoa(*(testArr + 6),string_buffer,10,0,0));
-  print((int*) "_____");
-  print(itoa(testArr[6],string_buffer,10,0,0));
-  println();
-  print(itoa(*(testArr + 7),string_buffer,10,0,0));
-  print((int*) "_____");
-  print(itoa(testArr[7],string_buffer,10,0,0));
-  println();
-
   println();
   print((int*) "Test for pointer usage as arrays:");
   println();
@@ -7994,9 +7929,7 @@ int main(int argc, int* argv) {
       print((int*) "] (=");
       print(itoa((i + 1) * 3 % (j + 1),string_buffer,10,0,0));
       print((int*) ") = ");
-      // print(itoa(testArr[i],string_buffer,10,0,0));
       print(itoa(testArr[i * 8 + j],string_buffer,10,0,0));
-      // print(itoa(TwoDarrayLocal[i][j],string_buffer,10,0,0));
       print((int*) " ");
       j = j + 1;
     }
