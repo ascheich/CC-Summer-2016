@@ -3944,8 +3944,11 @@ void gr_statement(int* constantVal) {
 
           // assert: allocatedTemporaries = 2 || 3
 
-          if (ltype != rtype)
-            typeWarning(ltype, rtype);
+          if (getClass(entry) == ARRAY) {
+            if (ltype != rtype)
+              typeWarning(ltype, rtype);
+          } else if (ltype != INTSTAR_T)
+              typeWarning(ltype,INTSTAR_T);
 
           if (ltype == INT_T)
             ltype = SIZEOFINT;
