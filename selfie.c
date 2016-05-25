@@ -2765,7 +2765,7 @@ int gr_factor(int* constantVal) {
   // assert: n = allocatedTemporaries
 
   hasCast = 0;
-  *(constantVal + 1) = 0;
+  constantVal[1] = 0;
 
   type = INT_T;
 
@@ -2874,22 +2874,18 @@ int gr_factor(int* constantVal) {
           getSymbol();
 
           entry = searchSymbolTable(local_symbol_table, variableOrProcedureName, ARRAY);
-          if (entry == (int*) 0) {
+          if (entry == (int*) 0)
             entry = searchSymbolTable(global_symbol_table, variableOrProcedureName, ARRAY);
-          } else if (entry == (int*) 0) {
-            print((int*)"oanerg");
+          else if (entry == (int*) 0)
             entry = searchSymbolTable(local_symbol_table, variableOrProcedureName, VARIABLE);
-          } else if (entry == (int*) 0) {
+          else if (entry == (int*) 0)
             entry = searchSymbolTable(global_symbol_table, variableOrProcedureName, VARIABLE);
-            print((int*)"rneb");
-          }
 
+          talloc();
           if (getClass(entry) == VARIABLE)
-            load_variable(identifier);
-          else {
-            talloc();
+            emitIFormat(OP_LW, getScope(entry), currentTemporary(), getAddress(entry));
+          else
             emitIFormat(OP_ADDIU, REG_ZR, currentTemporary(), getAddress(entry));
-          }
 
           // assert: allocatedTemporaries == n(+1) + 1
 
@@ -3927,6 +3923,14 @@ void gr_statement() {
         else if (entry == (int*) 0)
             entry = searchSymbolTable(global_symbol_table, variableOrProcedureName, VARIABLE);
 
+        talloc();
+        if (getClass(entry) == VARIABLE)
+          emitIFormat(OP_LW, getScope(entry), currentTemporary(), getAddress(entry));
+        else
+          emitIFormat(OP_ADDIU, REG_ZR, currentTemporary(), getAddress(entry));
+
+        // assert: allocatedTemporaries = 1 || 2
+
         ltype = getType(entry);
 
         // identifier "[" expression "]" "=" expression;
@@ -3935,7 +3939,7 @@ void gr_statement() {
 
           rtype = gr_expression();
 
-          // assert: allocatedTemporaries = 1 || 2
+          // assert: allocatedTemporaries = 2 || 3
 
           if (ltype != rtype)
             typeWarning(ltype, rtype);
@@ -3945,28 +3949,31 @@ void gr_statement() {
           else
             ltype = SIZEOFINTSTAR;
 
-          if (*(constantValLeft + 1) == 1) {
-            // assert: allocatedTemporaries = 1
 
-            emitIFormat(OP_SW, getScope(entry), currentTemporary(), getAddress(entry) - *constantValLeft * ltype);
+          if (*(constantValLeft + 1) == 1) {
+            // assert: allocatedTemporaries = 2
+
+            emitIFormat(OP_ADDIU, REG_ZR, nextTemporary(), (*constantValLeft * ltype));
+            emitRFormat(OP_SPECIAL, previousTemporary(), nextTemporary(), previousTemporary(), FCT_SUBU);
+            emitRFormat(OP_SPECIAL, getScope(entry), previousTemporary(), previousTemporary(), FCT_ADDU);
+            emitIFormat(OP_SW, previousTemporary(), currentTemporary(), 0);
 
             // assert: allocatedTemporaries = 2
 
           } else {
 
-            // assert: allocatedTemporaries = 2
+            // assert: allocatedTemporaries = 3
 
             emitIFormat(OP_ADDIU, REG_ZR, nextTemporary(), 2);
-            emitRFormat(OP_SPECIAL, nextTemporary(), previousTemporary(), previousTemporary(), FCT_SLLV);
+            emitRFormat(OP_SPECIAL, nextTemporary(), previousTemporary() - 1, previousTemporary() - 1, FCT_SLLV);
 
-            emitIFormat(OP_ADDIU, REG_ZR, nextTemporary(), getAddress(entry));
-            emitRFormat(OP_SPECIAL, nextTemporary(), previousTemporary(), previousTemporary(), FCT_SUBU);
+            emitRFormat(OP_SPECIAL, previousTemporary(), previousTemporary() - 1, previousTemporary() - 1, FCT_SUBU);
 
-            emitRFormat(OP_SPECIAL, getScope(entry), previousTemporary(), previousTemporary(), FCT_ADDU);
+            emitRFormat(OP_SPECIAL, getScope(entry), previousTemporary() - 1, previousTemporary(), FCT_ADDU);
             emitIFormat(OP_SW, previousTemporary(), currentTemporary(), 0);
             tfree(1);
           }
-          tfree(1);
+          tfree(2);
 
           // assert: allocatedTemporaries = 0;
 
@@ -4003,12 +4010,12 @@ void gr_statement() {
 
               if (*(constantValLeft + 1) == 1) {
                 if (*(constantValRight + 1) == 1) {
-                  // assert: allocatedTemporaries == 1
-
-                  emitIFormat(OP_SW, getScope(entry), currentTemporary(), getAddress(entry) - ((*constantValLeft * getValue(entry) + *constantValRight)  * ltype));
-                  tfree(1);
-                } else {
                   // assert: allocatedTemporaries == 2
+
+                  emitIFormat(OP_ADDIU, REG_ZR, nextTemporary(), ((*constantValLeft * getValue(entry) + *constantValRight)  * ltype));
+                  emitRFormat(OP_SPECIAL, previousTemporary(), nextTemporary(), previousTemporary(), FCT_SUBU);
+                } else {
+                  // assert: allocatedTemporaries == 3
 
                   talloc();
                   emitIFormat(OP_ADDIU, REG_ZR, currentTemporary(), *constantValLeft);
@@ -4022,57 +4029,52 @@ void gr_statement() {
                   emitRFormat(OP_SPECIAL, previousTemporary(), nextTemporary(), 0, FCT_MULTU);
                   emitRFormat(OP_SPECIAL, 0, 0, previousTemporary(), FCT_MFLO);
 
-                  emitIFormat(OP_ADDIU, REG_ZR, nextTemporary(), getAddress(entry));
-                  emitRFormat(OP_SPECIAL, nextTemporary(), previousTemporary(), previousTemporary(), FCT_SUBU);
-
-                  emitRFormat(OP_SPECIAL, getScope(entry), previousTemporary(), previousTemporary(), FCT_ADDU);
-                  emitIFormat(OP_SW, previousTemporary(), currentTemporary(), 0);
-
-                  tfree(2);
+                  emitRFormat(OP_SPECIAL, previousTemporary() - 1, previousTemporary(), previousTemporary(), FCT_SUBU);
                 }
+                emitRFormat(OP_SPECIAL, getScope(entry), previousTemporary(), previousTemporary(), FCT_ADDU);
+                emitIFormat(OP_SW, previousTemporary(), currentTemporary(), 0);
+                tfree(2);
               } else {
                 if (*(constantValRight + 1) == 1) {
-                  // assert: allocatedTemporaries == 2
-
-                  emitIFormat(OP_ADDIU, REG_ZR, nextTemporary(), getValue(entry));
-                  emitRFormat(OP_SPECIAL, previousTemporary(), nextTemporary(), 0, FCT_MULTU);
-                  emitRFormat(OP_SPECIAL, 0, 0, previousTemporary(), FCT_MFLO);
-
-                  emitIFormat(OP_ADDIU, REG_ZR, nextTemporary(), *constantValRight);
-                  emitRFormat(OP_SPECIAL, previousTemporary(), nextTemporary(), previousTemporary(), FCT_ADDU);
-
-
-                  emitIFormat(OP_ADDIU, REG_ZR, nextTemporary(), ltype);
-                  emitRFormat(OP_SPECIAL, previousTemporary(), nextTemporary(), 0, FCT_MULTU);
-                  emitRFormat(OP_SPECIAL, 0, 0, previousTemporary(), FCT_MFLO);
-
-                  emitIFormat(OP_ADDIU, REG_ZR, nextTemporary(), getAddress(entry));
-                  emitRFormat(OP_SPECIAL, nextTemporary(), previousTemporary(), previousTemporary(), FCT_SUBU);
-
-                  emitRFormat(OP_SPECIAL, getScope(entry), previousTemporary(), previousTemporary(), FCT_ADDU);
-                  emitIFormat(OP_SW, previousTemporary(), currentTemporary(), 0);
-
-                  tfree(2);
-                } else {
                   // assert: allocatedTemporaries == 3
+
                   emitIFormat(OP_ADDIU, REG_ZR, nextTemporary(), getValue(entry));
                   emitRFormat(OP_SPECIAL, previousTemporary() - 1, nextTemporary(), 0, FCT_MULTU);
                   emitRFormat(OP_SPECIAL, 0, 0, previousTemporary() - 1, FCT_MFLO);
 
-                  emitRFormat(OP_SPECIAL, previousTemporary() - 1, previousTemporary(), previousTemporary() - 1, FCT_ADDU);
+                  emitIFormat(OP_ADDIU, REG_ZR, nextTemporary(), *constantValRight);
+                  emitRFormat(OP_SPECIAL, previousTemporary() - 1, nextTemporary(), previousTemporary() - 1, FCT_ADDU);
+
+
+                  emitIFormat(OP_ADDIU, REG_ZR, nextTemporary(), ltype);
+                  emitRFormat(OP_SPECIAL, previousTemporary() - 1, nextTemporary(), 0, FCT_MULTU);
+                  emitRFormat(OP_SPECIAL, 0, 0, previousTemporary() - 1, FCT_MFLO);
+
+                  emitRFormat(OP_SPECIAL, previousTemporary(), previousTemporary() - 1, previousTemporary(), FCT_SUBU);
+
+                  emitRFormat(OP_SPECIAL, getScope(entry), previousTemporary(), previousTemporary(), FCT_ADDU);
+                  emitIFormat(OP_SW, previousTemporary(), currentTemporary(), 0);
+
+                  tfree(3);
+                } else {
+                  // assert: allocatedTemporaries == 4
+                  emitIFormat(OP_ADDIU, REG_ZR, nextTemporary(), getValue(entry));
+                  emitRFormat(OP_SPECIAL, previousTemporary() - 2, nextTemporary(), 0, FCT_MULTU);
+                  emitRFormat(OP_SPECIAL, 0, 0, previousTemporary() - 2, FCT_MFLO);
+
+                  emitRFormat(OP_SPECIAL, previousTemporary() - 2, previousTemporary(), previousTemporary() - 2, FCT_ADDU);
 
 
                   emitIFormat(OP_ADDIU, REG_ZR, previousTemporary(), ltype);
-                  emitRFormat(OP_SPECIAL, previousTemporary() - 1, previousTemporary(), 0, FCT_MULTU);
-                  emitRFormat(OP_SPECIAL, 0, 0, previousTemporary() - 1, FCT_MFLO);
+                  emitRFormat(OP_SPECIAL, previousTemporary() - 2, previousTemporary(), 0, FCT_MULTU);
+                  emitRFormat(OP_SPECIAL, 0, 0, previousTemporary() - 2, FCT_MFLO);
 
-                  emitIFormat(OP_ADDIU, REG_ZR, previousTemporary(), getAddress(entry));
-                  emitRFormat(OP_SPECIAL, previousTemporary(), previousTemporary() - 1, previousTemporary() - 1, FCT_SUBU);
+                  emitRFormat(OP_SPECIAL, previousTemporary() - 1, previousTemporary() - 2, previousTemporary(), FCT_SUBU);
 
-                  emitRFormat(OP_SPECIAL, getScope(entry), previousTemporary() - 1, previousTemporary() - 1, FCT_ADDU);
-                  emitIFormat(OP_SW, previousTemporary() - 1, currentTemporary(), 0);
+                  emitRFormat(OP_SPECIAL, getScope(entry), previousTemporary(), previousTemporary(), FCT_ADDU);
+                  emitIFormat(OP_SW, previousTemporary(), currentTemporary(), 0);
 
-                  tfree(3);
+                  tfree(4);
                 }
               }
               // assert: allocatedTemporaries = 0;
