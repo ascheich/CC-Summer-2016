@@ -2765,7 +2765,7 @@ int gr_factor(int* constantVal) {
   // assert: n = allocatedTemporaries
 
   hasCast = 0;
-  constantVal[1] = 0;
+  *(constantVal + 1) = 0;
 
   type = INT_T;
 
@@ -2876,15 +2876,16 @@ int gr_factor(int* constantVal) {
           entry = searchSymbolTable(local_symbol_table, variableOrProcedureName, ARRAY);
           if (entry == (int*) 0)
             entry = searchSymbolTable(global_symbol_table, variableOrProcedureName, ARRAY);
-          else if (entry == (int*) 0)
+          if (entry == (int*) 0)
             entry = searchSymbolTable(local_symbol_table, variableOrProcedureName, VARIABLE);
-          else if (entry == (int*) 0)
+          if (entry == (int*) 0)
             entry = searchSymbolTable(global_symbol_table, variableOrProcedureName, VARIABLE);
 
           talloc();
-          if (getClass(entry) == VARIABLE)
-            emitIFormat(OP_LW, getScope(entry), currentTemporary(), getAddress(entry));
-          else
+          // if (getClass(entry) == VARIABLE) {
+          //   emitIFormat(OP_LW, REG_ZR, currentTemporary(), getAddress(entry));
+          //   // emitIFormat(OP_LW, getScope(entry), currentTemporary(), getAddress(entry));
+          // } else
             emitIFormat(OP_ADDIU, REG_ZR, currentTemporary(), getAddress(entry));
 
           // assert: allocatedTemporaries == n(+1) + 1
@@ -3009,7 +3010,10 @@ int gr_factor(int* constantVal) {
               emitIFormat(OP_ADDIU, REG_ZR, nextTemporary(), 2);
               emitRFormat(OP_SPECIAL, nextTemporary(), currentTemporary(), currentTemporary(), FCT_SLLV);
 
-              emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), FCT_SUBU);
+              if (getClass(entry) == VARIABLE) {
+                emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), FCT_ADDU);
+              } else
+                emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), FCT_SUBU);
               tfree(1);
 
             }
@@ -3918,9 +3922,9 @@ void gr_statement() {
         entry = searchSymbolTable(local_symbol_table, variableOrProcedureName, ARRAY);
         if (entry == (int*) 0)
           entry = searchSymbolTable(global_symbol_table, variableOrProcedureName, ARRAY);
-        else if (entry == (int*) 0)
+        if (entry == (int*) 0)
             entry = searchSymbolTable(local_symbol_table, variableOrProcedureName, VARIABLE);
-        else if (entry == (int*) 0)
+        if (entry == (int*) 0)
             entry = searchSymbolTable(global_symbol_table, variableOrProcedureName, VARIABLE);
 
         talloc();
@@ -4260,9 +4264,6 @@ int gr_variable(int offset) {
                       entry = searchSymbolTable(local_symbol_table, variableOrProcedureName, ARRAY);
                       setSize(entry, *constantValLeft * *constantValRight);
                       offset = *constantValLeft * *constantValRight;
-                      println();
-                      print(itoa(offset,string_buffer,10,0,0));
-                      println();
                     } else
                       syntaxErrorMessage((int*) "arraysize must be greater than 0");
                   } else
@@ -7862,8 +7863,10 @@ int selfie(int argc, int* argv) {
 int main(int argc, int* argv) {
   int i;
   int j;
-  int TwoDarrayLocal[4][8];
   // int localArr[] = {1,2,3,4,5,6,7,8};
+  int TwoDarrayLocal[4][8];
+  int* testArr;
+  testArr = malloc(32 * SIZEOFINT);
 
   initLibrary();
 
@@ -7892,24 +7895,29 @@ int main(int argc, int* argv) {
   //------------------
 
   println();
+  print((int*) "Test for pointer usage as arrays:");
+  println();
+  print((int*) "int* testArr");
+  println();
   print((int*) "TwoDarrayLocal[i][j] = (i + 1) * 3 % (j + 1)");
   println();
-  print((int*) "TwoDarrayLocal[i][j] = TwoDarrayLocal[i][j]");
+  print((int*) "testArr[i][j] = TwoDarrayLocal[i][j]");
+  println();
   i = 0;
   j = 0;
   while (i < 4) {
     while (j < 8) {
       println();
       TwoDarrayLocal[i][j] = (i + 1) * 3 % (j + 1);
-      TwoDarrayLocal[i][j] = TwoDarrayLocal[i][j];
-      print((int*) "TwoDarrayLocal[");
+      // testArr[i] = TwoDarrayLocal[i][j];
+      print((int*) "testArr[");
       print(itoa(i,string_buffer,10,0,0));
       print((int*) "][");
       print(itoa(j,string_buffer,10,0,0));
       print((int*) "] (=");
       print(itoa((i + 1) * 3 % (j + 1),string_buffer,10,0,0));
       print((int*) ") = ");
-      print(itoa(TwoDarrayLocal[i][j],string_buffer,10,0,0));
+      print(itoa(testArr[i],string_buffer,10,0,0));
       print((int*) " ");
       j = j + 1;
     }
