@@ -165,6 +165,7 @@ int* filename_buffer;  // buffer for filenames
 int* io_buffer;        // buffer for binary I/O
 int globalArrayInit_buffer[100];      // buffer for direct array initialization
 int globalArrayInitBuffer_Top = 0;   // index of 1st free field in init-array
+int structMember_buffer[50][3];
 
 // 0 = O_RDONLY (0x0000)
 int O_RDONLY = 0;
@@ -436,6 +437,7 @@ void setSize(int* entry, int size)          { entry[8] = size; }
 
 void createStructTableEntry(int whichTable, int* name);
 int* getStructTableEntry(int* name);
+void setStructMembers(int* entry, int amount);
 
 // struct table entry:
 // +----+------------+
@@ -1777,19 +1779,9 @@ int identifierOrKeyword() {
     return SYM_RETURN;
   if (identifierStringMatch(SYM_VOID))
     return SYM_VOID;
-  if (identifierStringMatch(SYM_STRUCT)) {
-    getSymbol();
-    // PROLOG error ??
-
-    if (symbol == SYM_IDENTIFIER) {
-      getSymbol();
-
-      return SYM_STRUCT;
-    } else {
-      syntaxErrorSymbol(SYM_IDENTIFIER);
-      return SYM_EOF;
-    }
-  } else
+  if (identifierStringMatch(SYM_STRUCT))
+    return SYM_STRUCT;
+  else
     return SYM_IDENTIFIER;
 }
 
@@ -2099,6 +2091,8 @@ int getSymbol() {
       SYMBOLS[SYM_CHARACTER][1] = SYMBOLS[SYM_CHARACTER][1] + 1;
     else if (symbol == SYM_STRING)
       SYMBOLS[SYM_STRING][1] = SYMBOLS[SYM_STRING][1] + 1;
+    else if (symbol == SYM_STRUCT)
+      SYMBOLS[SYM_STRUCT][1] = SYMBOLS[SYM_STRUCT][1] + 1;
     else if (symbol == SYM_SLLV)
       SYMBOLS[SYM_SLLV][1] = SYMBOLS[SYM_SLLV][1] + 1;
     else if (symbol == SYM_SRLV)
@@ -2260,6 +2254,24 @@ int* getStructTableEntry(int* string) {
   }
 
   return (int*) 0;
+}
+
+void setStructMembers(int* entry, int amount) {
+  int i;
+  int* members;
+
+  i = 0;
+  members = getStructFields(entry);
+
+  while (i < amount) {
+    // members[size][0] = member name
+    members[i * 3] = structMember_buffer[i][0];
+    // member[size][1] = member type
+    members[i * 3 + 1] = structMember_buffer[i][1];
+    // member offset
+    members[i * 3 + 2] = structMember_buffer[i][2];
+    i = i + 1;
+  }
 }
 // -----------------------------------------------------------------
 // ---------------------------- PARSER -----------------------------
@@ -2506,6 +2518,8 @@ int* putType(int type) {
     return (int*) "int*";
   else if (type == VOID_T)
     return (int*) "void";
+  else if (type == STRUCT_T)
+    return (int*) "struct ?";
   else
     return (int*) "unknown";
 }
@@ -2778,7 +2792,7 @@ int gr_factor(int* constantVal) {
 
   hasCast = 0;
   constantVal[1] = 0;
-  structName = 0;
+  structName = (int*) 0;
 
   type = INT_T;
 
@@ -4148,7 +4162,7 @@ int gr_type(int* structName) {
   int type;
   int* entry;
 
-  entry = 0;
+  entry = (int*) 0;
 
   type = INT_T;
 
@@ -4170,8 +4184,8 @@ int gr_type(int* structName) {
       structName = identifier;
     }
     getSymbol();
-
-    return type;
+  } else if (symbol == SYM_STRUCT) {
+    type = STRUCT_T;
   } else {
     printLineNumber((int*) "invalid type; int or struct required", lineNumber);
     printSymbol(symbol);
@@ -4185,49 +4199,57 @@ int gr_type(int* structName) {
 int gr_struct(int whichTable){
   int type;
   int size;
-  int* members;
   int* strct_entry;
   int* structName;
 
   size = 0;
-  structName = 0;
+  structName = (int*) 0;
 
-  if (symbol == SYM_LBRACE) {
+  if (symbol == SYM_IDENTIFIER) {
     getSymbol();
 
     createStructTableEntry(whichTable, identifier);
     strct_entry = getStructTableEntry(identifier);
-    // members-array: look struct table for info
-    members = getStructFields(strct_entry);
 
-    while (symbol != SYM_RBRACE) {
-      // PROLOG error
-      type = gr_type(structName);
+    if (symbol == SYM_LBRACE) {
+      getSymbol();
 
-      if (symbol == SYM_IDENTIFIER) {
-        getSymbol();
+      while (symbol != SYM_RBRACE) {
+        type = gr_type(structName);
 
-        if (size < 20) {
-          // members[size][0] = member name
-          members[size * 3] = (int) identifier;
-          // member[size][1] = member type
-          members[size * 3 + 1] = type;
-          // member offset
-          members[size * 3 + 2] = size;
-
-          size = size + 1;
-        } else
-          syntaxErrorMessage((int*) "reached max amount of members for struct");
-
-        if (symbol == SYM_SEMICOLON)
+        if (symbol == SYM_IDENTIFIER) {
           getSymbol();
-        else
-          syntaxErrorSymbol(SYM_SEMICOLON);
-      } else
-          syntaxErrorSymbol(SYM_IDENTIFIER);
+
+          if (size < 50) {
+            // member name
+            structMember_buffer[size][3] = (int) identifier;
+            // member type
+            structMember_buffer[size][1] = type;
+            // member offset
+            structMember_buffer[size][2] = size;
+
+            size = size + 1;
+          } else
+            syntaxErrorMessage((int*) "reached max amount of members for struct");
+
+          if (symbol == SYM_SEMICOLON)
+            getSymbol();
+          else{
+            syntaxErrorSymbol(SYM_SEMICOLON);
+          }
+        } else
+            syntaxErrorSymbol(SYM_IDENTIFIER);
+      }
+      getSymbol();
+
+      setStructSize(strct_entry, size);
+      // members-array[max:50][3]
+      setStructFields(strct_entry, malloc(size * 3 * WORDSIZE));
+      setStructMembers(strct_entry, size);
     }
-    setStructSize(strct_entry, size);
-  }
+  } else
+    syntaxErrorSymbol(SYM_IDENTIFIER);
+
   return size;
 }
 
@@ -4235,7 +4257,7 @@ int gr_parameter(int offset) {
   int type;
   int* structName;
 
-  structName = 0;
+  structName = (int*) 0;
 
   type = gr_type(structName);
 
@@ -4274,7 +4296,7 @@ int gr_variable(int offset) {
   constantValRight = malloc(2 * SIZEOFINT);
   constantValLeft[1] = 0;
   constantValRight[1] = 0;
-  structName = 0;
+  structName = (int*) 0;
 
   type = gr_type(structName);
 
@@ -4371,9 +4393,11 @@ int gr_variable(int offset) {
           syntaxErrorSymbol(SYM_RBRACKET);
       }
     } else if (type == STRUCT_T) {
+      // PROLOG typedef
       createSymbolTableEntry(LOCAL_TABLE, identifier, lineNumber, VARIABLE, type, 0, offset);
       entry = searchSymbolTable(local_symbol_table, identifier, VARIABLE);
       structEntry = getStructTableEntry(structName);
+      setValue(entry, (int) structEntry);
       setSize(entry, getStructSize(structEntry));
       offset = getStructSize(structEntry);
     } else {
@@ -4381,6 +4405,8 @@ int gr_variable(int offset) {
       return 1;
     }
   } else if (symbol == SYM_STRUCT) {
+    getSymbol();
+
     gr_struct(LOCAL_TABLE);
     return 0;
   } else {
@@ -4405,7 +4431,7 @@ void gr_initialization(int* name, int offset, int type) {
 
   hasCast = 0;
 
-  structName = 0;
+  structName = (int*) 0;
 
   if (symbol == SYM_ASSIGN) {
     getSymbol();
@@ -4478,6 +4504,9 @@ void gr_procedure(int* procedure, int returnType, int* constantVal) {
   int functionStart;
   int* entry;
   int offset;
+  // PROLOG remove whileFlag when boolean logic is implemented
+  int whileFlag;
+  whileFlag = 0;
   // direct array init not yet implemented for local variables
   // int* initArray;
   // *initArray= malloc(50 * WORDSIZE);
@@ -4573,7 +4602,15 @@ void gr_procedure(int* procedure, int returnType, int* constantVal) {
     offset = 0;
     localVariables = 0;
 
-    while (symbol == SYM_INT) {
+    // PROLOG remove whileFlag when boolean logic is implemented
+    // while ((symbol == SYM_INT) || (symbol == SYM_STRUCT))
+    if (symbol == SYM_INT)
+      whileFlag = 1;
+    else if (symbol == SYM_STRUCT)
+      whileFlag = 1;
+    else
+      whileFlag = 0;
+    while (whileFlag) {
       localVariables = localVariables + 1;
 
       offset = gr_variable(-localVariables * WORDSIZE);
@@ -4583,6 +4620,14 @@ void gr_procedure(int* procedure, int returnType, int* constantVal) {
         getSymbol();
       else
         syntaxErrorSymbol(SYM_SEMICOLON);
+
+      // PROLOG remove whileFlag when boolean logic is implemented
+      if (symbol == SYM_INT)
+        whileFlag = 1;
+      else if (symbol == SYM_STRUCT)
+        whileFlag = 1;
+      else
+        whileFlag = 0;
     }
 
     help_procedure_prologue(localVariables);
@@ -4635,7 +4680,7 @@ void gr_cstar() {
   constantVal[1] = 0;
   constantValRight[1] = 0;
   size = 0;
-  structName = 0;
+  structName = (int*) 0;
 
   while (symbol != SYM_EOF) {
     while (lookForType()) {
@@ -4662,7 +4707,6 @@ void gr_cstar() {
       } else
         syntaxErrorSymbol(SYM_IDENTIFIER);
     } else {
-      // PROLOG error
       type = gr_type(structName);
 
       if (symbol == SYM_IDENTIFIER) {
@@ -4815,10 +4859,12 @@ void gr_cstar() {
                 syntaxErrorSymbol(SYM_RBRACKET);
             }
           } else if (type == STRUCT_T) {
+            // PROLOG typedef
             createSymbolTableEntry(GLOBAL_TABLE, variableOrProcedureName, lineNumber, VARIABLE, type, 0, -(allocatedMemory + WORDSIZE));
             entry = searchSymbolTable(global_symbol_table, variableOrProcedureName, VARIABLE);
-            setSize(entry, getStructSize(structEntry));
             structEntry = getStructTableEntry(structName);
+            setValue(entry, (int) structEntry);
+            setSize(entry, getStructSize(structEntry));
             allocatedMemory = (getStructSize(structEntry) * WORDSIZE) - WORDSIZE;
             if (symbol == SYM_SEMICOLON)
               getSymbol();
@@ -4838,7 +4884,14 @@ void gr_cstar() {
               gr_initialization(variableOrProcedureName, -allocatedMemory, type);
           }
         } else if (symbol == SYM_STRUCT) {
+          getSymbol();
+
           gr_struct(GLOBAL_TABLE);
+
+          if (symbol == SYM_SEMICOLON)
+            getSymbol();
+          else
+            syntaxErrorSymbol(SYM_SEMICOLON);
         } else
           syntaxErrorSymbol(SYM_IDENTIFIER);
     }
@@ -7843,7 +7896,7 @@ int selfie(int argc, int* argv) {
 
         if (prologDebug) {
           i = 0;
-          while (i < 32){
+          while (i < 33){
               print((int*) "SYMBOL ");
               print((int*) SYMBOLS[i][0]);
               print((int*) " # ");
@@ -7970,19 +8023,16 @@ int selfie(int argc, int* argv) {
 }
 
 int main(int argc, int* argv) {
-  int i;
-  int j;
   // int localArr[] = {1,2,3,4,5,6,7,8};
-  int TwoDarrayLocal[4][8];
-  int* testArr;
-
-  struct localStruct{
+  struct localStruct {
     int a;
     int b;
     int* c;
   };
 
-  testArr = malloc(32 * SIZEOFINT);
+  // typedef:
+  // localStruct testStruct;
+  // globalStruct otherStruct;
 
   initLibrary();
 
@@ -8011,37 +8061,12 @@ int main(int argc, int* argv) {
   //------------------
 
   println();
-  print((int*) "Test for pointer usage as arrays:");
+  print((int*) "Test for struct usage:");
   println();
-  print((int*) "int* testArr");
+  print((int*) "global struct: globalStruct{int a, int b, int* c}");
   println();
-  print((int*) "TwoDarrayLocal[i][j] = (i + 1) * 3 % (j + 1)");
+  print((int*) "local struct: localStruct{int a, int b, int* c}");
   println();
-  print((int*) "testArr[i][j] = TwoDarrayLocal[i][j]");
-  println();
-  i = 0;
-  j = 0;
-  while (i < 4) {
-    while (j < 8) {
-      println();
-      TwoDarrayLocal[i][j] = (i + 1) * 3 % (j + 1);
-      testArr[i * 8 + j] = TwoDarrayLocal[i][j];
-      print((int*) "testArr[");
-      print(itoa(i,string_buffer,10,0,0));
-      print((int*) "][");
-      print(itoa(j,string_buffer,10,0,0));
-      print((int*) "] (=");
-      print(itoa((i + 1) * 3 % (j + 1),string_buffer,10,0,0));
-      print((int*) ") = ");
-      print(itoa(testArr[i * 8 + j],string_buffer,10,0,0));
-      print((int*) " ");
-      j = j + 1;
-    }
-    println();
-    j = 0;
-    i = i + 1;
-  }
-  i = 0;
 
   //------------------
   println(); println();
