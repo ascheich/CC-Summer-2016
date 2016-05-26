@@ -8,7 +8,7 @@ This is the grammar of the C Star (C*) programming language.
 
 C* is a small Turing-complete subset of C that includes dereferencing (the * operator) but excludes data structures, bitwise and Boolean operators, and many other features. C* is supposed to be close to the minimum necessary for implementing a self-compiling, single-pass, recursive-descent compiler.
 
-Keywords: int, while, if, else, return, void
+Keywords: int, while, if, else, return, void, struct
 
 ```
 digit                         = "0" | ... | "9" .
@@ -19,20 +19,22 @@ letter                        = "a" | ... | "z" | "A" | ... | "Z" .
 
 identifier                    = letter { letter | digit | "_" } .
 
-type                          = "int" [ "*" ] .
+type                          = "int" [ "*" ] | structType.
 
 cast                          = "(" type ")" .
 
-call                          = identifier "(" [ expression { "," expression } ] ")" .
+call                          = identifier "(" [ expression<constantVal> { "," expression<constantVal> } ] ")" .
 
 literal                       = integer | "'" ascii_character "'" .
 
-selector                      = "[" [ expression ] "]" .
+selector                      = "[" expression<constantVal> "]" [ "[" expression<constantVal> "]" ] .
+
+dimension<directInit>         = "[" [ expression<constantVal> ] "]" [ "[" expression<constantVal> "]" ] .
 
 integerList                     = "{" integer { "," integer } "}" .
 
 factor<constantVal>           = [ cast ]
-                                ( [ "*" ] ( identifier [ selector ]  | "(" expression ")" ) |
+                                ( [ "*" ] ( identifier [ selector ]  | "(" expression<constantVal> ")" ) |
                                 call |
                                 literal |
                                 """ { ascii_character } """ ) .
@@ -43,33 +45,43 @@ simpleExpression<constantVal> = [ "-" ] term<constantVal> { ( "+" | "-" ) term<c
 
 shiftExpression<constantVal>  = simpleExpression<constantVal> { ( "<<" | ">>" ) simpleExpression<constantVal> }.
 
-expression                    = shiftExpression [ ( "==" | "!=" | "<" | ">" | "<=" | ">=" ) shiftExpression ] .
+expression<constantVal>       = shiftExpression<constantVal> [ ( "==" | "!=" | "<" | ">" | "<=" | ">=" ) shiftExpression<constantVal> ] .
 
-while                         = "while" "(" expression ")"
+while                         = "while" "(" expression<constantVal> ")"
                                           ( statement |
                                            "{" { statement } "}" ) .
 
-if                            = "if" "(" expression ")"
+if                            = "if" "(" expression<constantVal> ")"
                                           ( statement |
                                             "{" { statement } "}" )
                                       [ "else"
                                           ( statement |
                                             "{" { statement } "}" ) ] .
 
-return                        = "return" [ expression ] .
+return                        = "return" [ expression<constantVal> ] .
 
-statement                     = ( [ "*" ] identifier [ selector ] | "*" "(" expression ")" ) "="
-                                    expression ";" |
+statement                     = ( [ "*" ] identifier [ selector ] | "*" "(" expression<constantVal> ")" ) "="
+                                    expression<constantVal> ";" |
                                   call ";" |
                                   while |
                                   if |
                                   return ";" .
 
-variable                      = type identifier [ selector [ "=" integerList ] ] .
+struct                        = "struct" identifier "{" type identifier ";" { type identifier ";" } "}" ";"
 
-procedure                     = "(" [ variable { "," variable } ] ")"
+variable                      = type identifier [ dimension<directInit> ] |
+                                  struct .
+
+varW/ArrayInit_DummyImplement = type identifier [ dimension<directInit> [ "=" integerList ] ] |
+                                  struct .
+
+parameter                     = type identifier;
+
+procedure                     = "(" [ parameter { "," parameter } ] ")"
                                 ( ";" | "{" { variable ";" } { statement } "}" ) .
 
-cstar                         = { type identifier [ selector ] [ "=" ( ([ cast ] [ "-" ] literal) | integerList ) ] ";" |
-                                ( "void" | type ) identifier procedure } .
+cstar                         = { type identifier [ dimension<directInit> ]
+                                                  [ "=" ( ([ cast ] [ "-" ] literal) | integerList ) ] ";" |
+                                ( "void" | type ) identifier procedure |
+                                struct } .
 ```
