@@ -19,7 +19,7 @@ letter                        = "a" | ... | "z" | "A" | ... | "Z" .
 
 identifier                    = letter { letter | digit | "_" } .
 
-type                          = "int" [ "*" ] .
+type                          = "int" [ "*" ] | structType.
 
 cast                          = "(" type ")" .
 
