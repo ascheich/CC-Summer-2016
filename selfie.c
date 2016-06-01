@@ -146,6 +146,9 @@ int CHAR_DOUBLEQUOTE  = '"';
 int CHAR_LBRACKET     = '[';
 int CHAR_RBRACKET     = ']';
 
+int CHAR_AMPERSAND    = '&';
+int CHAR_PIPE         = '|';
+
 int SIZEOFINT     = 4; // must be the same as WORDSIZE
 int SIZEOFINTSTAR = 4; // must be the same as WORDSIZE
 
@@ -294,12 +297,16 @@ int SYM_CHARACTER    = 26; // character
 int SYM_STRING       = 27; // string
 int SYM_STRUCT       = 28; // STRUCT identifier {
 
-int SYM_SLLV          = 29; // <<
-int SYM_SRLV          = 30; // >>
-int SYM_LBRACKET      = 31; // [
-int SYM_RBRACKET      = 32; // ]
+int SYM_SLLV         = 29; // <<
+int SYM_SRLV         = 30; // >>
+int SYM_LBRACKET     = 31; // [
+int SYM_RBRACKET     = 32; // ]
 
-int SYMBOLS[33][2]; // array of strings representing symbols
+int SYM_AND          = 33; // &&
+int SYM_OR           = 34; // ||
+int SYM_NOT          = 35; // !
+
+int SYMBOLS[36][2]; // array of strings representing symbols
 
 int maxIdentifierLength = 64; // maximum number of characters in an identifier
 int maxIntegerLength    = 10; // maximum number of characters in an integer
@@ -366,12 +373,16 @@ void initScanner () {
   SYMBOLS[SYM_LBRACKET][0]     = (int) "[";
   SYMBOLS[SYM_RBRACKET][0]     = (int) "]";
 
+  SYMBOLS[SYM_AND][0]          = (int) "&&";
+  SYMBOLS[SYM_OR][0]           = (int) "||";
+  SYMBOLS[SYM_NOT][0]          = (int) "!";
+
   character = CHAR_EOF;
   symbol    = SYM_EOF;
 
   if (prologDebug) {
     i = 0;
-    while (i < 33) {
+    while (i < 36) {
       SYMBOLS[i][1] = 0;
       i = i + 1;
     }
