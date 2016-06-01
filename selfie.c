@@ -522,6 +522,8 @@ int isStarOrDivOrModulo();
 int isPlusOrMinus();
 int isComparison();
 
+int isBoolOp();
+
 int isShift();
 int isIntegerList();
 
@@ -552,6 +554,7 @@ int  gr_term(int* constantVal);
 int  gr_simpleExpression(int* constantVal);
 int  gr_shiftExpression(int* constantVal);
 int  gr_expression(int* constantVal);
+int  gr_boolExpression(int* constantVal);
 void gr_while(int* constantVal);
 void gr_if(int* constantVal);
 void gr_return(int returnType, int* constantVal);
@@ -2390,6 +2393,17 @@ int isComparison() {
     return 0;
 }
 
+int isBoolOp() {
+  if (symbol == SYM_AND)
+    return 1;
+  else if (symbol == SYM_OR)
+    return 1;
+  else if (symbol == SYM_NOT)
+    return 1;
+  else
+    return 0;
+}
+
 int isShift() {
   if (symbol == SYM_SLLV)
     return 1;
@@ -3648,6 +3662,92 @@ int gr_expression(int* constantVal) {
   // assert: allocatedTemporaries == n + 1
 
   return ltype;
+}
+
+int gr_boolExpression(int* constantVal) {
+   int ltype;
+//   int leftFoldable;
+//   int leftVal;
+//   int operatorSymbol;
+//   int rtype;
+//   int not;
+//
+//   // assert: n = allocatedTemporaries
+//
+//   // optional: !
+//   if (symbol == SYM_NOT) {
+//     not = 1;
+//
+//     getSymbol();
+//
+//   } else
+//     not = 0;
+//
+   ltype = gr_expression(constantVal);
+//
+//   // assert: allocatedTemporaries == n + 1
+//
+//   //optional: ==, !=, <, >, <=, >= simpleExpression
+//   if (isBoolOp()) {
+//     operatorSymbol = symbol;
+//
+//     if (constantVal[1] == 1){
+//       leftFoldable = 1;
+//       leftVal = *constantVal;
+//     } else
+//       leftFoldable = 0;
+//
+//     getSymbol();
+//     rtype = gr_expression(constantVal);
+//
+//     // assert: allocatedTemporaries == n + 2
+//
+//     if (ltype != rtype)
+//       typeWarning(ltype, rtype);
+//
+//     if (leftFoldable == 1){
+//       if (constantVal[1] == 1){
+//         if(prologDebug){
+//           print((int*)"  _____BOOLEAN_EXPRESSION__");
+//           print((int*)"line: ");
+//           print(itoa(lineNumber,string_buffer,10,0,0));
+//           println();
+//         }
+//         if (operatorSymbol == SYM_AND)
+//           *constantVal = (leftVal && *constantVal);
+//         else if (operatorSymbol == SYM_OR)
+//           *constantVal = (leftVal || *constantVal);
+//       } else {
+//         load_integer(leftVal);
+//         if (operatorSymbol == SYM_AND) {
+//           // PROLOG
+//
+//         } else if (operatorSymbol == SYM_OR) {
+//           // PROLOG
+//
+//         }
+//       }
+//     } else {
+//       if (constantVal[1] == 1)
+//         load_integer(*constantVal);
+//       constantVal[1] = 0;
+//
+//       if (operatorSymbol == SYM_AND) {
+//         // PROLOG
+//
+//       } else if (operatorSymbol == SYM_OR) {
+//         // PROLOG
+//
+//       }
+//     }
+//   }
+//   if (constantVal[1] == 1)
+//     load_integer(*constantVal);
+//   constantVal[1] = 0;
+//
+//   // assert: allocatedTemporaries == n + 1
+//
+   return ltype;
 }
 
 void gr_while(int* constantVal) {
