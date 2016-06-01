@@ -47,7 +47,7 @@ shiftExpression<constantVal>  = simpleExpression<constantVal> { ( "<<" | ">>" ) 
 
 expression<constantVal>       = shiftExpression<constantVal> [ ( "==" | "!=" | "<" | ">" | "<=" | ">=" ) shiftExpression<constantVal> ] .
 
-boolExpression<constantVal>   = {!} expression<constantVal> { ("%%" | "||" ) expression<constantVal }.
+boolExpression<constantVal>   = ["!"] expression<constantVal> { ("%%" | "||" ) ["!"] expression<constantVal } .
 
 while                         = "while" "(" boolExpression<constantVal> ")"
                                           ( statement |
