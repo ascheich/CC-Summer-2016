@@ -1306,7 +1306,7 @@ int loadCharacter(int* s, int i) {
 
   a = i / SIZEOFINT;
 
-  return rightShift(leftShift(s[a], ((SIZEOFINT - 1) - (i % SIZEOFINT)) * 8), (SIZEOFINT - 1) * 8);
+  return s[a] << ((SIZEOFINT - 1) - (i % SIZEOFINT)) * 8 >> (SIZEOFINT - 1) * 8;
 }
 
 int* storeCharacter(int* s, int i, int c) {
@@ -1315,7 +1315,7 @@ int* storeCharacter(int* s, int i, int c) {
 
   a = i / SIZEOFINT;
 
-  s[a] = (s[a] - leftShift(loadCharacter(s, i), (i % SIZEOFINT) * 8)) + leftShift(c, (i % SIZEOFINT) * 8);
+  s[a] = (s[a] - (loadCharacter(s, i) << (i % SIZEOFINT) * 8)) + (c << (i % SIZEOFINT) * 8);
 
   return s;
 }
@@ -1439,11 +1439,11 @@ int* itoa(int n, int* s, int b, int a, int p) {
         storeCharacter(s, 0, '0');
 
         // avoids setting n to 0
-        n = (rightShift(INT_MIN, 1) / b) * 2;
+        n = ((INT_MIN >> 1) / b) * 2;
         i = 1;
       } else {
         // reset msb, restore below
-        n   = rightShift(leftShift(n, 1), 1);
+        n   = ((n << 1) >> 1);
         msb = 1;
       }
     }
@@ -1470,7 +1470,7 @@ int* itoa(int n, int* s, int b, int a, int p) {
 
     if (msb) {
       // restore msb from above
-      n   = n + (rightShift(INT_MIN, 1) / b) * 2;
+      n   = n + ((INT_MIN >> 1) / b) * 2;
       msb = 0;
     }
   }
@@ -2015,12 +2015,12 @@ int getSymbol() {
   } else if (character == CHAR_EXCLAMATION) {
     getCharacter();
 
-    if (character == CHAR_EQUAL)
+    if (character == CHAR_EQUAL){
       getCharacter();
-    else
-      syntaxErrorCharacter(CHAR_EQUAL);
 
-    symbol = SYM_NOTEQ;
+      symbol = SYM_NOTEQ;
+    } else
+      symbol = SYM_NOT;
 
   } else if (character == CHAR_PERCENTAGE) {
     getCharacter();
@@ -2031,10 +2031,32 @@ int getSymbol() {
     getCharacter();
 
     symbol = SYM_LBRACKET;
+
   } else if (character == CHAR_RBRACKET) {
     getCharacter();
 
     symbol = SYM_RBRACKET;
+
+  } else if (character == CHAR_AMPERSAND) {
+    getCharacter();
+
+      if (character == CHAR_AMPERSAND) {
+        getCharacter();
+
+        symbol = SYM_AND;
+      } else
+        syntaxErrorCharacter(CHAR_AMPERSAND);
+
+  } else if (character == CHAR_PIPE) {
+    getCharacter();
+
+      if (character == CHAR_PIPE) {
+        getCharacter();
+
+        symbol = SYM_OR;
+      } else
+        syntaxErrorCharacter(CHAR_PIPE);
+
   } else {
     printLineNumber((int*) "error", lineNumber);
     print((int*) "found unknown character ");
@@ -2112,6 +2134,12 @@ int getSymbol() {
       SYMBOLS[SYM_LBRACKET][1] = SYMBOLS[SYM_LBRACKET][1] + 1;
     else if (symbol == SYM_RBRACKET)
       SYMBOLS[SYM_RBRACKET][1] = SYMBOLS[SYM_RBRACKET][1] + 1;
+    else if (symbol == SYM_AND)
+      SYMBOLS[SYM_AND][1] = SYMBOLS[SYM_AND][1] + 1;
+    else if (symbol == SYM_OR)
+      SYMBOLS[SYM_OR][1] = SYMBOLS[SYM_OR][1] + 1;
+    else if (symbol == SYM_NOT)
+      SYMBOLS[SYM_NOT][1] = SYMBOLS[SYM_NOT][1] + 1;
   }
 
   return symbol;
