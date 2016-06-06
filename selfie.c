@@ -147,6 +147,9 @@ int CHAR_LBRACKET     = '[';
 int CHAR_RBRACKET     = ']';
 int CHAR_DOT          = '.';
 
+int CHAR_AMPERSAND    = '&';
+int CHAR_PIPE         = '|';
+
 int SIZEOFINT     = 4; // must be the same as WORDSIZE
 int SIZEOFINTSTAR = 4; // must be the same as WORDSIZE
 
@@ -302,7 +305,11 @@ int SYM_SRLV          = 32; // >>
 int SYM_LBRACKET      = 33; // [
 int SYM_RBRACKET      = 34; // ]
 
-int SYMBOLS[36][2]; // array of strings representing symbols
+int SYM_AND          = 35; // &&
+int SYM_OR           = 36; // ||
+int SYM_NOT          = 37; // !
+
+int SYMBOLS[38][2]; // array of strings representing symbols
 
 int maxIdentifierLength = 64; // maximum number of characters in an identifier
 int maxIntegerLength    = 10; // maximum number of characters in an integer
@@ -371,12 +378,16 @@ void initScanner () {
   SYMBOLS[SYM_LBRACKET][0]     = (int) "[";
   SYMBOLS[SYM_RBRACKET][0]     = (int) "]";
 
+  SYMBOLS[SYM_AND][0]          = (int) "&&";
+  SYMBOLS[SYM_OR][0]           = (int) "||";
+  SYMBOLS[SYM_NOT][0]          = (int) "!";
+
   character = CHAR_EOF;
   symbol    = SYM_EOF;
 
   if (prologDebug) {
     i = 0;
-    while (i < 33) {
+    while (i < 36) {
       SYMBOLS[i][1] = 0;
       i = i + 1;
     }
@@ -517,6 +528,8 @@ int isStarOrDivOrModulo();
 int isPlusOrMinus();
 int isComparison();
 
+int isBoolOp();
+
 int isShift();
 int isIntegerList();
 
@@ -547,6 +560,7 @@ int  gr_term(int* constantVal);
 int  gr_simpleExpression(int* constantVal);
 int  gr_shiftExpression(int* constantVal);
 int  gr_expression(int* constantVal);
+int  gr_boolExpression(int* constantVal);
 void gr_while(int* constantVal);
 void gr_if(int* constantVal);
 void gr_return(int returnType, int* constantVal);
@@ -1301,7 +1315,7 @@ int loadCharacter(int* s, int i) {
 
   a = i / SIZEOFINT;
 
-  return rightShift(leftShift(s[a], ((SIZEOFINT - 1) - (i % SIZEOFINT)) * 8), (SIZEOFINT - 1) * 8);
+  return s[a] << ((SIZEOFINT - 1) - (i % SIZEOFINT)) * 8 >> (SIZEOFINT - 1) * 8;
 }
 
 int* storeCharacter(int* s, int i, int c) {
@@ -1310,7 +1324,7 @@ int* storeCharacter(int* s, int i, int c) {
 
   a = i / SIZEOFINT;
 
-  s[a] = (s[a] - leftShift(loadCharacter(s, i), (i % SIZEOFINT) * 8)) + leftShift(c, (i % SIZEOFINT) * 8);
+  s[a] = (s[a] - (loadCharacter(s, i) << (i % SIZEOFINT) * 8)) + (c << (i % SIZEOFINT) * 8);
 
   return s;
 }
@@ -1434,11 +1448,11 @@ int* itoa(int n, int* s, int b, int a, int p) {
         storeCharacter(s, 0, '0');
 
         // avoids setting n to 0
-        n = (rightShift(INT_MIN, 1) / b) * 2;
+        n = ((INT_MIN >> 1) / b) * 2;
         i = 1;
       } else {
         // reset msb, restore below
-        n   = rightShift(leftShift(n, 1), 1);
+        n   = ((n << 1) >> 1);
         msb = 1;
       }
     }
@@ -1465,7 +1479,7 @@ int* itoa(int n, int* s, int b, int a, int p) {
 
     if (msb) {
       // restore msb from above
-      n   = n + (rightShift(INT_MIN, 1) / b) * 2;
+      n   = n + ((INT_MIN >> 1) / b) * 2;
       msb = 0;
     }
   }
@@ -2015,12 +2029,12 @@ int getSymbol() {
   } else if (character == CHAR_EXCLAMATION) {
     getCharacter();
 
-    if (character == CHAR_EQUAL)
+    if (character == CHAR_EQUAL){
       getCharacter();
-    else
-      syntaxErrorCharacter(CHAR_EQUAL);
 
-    symbol = SYM_NOTEQ;
+      symbol = SYM_NOTEQ;
+    } else
+      symbol = SYM_NOT;
 
   } else if (character == CHAR_PERCENTAGE) {
     getCharacter();
@@ -2031,6 +2045,7 @@ int getSymbol() {
     getCharacter();
 
     symbol = SYM_LBRACKET;
+
   } else if (character == CHAR_RBRACKET) {
     getCharacter();
 
@@ -2039,6 +2054,25 @@ int getSymbol() {
     getCharacter();
 
     symbol = SYM_DOT;
+  } else if (character == CHAR_AMPERSAND) {
+    getCharacter();
+
+      if (character == CHAR_AMPERSAND) {
+        getCharacter();
+
+        symbol = SYM_AND;
+      } else
+        syntaxErrorCharacter(CHAR_AMPERSAND);
+
+  } else if (character == CHAR_PIPE) {
+    getCharacter();
+
+      if (character == CHAR_PIPE) {
+        getCharacter();
+
+        symbol = SYM_OR;
+      } else
+        syntaxErrorCharacter(CHAR_PIPE);
   } else {
     printLineNumber((int*) "error", lineNumber);
     print((int*) "found unknown character ");
@@ -2120,6 +2154,12 @@ int getSymbol() {
       SYMBOLS[SYM_LBRACKET][1] = SYMBOLS[SYM_LBRACKET][1] + 1;
     else if (symbol == SYM_RBRACKET)
       SYMBOLS[SYM_RBRACKET][1] = SYMBOLS[SYM_RBRACKET][1] + 1;
+    else if (symbol == SYM_AND)
+      SYMBOLS[SYM_AND][1] = SYMBOLS[SYM_AND][1] + 1;
+    else if (symbol == SYM_OR)
+      SYMBOLS[SYM_OR][1] = SYMBOLS[SYM_OR][1] + 1;
+    else if (symbol == SYM_NOT)
+      SYMBOLS[SYM_NOT][1] = SYMBOLS[SYM_NOT][1] + 1;
   }
 
   return symbol;
@@ -2385,6 +2425,17 @@ int isComparison() {
   else if (symbol == SYM_LEQ)
     return 1;
   else if (symbol == SYM_GEQ)
+    return 1;
+  else
+    return 0;
+}
+
+int isBoolOp() {
+  if (symbol == SYM_AND)
+    return 1;
+  else if (symbol == SYM_OR)
+    return 1;
+  else if (symbol == SYM_NOT)
     return 1;
   else
     return 0;
@@ -3669,6 +3720,91 @@ int gr_expression(int* constantVal) {
   // assert: allocatedTemporaries == n + 1
 
   return ltype;
+}
+
+int gr_boolExpression(int* constantVal) {
+  int ltype;
+  int leftFoldable;
+  int leftVal;
+  int operatorSymbol;
+  int rtype;
+  int not;
+
+  // assert: n = allocatedTemporaries
+
+  // optional: !
+  if (symbol == SYM_NOT) {
+    not = 1;
+
+    getSymbol();
+
+  } else
+    not = 0;
+
+   ltype = gr_expression(constantVal);
+
+  // assert: allocatedTemporaries == n + 1
+
+  if (isBoolOp()) {
+    operatorSymbol = symbol;
+
+    if (constantVal[1] == 1){
+      leftFoldable = 1;
+      leftVal = *constantVal;
+    } else
+      leftFoldable = 0;
+
+    getSymbol();
+    rtype = gr_expression(constantVal);
+
+    // assert: allocatedTemporaries == n + 2
+
+    if (ltype != rtype)
+      typeWarning(ltype, rtype);
+
+    if (leftFoldable == 1){
+      if (constantVal[1] == 1){
+        if(prologDebug){
+          print((int*)"  _____BOOLEAN_EXPRESSION__");
+          print((int*)"line: ");
+          print(itoa(lineNumber,string_buffer,10,0,0));
+          println();
+        }
+        // if (operatorSymbol == SYM_AND)
+        //   *constantVal = (leftVal && *constantVal);
+        // else if (operatorSymbol == SYM_OR)
+        //   *constantVal = (leftVal || *constantVal);
+      } else {
+        load_integer(leftVal);
+        if (operatorSymbol == SYM_AND) {
+          // PROLOG
+
+        } else if (operatorSymbol == SYM_OR) {
+          // PROLOG
+
+        }
+      }
+    } else {
+      if (constantVal[1] == 1)
+        load_integer(*constantVal);
+      constantVal[1] = 0;
+
+      if (operatorSymbol == SYM_AND) {
+        // PROLOG
+
+      } else if (operatorSymbol == SYM_OR) {
+        // PROLOG
+
+      }
+    }
+  }
+  if (constantVal[1] == 1)
+    load_integer(*constantVal);
+  constantVal[1] = 0;
+
+  // assert: allocatedTemporaries == n + 1
+
+   return ltype;
 }
 
 void gr_while(int* constantVal) {
