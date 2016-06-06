@@ -2363,7 +2363,6 @@ int getMemberType(int* entry, int* identifier) {
   memberArrPtr = (int*) entry[3];
 
   while (i < size) {
-    print((int*)"test");
     // memberArrPtr[i][0]
     if (stringCompare(identifier, (int*) memberArrPtr[i * size]))
       return memberArrPtr[i * size + 1];
