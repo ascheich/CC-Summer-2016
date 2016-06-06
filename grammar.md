@@ -47,21 +47,23 @@ shiftExpression<constantVal>  = simpleExpression<constantVal> { ( "<<" | ">>" ) 
 
 expression<constantVal>       = shiftExpression<constantVal> [ ( "==" | "!=" | "<" | ">" | "<=" | ">=" ) shiftExpression<constantVal> ] .
 
-while                         = "while" "(" expression<constantVal> ")"
+boolExpression<constantVal>   = ["!"] expression<constantVal> { ("%%" | "||" ) ["!"] expression<constantVal } .
+
+while                         = "while" "(" boolExpression<constantVal> ")"
                                           ( statement |
                                            "{" { statement } "}" ) .
 
-if                            = "if" "(" expression<constantVal> ")"
+if                            = "if" "(" boolExpression<constantVal> ")"
                                           ( statement |
                                             "{" { statement } "}" )
                                       [ "else"
                                           ( statement |
                                             "{" { statement } "}" ) ] .
 
-return                        = "return" [ expression<constantVal> ] .
+return                        = "return" [ boolExpression<constantVal> ] .
 
-statement                     = ( [ "*" ] identifier [ selector ] | "*" "(" expression<constantVal> ")" ) "="
-                                    expression<constantVal> ";" |
+statement                     = ( [ "*" ] identifier [ selector ] | "*" "(" boolExpression<constantVal> ")" ) "="
+                                    boolExpression<constantVal> ";" |
                                   call ";" |
                                   while |
                                   if |
