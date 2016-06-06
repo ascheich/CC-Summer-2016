@@ -187,11 +187,11 @@ int outputFD    = 1;
 
 // Variable for Testing Purposes
 int prolog_Test = 42;
-// struct globalStruct{
-//   int a;
-//   int b;
-//   int* c;
-// };
+struct globalStruct{
+  int a;
+  int b;
+  int* c;
+};
 //---------------------
 int prologDebug = 0;
 // ------------------------- INITIALIZATION ------------------------
@@ -2320,6 +2320,7 @@ void setStructMembers(int* entry, int amount) {
   int* members;
 
   i = 0;
+
   members = getStructFields(entry);
 
   while (i < amount) {
@@ -2342,12 +2343,12 @@ int  getMemberOffset(int* entry, int* identifier) {
   size = getStructSize(entry);
   memberArrPtr = (int*) entry[3];
 
-  // while (i < size) {
-  //   // memberArrPtr[i][0]
-  //   if (stringCompare(identifier, (int*) memberArrPtr[i * size]))
-  //     return i;
-  //   i = i + 1;
-  // }
+  while (i < size) {
+    // memberArrPtr[i][0]
+    if (stringCompare(identifier, (int*) memberArrPtr[i * size]))
+      return i;
+    i = i + 1;
+  }
   return 0;
 }
 
@@ -4384,6 +4385,7 @@ int gr_type() {
 int gr_struct(int whichTable, int* structName){
   int type;
   int size;
+  int* fields;
   int* entry;
   int* strct_entry;
 
@@ -4427,11 +4429,10 @@ int gr_struct(int whichTable, int* structName){
 
       setStructSize(strct_entry, size);
       // members-array[max:50][3]
-      setStructFields(strct_entry, malloc(size * 3 * WORDSIZE));
+      fields = malloc(size * 3 * WORDSIZE);
+      setStructFields(strct_entry, fields);
       setStructMembers(strct_entry, size);
     }
-
-    size = 0;
   } else {
     strct_entry = getStructTableEntry(structName);
 
@@ -4599,7 +4600,6 @@ int gr_variable(int offset) {
     } else if (type == STRUCT_T) {
       offset = gr_struct(LOCAL_TABLE, structName);
 
-      print((int*)"aieriabrn");
       return offset;
     } else {
       createSymbolTableEntry(LOCAL_TABLE, identifier, lineNumber, VARIABLE, type, 0, offset);
@@ -8201,11 +8201,11 @@ int selfie(int argc, int* argv) {
 int main(int argc, int* argv) {
   int abc;
   // int localArr[] = {1,2,3,4,5,6,7,8};
-  // struct localStruct {
-  //   int a;
-  //   int b;
-  //   int* c;
-  // };
+  struct localStruct {
+    int a;
+    int b;
+    int* c;
+  };
 
   // struct localStruct myStruct;
   // struct localStruct secondStruct;
