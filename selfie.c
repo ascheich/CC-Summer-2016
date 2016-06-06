@@ -455,6 +455,7 @@ void createStructTableEntry(int whichTable, int* name);
 int* getStructTableEntry(int* name);
 void setStructMembers(int* entry, int amount);
 int  getMemberOffset(int* entry, int* identifier);
+int  getMemberType(int* entry, int* identifier);
 
 // struct table entry:
 // +----+------------+
@@ -2334,7 +2335,7 @@ void setStructMembers(int* entry, int amount) {
   }
 }
 
-int  getMemberOffset(int* entry, int* identifier) {
+int getMemberOffset(int* entry, int* identifier) {
   int i;
   int size;
   int* memberArrPtr;
@@ -2347,6 +2348,24 @@ int  getMemberOffset(int* entry, int* identifier) {
     // memberArrPtr[i][0]
     if (stringCompare(identifier, (int*) memberArrPtr[i * size]))
       return i;
+    i = i + 1;
+  }
+  return 0;
+}
+
+int getMemberType(int* entry, int* identifier) {
+  int i;
+  int size;
+  int* memberArrPtr;
+
+  i = 0;
+  size = getStructSize(entry);
+  memberArrPtr = (int*) entry[3];
+
+  while (i < size) {
+    // memberArrPtr[i][0]
+    if (stringCompare(identifier, (int*) memberArrPtr[i * size]))
+      return memberArrPtr[i * size + 1];
     i = i + 1;
   }
   return 0;
@@ -3163,10 +3182,10 @@ int gr_factor(int* constantVal) {
 
           strct_entry = (int*) getValue(entry);
 
-          // talloc();
-          // emitIFormat(OP_ADDIU, REG_ZR, currentTemporary(), getAddress(entry) + getMemberOffset(strct_entry, identifier) * WORDSIZE);
-          // emitRFormat(OP_SPECIAL, getScope(entry), currentTemporary(), currentTemporary(), FCT_ADDU);
-          // emitIFormat(OP_LW, currentTemporary(), currentTemporary(), 0);
+          talloc();
+          emitIFormat(OP_ADDIU, REG_ZR, currentTemporary(), getAddress(entry) - getMemberOffset(strct_entry, identifier) * WORDSIZE);
+          emitRFormat(OP_SPECIAL, getScope(entry), currentTemporary(), currentTemporary(), FCT_ADDU);
+          emitIFormat(OP_LW, currentTemporary(), currentTemporary(), 0);
 
           // assert: allocatedTemporaries == n + 1
         } else
@@ -4003,6 +4022,7 @@ void gr_statement(int* constantVal) {
   int rtype;
   int* variableOrProcedureName;
   int* entry;
+  int* strct_entry;
 
   int* constantValLeft;
   int* constantValRight;
@@ -4331,6 +4351,44 @@ void gr_statement(int* constantVal) {
           syntaxErrorUnexpected();
       } else
         syntaxErrorSymbol(SYM_RBRACKET);
+    } else if (symbol == SYM_DOT) {
+      getSymbol();
+
+      entry = searchSymbolTable(local_symbol_table, variableOrProcedureName, VARIABLE);
+      if (entry == (int*) 0)
+        entry = searchSymbolTable(global_symbol_table, variableOrProcedureName, VARIABLE);
+      if (getType(entry) == STRUCT_T) {
+        if (symbol == SYM_IDENTIFIER) {
+          getSymbol();
+
+          strct_entry = (int*) getValue(entry);
+
+          if (symbol == SYM_ASSIGN) {
+            getSymbol();
+
+            ltype = getMemberType(strct_entry, variableOrProcedureName);
+            rtype = gr_expression(constantVal);
+
+            if (ltype != rtype)
+              typeWarning(ltype, rtype);
+
+            if (symbol == SYM_SEMICOLON) {
+              getSymbol();
+
+              talloc();
+              emitIFormat(OP_ADDIU, REG_ZR, currentTemporary(), getAddress(entry) - getMemberOffset(strct_entry, identifier) * WORDSIZE);
+              emitRFormat(OP_SPECIAL, getScope(entry), currentTemporary(), currentTemporary(), FCT_ADDU);
+              emitIFormat(OP_SW, currentTemporary(), previousTemporary(), 0);
+              tfree(2);
+
+              // assert: allocated temporaries = 0
+            } else
+              syntaxErrorSymbol(SYM_SEMICOLON);
+          }
+        } else
+          syntaxErrorSymbol(SYM_IDENTIFIER);
+      } else
+        syntaxErrorMessage((int*) "expected struct for arrow usage");
     } else
         syntaxErrorUnexpected();
   }
@@ -8207,8 +8265,8 @@ int main(int argc, int* argv) {
     int* c;
   };
 
-  // struct localStruct myStruct;
-  // struct localStruct secondStruct;
+  struct localStruct myStruct;
+  struct localStruct secondStruct;
 
   initLibrary();
 
@@ -8244,8 +8302,12 @@ int main(int argc, int* argv) {
   print((int*) "local struct: localStruct{int a, int b, int* c}");
   println();
 
-  // myStruct->a = 1;
-  // abc = myStruct.a;
+  abc = 77;
+  myStruct.a = abc;
+
+  print((int*)"TEST");
+  print(itoa(myStruct.a,string_buffer,10,0,0));
+  println();
 
   //------------------
   println(); println();
