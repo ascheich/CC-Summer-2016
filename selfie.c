@@ -387,7 +387,7 @@ void initScanner () {
 
   if (prologDebug) {
     i = 0;
-    while (i < 36) {
+    while (i < 38) {
       SYMBOLS[i][1] = 0;
       i = i + 1;
     }
@@ -2363,6 +2363,7 @@ int getMemberType(int* entry, int* identifier) {
   memberArrPtr = (int*) entry[3];
 
   while (i < size) {
+    print((int*)"test");
     // memberArrPtr[i][0]
     if (stringCompare(identifier, (int*) memberArrPtr[i * size]))
       return memberArrPtr[i * size + 1];
@@ -4361,12 +4362,14 @@ void gr_statement(int* constantVal) {
         if (symbol == SYM_IDENTIFIER) {
           getSymbol();
 
+
           strct_entry = (int*) getValue(entry);
+
+          ltype = getMemberType(strct_entry, identifier);
 
           if (symbol == SYM_ASSIGN) {
             getSymbol();
 
-            ltype = getMemberType(strct_entry, variableOrProcedureName);
             rtype = gr_expression(constantVal);
 
             if (ltype != rtype)
@@ -8304,10 +8307,6 @@ int main(int argc, int* argv) {
 
   abc = 77;
   myStruct.a = abc;
-
-  print((int*)"TEST");
-  print(itoa(myStruct.a,string_buffer,10,0,0));
-  println();
 
   //------------------
   println(); println();
