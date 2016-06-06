@@ -145,6 +145,7 @@ int CHAR_DOUBLEQUOTE  = '"';
 
 int CHAR_LBRACKET     = '[';
 int CHAR_RBRACKET     = ']';
+int CHAR_DOT          = '.';
 
 int SIZEOFINT     = 4; // must be the same as WORDSIZE
 int SIZEOFINTSTAR = 4; // must be the same as WORDSIZE
@@ -183,11 +184,11 @@ int outputFD    = 1;
 
 // Variable for Testing Purposes
 int prolog_Test = 42;
-struct globalStruct{
-  int a;
-  int b;
-  int* c;
-};
+// struct globalStruct{
+//   int a;
+//   int b;
+//   int* c;
+// };
 //---------------------
 int prologDebug = 0;
 // ------------------------- INITIALIZATION ------------------------
@@ -293,13 +294,15 @@ int SYM_MOD          = 25; // %
 int SYM_CHARACTER    = 26; // character
 int SYM_STRING       = 27; // string
 int SYM_STRUCT       = 28; // STRUCT identifier {
+int SYM_DOT          = 29; // .
+int SYM_RARROW       = 30; // ->
 
-int SYM_SLLV          = 29; // <<
-int SYM_SRLV          = 30; // >>
-int SYM_LBRACKET      = 31; // [
-int SYM_RBRACKET      = 32; // ]
+int SYM_SLLV          = 31; // <<
+int SYM_SRLV          = 32; // >>
+int SYM_LBRACKET      = 33; // [
+int SYM_RBRACKET      = 34; // ]
 
-int SYMBOLS[33][2]; // array of strings representing symbols
+int SYMBOLS[36][2]; // array of strings representing symbols
 
 int maxIdentifierLength = 64; // maximum number of characters in an identifier
 int maxIntegerLength    = 10; // maximum number of characters in an integer
@@ -360,6 +363,8 @@ void initScanner () {
   SYMBOLS[SYM_CHARACTER][0]    = (int) "character";
   SYMBOLS[SYM_STRING][0]       = (int) "string";
   SYMBOLS[SYM_STRUCT][0]       = (int) "struct";
+  SYMBOLS[SYM_DOT][0]          = (int) ".";
+  SYMBOLS[SYM_RARROW][0]       = (int) "->";
 
   SYMBOLS[SYM_SLLV][0]         = (int) "<<";
   SYMBOLS[SYM_SRLV][0]         = (int) ">>";
@@ -438,6 +443,7 @@ void setSize(int* entry, int size)          { entry[8] = size; }
 void createStructTableEntry(int whichTable, int* name);
 int* getStructTableEntry(int* name);
 void setStructMembers(int* entry, int amount);
+int  getMemberOffset(int* entry, int* identifier);
 
 // struct table entry:
 // +----+------------+
@@ -452,14 +458,14 @@ void setStructMembers(int* entry, int amount);
 //                      [x][1]: type
 //                      [x][2]: offset
 
-int* getNextStructEntry(int* entry) { return (int*) *entry; }
-int* getStructName(int* entry)      { return (int*) entry[1]; }
-int  getStructSize(int* entry)      { return        entry[2]; }
-int* getStructFields(int* entry)    { return (int*) entry[3]; }
+int* getNextStructEntry(int* entry)   { return (int*) *entry;   }
+int* getStructName(int* entry)        { return (int*) entry[1]; }
+int  getStructSize(int* entry)        { return        entry[2]; }
+int* getStructFields(int* entry)      { return (int*) entry[3]; }
 
-void setNextStructEntry(int* entry, int* next) { *entry   = (int)  next; }
-void setStructName(int* entry, int* name)      { entry[1] = (int)  name; }
-void setStructSize(int* entry, int size)       { entry[2] =        size; }
+void setNextStructEntry(int* entry, int* next) { *entry   = (int)  next;   }
+void setStructName(int* entry, int* name)      { entry[1] = (int)  name;   }
+void setStructSize(int* entry, int size)       { entry[2] =        size;   }
 void setStructFields(int* entry, int* fields)  { entry[3] = (int)  fields; }
 
 // ------------------------ GLOBAL CONSTANTS -----------------------
@@ -545,10 +551,10 @@ void gr_while(int* constantVal);
 void gr_if(int* constantVal);
 void gr_return(int returnType, int* constantVal);
 void gr_statement(int* constantVal);
-int  gr_type(int* structName);
+int  gr_type();
 int  gr_parameter(int offset);
 int  gr_variable(int offset);
-int  gr_struct(int whichTable);
+int  gr_struct(int whichTable, int* structName);
 void gr_initialization(int* name, int offset, int type);
 void gr_procedure(int* procedure, int returnType, int* constantVal);
 void gr_cstar();
@@ -1614,12 +1620,12 @@ void printLineNumber(int* message, int line) {
   print((int*) " in ");
   print(sourceName);
   print((int*) " in line ");
-  print(itoa(line, string_buffer, 10, 0, 0));
+  print(itoa(line / 2, string_buffer, 10, 0, 0));
   print((int*) ": ");
 }
 
 void syntaxErrorMessage(int* message) {
-  printLineNumber((int*) "error", lineNumber);
+  printLineNumber((int*) "error", lineNumber / 2);
 
   print(message);
 
@@ -1627,7 +1633,7 @@ void syntaxErrorMessage(int* message) {
 }
 
 void syntaxErrorCharacter(int expected) {
-  printLineNumber((int*) "error", lineNumber);
+  printLineNumber((int*) "error", lineNumber / 2);
 
   printCharacter(expected);
   print((int*) " expected but ");
@@ -1931,7 +1937,12 @@ int getSymbol() {
   } else if (character == CHAR_DASH) {
     getCharacter();
 
-    symbol = SYM_MINUS;
+    if (character == CHAR_GT) {
+      getCharacter();
+
+      symbol = SYM_RARROW;
+    } else
+      symbol = SYM_MINUS;
 
   } else if (character == CHAR_ASTERISK) {
     getCharacter();
@@ -2024,6 +2035,10 @@ int getSymbol() {
     getCharacter();
 
     symbol = SYM_RBRACKET;
+  } else if (character == CHAR_DOT) {
+    getCharacter();
+
+    symbol = SYM_DOT;
   } else {
     printLineNumber((int*) "error", lineNumber);
     print((int*) "found unknown character ");
@@ -2093,6 +2108,10 @@ int getSymbol() {
       SYMBOLS[SYM_STRING][1] = SYMBOLS[SYM_STRING][1] + 1;
     else if (symbol == SYM_STRUCT)
       SYMBOLS[SYM_STRUCT][1] = SYMBOLS[SYM_STRUCT][1] + 1;
+    else if (symbol == SYM_DOT)
+      SYMBOLS[SYM_DOT][1] = SYMBOLS[SYM_DOT][1] + 1;
+    else if (symbol == SYM_RARROW)
+      SYMBOLS[SYM_RARROW][1] = SYMBOLS[SYM_RARROW][1] + 1;
     else if (symbol == SYM_SLLV)
       SYMBOLS[SYM_SLLV][1] = SYMBOLS[SYM_SLLV][1] + 1;
     else if (symbol == SYM_SRLV)
@@ -2273,6 +2292,26 @@ void setStructMembers(int* entry, int amount) {
     i = i + 1;
   }
 }
+
+int  getMemberOffset(int* entry, int* identifier) {
+  int i;
+  int size;
+  int* memberArrPtr;
+
+  i = 0;
+  size = getStructSize(entry);
+  memberArrPtr = (int*) entry[3];
+
+  // while (i < size) {
+  //   // memberArrPtr[i][0]
+  //   if (stringCompare(identifier, (int*) memberArrPtr[i * size]))
+  //     return i;
+  //   i = i + 1;
+  // }
+  return 0;
+}
+
+
 // -----------------------------------------------------------------
 // ---------------------------- PARSER -----------------------------
 // -----------------------------------------------------------------
@@ -2785,14 +2824,13 @@ int gr_factor(int* constantVal) {
   int typeSize;
   int constantValLeft;
   int* entry;
-  int* structName;
+  int* strct_entry;
   int* variableOrProcedureName;
 
   // assert: n = allocatedTemporaries
 
   hasCast = 0;
   constantVal[1] = 0;
-  structName = (int*) 0;
 
   type = INT_T;
 
@@ -2813,7 +2851,7 @@ int gr_factor(int* constantVal) {
     if (symbol == SYM_INT) {
       hasCast = 1;
 
-      cast = gr_type(structName);
+      cast = gr_type();
 
       if (symbol == SYM_RPARENTHESIS)
         getSymbol();
@@ -3061,6 +3099,28 @@ int gr_factor(int* constantVal) {
         } else
           syntaxErrorSymbol(SYM_RBRACKET);
         *(constantVal + 1) = 0;
+    } else if (symbol == SYM_DOT) {
+      getSymbol();
+
+      entry = searchSymbolTable(local_symbol_table, variableOrProcedureName, VARIABLE);
+      if (entry == (int*) 0)
+        entry = searchSymbolTable(global_symbol_table, variableOrProcedureName, VARIABLE);
+      if (getType(entry) == STRUCT_T) {
+        if (symbol == SYM_IDENTIFIER) {
+          getSymbol();
+
+          strct_entry = (int*) getValue(entry);
+
+          // talloc();
+          // emitIFormat(OP_ADDIU, REG_ZR, currentTemporary(), getAddress(entry) + getMemberOffset(strct_entry, identifier) * WORDSIZE);
+          // emitRFormat(OP_SPECIAL, getScope(entry), currentTemporary(), currentTemporary(), FCT_ADDU);
+          // emitIFormat(OP_LW, currentTemporary(), currentTemporary(), 0);
+
+          // assert: allocatedTemporaries == n + 1
+        } else
+          syntaxErrorSymbol(SYM_IDENTIFIER);
+      } else
+        syntaxErrorMessage((int*) "expected struct for arrow usage");
     } else {
         // variable access: identifier
         type = load_variable(variableOrProcedureName);
@@ -4158,11 +4218,8 @@ void gr_statement(int* constantVal) {
   }
 }
 
-int gr_type(int* structName) {
+int gr_type() {
   int type;
-  int* entry;
-
-  entry = (int*) 0;
 
   type = INT_T;
 
@@ -4174,18 +4231,10 @@ int gr_type(int* structName) {
 
       getSymbol();
     }
-  } else if (symbol == SYM_IDENTIFIER) {
-    getStructTableEntry(identifier);
-
-    if (entry == (int*) 0)
-      syntaxErrorUnexpected();
-    else {
-      type = STRUCT_T;
-      structName = identifier;
-    }
-    getSymbol();
   } else if (symbol == SYM_STRUCT) {
     type = STRUCT_T;
+
+    getSymbol();
   } else {
     printLineNumber((int*) "invalid type; int or struct required", lineNumber);
     printSymbol(symbol);
@@ -4196,33 +4245,32 @@ int gr_type(int* structName) {
 }
 
 // "{" type identifier ";" { type identifier ";" } "}" ";"
-int gr_struct(int whichTable){
+int gr_struct(int whichTable, int* structName){
   int type;
   int size;
+  int* entry;
   int* strct_entry;
-  int* structName;
 
   size = 0;
-  structName = (int*) 0;
+  entry = (int*) 0;
 
-  if (symbol == SYM_IDENTIFIER) {
-    getSymbol();
-
-    createStructTableEntry(whichTable, identifier);
-    strct_entry = getStructTableEntry(identifier);
+  if (getStructTableEntry(structName) == (int*) 0) {
+    //define new struct type;
+    createStructTableEntry(whichTable, structName);
+    strct_entry = getStructTableEntry(structName);
 
     if (symbol == SYM_LBRACE) {
       getSymbol();
 
       while (symbol != SYM_RBRACE) {
-        type = gr_type(structName);
+        type = gr_type();
 
         if (symbol == SYM_IDENTIFIER) {
           getSymbol();
 
           if (size < 50) {
             // member name
-            structMember_buffer[size][3] = (int) identifier;
+            structMember_buffer[size][0] = (int) identifier;
             // member type
             structMember_buffer[size][1] = type;
             // member offset
@@ -4234,9 +4282,8 @@ int gr_struct(int whichTable){
 
           if (symbol == SYM_SEMICOLON)
             getSymbol();
-          else{
+          else
             syntaxErrorSymbol(SYM_SEMICOLON);
-          }
         } else
             syntaxErrorSymbol(SYM_IDENTIFIER);
       }
@@ -4247,19 +4294,39 @@ int gr_struct(int whichTable){
       setStructFields(strct_entry, malloc(size * 3 * WORDSIZE));
       setStructMembers(strct_entry, size);
     }
-  } else
-    syntaxErrorSymbol(SYM_IDENTIFIER);
+
+    size = 0;
+  } else {
+    strct_entry = getStructTableEntry(structName);
+
+    if (symbol == SYM_IDENTIFIER) {
+      getSymbol();
+
+      createSymbolTableEntry(whichTable, identifier, lineNumber, VARIABLE, STRUCT_T, 0, 0);
+
+      size = getStructSize(strct_entry);
+
+      if (whichTable == LOCAL_TABLE)
+        entry = searchSymbolTable(local_symbol_table, identifier, VARIABLE);
+      else {
+        entry = searchSymbolTable(global_symbol_table, identifier, VARIABLE);
+        setAddress(entry,-(allocatedMemory + WORDSIZE));
+        allocatedMemory = (size * WORDSIZE) - WORDSIZE;
+      }
+
+      setValue(entry, (int) strct_entry);
+      setSize(entry, size);
+    } else
+      syntaxErrorSymbol(SYM_IDENTIFIER);
+  }
 
   return size;
 }
 
 int gr_parameter(int offset) {
   int type;
-  int* structName;
 
-  structName = (int*) 0;
-
-  type = gr_type(structName);
+  type = gr_type();
 
   if (symbol == SYM_IDENTIFIER) {
     getSymbol();
@@ -4288,19 +4355,20 @@ int gr_variable(int offset) {
 
   int* variableOrProcedureName;
   int* entry;
-  int* structEntry;
-  int* structName;
   int* constantValLeft;
   int* constantValRight;
+  int* structName;
   constantValLeft = malloc(2 * SIZEOFINT);
   constantValRight = malloc(2 * SIZEOFINT);
   constantValLeft[1] = 0;
   constantValRight[1] = 0;
-  structName = (int*) 0;
 
-  type = gr_type(structName);
+  type = gr_type();
 
   if (symbol == SYM_IDENTIFIER) {
+    if (type == STRUCT_T)
+      structName = identifier;
+
     getSymbol();
 
     if (symbol == SYM_LBRACKET) {
@@ -4393,22 +4461,14 @@ int gr_variable(int offset) {
           syntaxErrorSymbol(SYM_RBRACKET);
       }
     } else if (type == STRUCT_T) {
-      // PROLOG typedef
-      createSymbolTableEntry(LOCAL_TABLE, identifier, lineNumber, VARIABLE, type, 0, offset);
-      entry = searchSymbolTable(local_symbol_table, identifier, VARIABLE);
-      structEntry = getStructTableEntry(structName);
-      setValue(entry, (int) structEntry);
-      setSize(entry, getStructSize(structEntry));
-      offset = getStructSize(structEntry);
+      offset = gr_struct(LOCAL_TABLE, structName);
+
+      print((int*)"aieriabrn");
+      return offset;
     } else {
       createSymbolTableEntry(LOCAL_TABLE, identifier, lineNumber, VARIABLE, type, 0, offset);
       return 1;
     }
-  } else if (symbol == SYM_STRUCT) {
-    getSymbol();
-
-    gr_struct(LOCAL_TABLE);
-    return 0;
   } else {
     syntaxErrorSymbol(SYM_IDENTIFIER);
 
@@ -4423,15 +4483,12 @@ void gr_initialization(int* name, int offset, int type) {
   int hasCast;
   int cast;
   int sign;
-  int* structName;
 
   actualLineNumber = lineNumber;
 
   initialValue = 0;
 
   hasCast = 0;
-
-  structName = (int*) 0;
 
   if (symbol == SYM_ASSIGN) {
     getSymbol();
@@ -4442,7 +4499,7 @@ void gr_initialization(int* name, int offset, int type) {
 
       getSymbol();
 
-      cast = gr_type(structName);
+      cast = gr_type();
 
       if (symbol == SYM_RPARENTHESIS)
         getSymbol();
@@ -4665,8 +4722,6 @@ void gr_cstar() {
   int size;
   int* variableOrProcedureName;
   int* entry;
-  int* structEntry;
-  int* structName;
   int temp;
   int i;
 
@@ -4680,7 +4735,6 @@ void gr_cstar() {
   constantVal[1] = 0;
   constantValRight[1] = 0;
   size = 0;
-  structName = (int*) 0;
 
   while (symbol != SYM_EOF) {
     while (lookForType()) {
@@ -4707,7 +4761,7 @@ void gr_cstar() {
       } else
         syntaxErrorSymbol(SYM_IDENTIFIER);
     } else {
-      type = gr_type(structName);
+      type = gr_type();
 
       if (symbol == SYM_IDENTIFIER) {
         variableOrProcedureName = identifier;
@@ -4717,183 +4771,169 @@ void gr_cstar() {
         // type identifier "(" procedure declaration or definition
         if (symbol == SYM_LPARENTHESIS)
           gr_procedure(variableOrProcedureName, type, constantVal);
-          // type identifier "[" ...
-          else if (symbol == SYM_LBRACKET) {
+        // type identifier "[" ...
+        else if (symbol == SYM_LBRACKET) {
+          getSymbol();
+
+          // type identifier "[" "]" "=" "{" integer [ "," integer ] "}""
+          if (symbol == SYM_RBRACKET){
             getSymbol();
 
-            // type identifier "[" "]" "=" "{" integer [ "," integer ] "}""
-            if (symbol == SYM_RBRACKET){
+            if (symbol == SYM_ASSIGN){
               getSymbol();
 
-              if (symbol == SYM_ASSIGN){
+              if (symbol == SYM_LBRACE) {
                 getSymbol();
 
-                if (symbol == SYM_LBRACE) {
+                while (isIntegerList()){
+                  if (symbol == SYM_INTEGER) {
+                    getSymbol();
+
+                    if (globalArrayInitBuffer_Top < 100) {
+                      globalArrayInit_buffer[globalArrayInitBuffer_Top] = literal;
+
+                      size = size + 1;
+                      globalArrayInitBuffer_Top = globalArrayInitBuffer_Top + 1;
+                    } else {
+                      printLineNumber((int*) "reached max amount of direct initializeable integers for array", lineNumber);
+                      print((int*) "discarding remaining values and fill in zeros instead");
+                      println();
+                      size = size + 1;
+                    }
+                    if (symbol == SYM_COMMA)
+                       getSymbol();
+                  } else
+                    syntaxErrorSymbol(SYM_INTEGER);
+                }
+
+                createSymbolTableEntry(GLOBAL_TABLE, variableOrProcedureName, lineNumber, ARRAY, type, 1, 0);
+                entry = searchSymbolTable(global_symbol_table, variableOrProcedureName, ARRAY);
+                setSize(entry, size);
+
+                if (type == INT_T) {
+                  setAddress(entry, - (allocatedMemory + SIZEOFINT));
+                  allocatedMemory = allocatedMemory + size * SIZEOFINT;
+                } else {
+                  setAddress(entry, - (allocatedMemory + SIZEOFINTSTAR));
+                  allocatedMemory = allocatedMemory  + size * SIZEOFINTSTAR;
+                }
+
+                // revert/correct order in init array
+                i = globalArrayInitBuffer_Top;
+                while (i > globalArrayInitBuffer_Top - size) {
+                  temp = globalArrayInit_buffer[globalArrayInitBuffer_Top - size];
+                  globalArrayInit_buffer[globalArrayInitBuffer_Top - size] = globalArrayInit_buffer[i - 1];
+                  globalArrayInit_buffer[i - 1] = temp;
+                  size = size - 1;
+                  i = i - 1;
+                }
+                i = 0;
+                size = 0;
+
+                if (symbol == SYM_RBRACE) {
                   getSymbol();
 
-                  while (isIntegerList()){
-                    if (symbol == SYM_INTEGER) {
-                      getSymbol();
-
-                      if (globalArrayInitBuffer_Top < 100) {
-                        globalArrayInit_buffer[globalArrayInitBuffer_Top] = literal;
-
-                        size = size + 1;
-                        globalArrayInitBuffer_Top = globalArrayInitBuffer_Top + 1;
-                      } else {
-                        printLineNumber((int*) "reached max amount of direct initializeable integers for array", lineNumber);
-                        print((int*) "discarding remaining values and fill in zeros instead");
-                        println();
-                        size = size + 1;
-                      }
-                      if (symbol == SYM_COMMA)
-                         getSymbol();
-                    } else
-                      syntaxErrorSymbol(SYM_INTEGER);
-                  }
-
-                  createSymbolTableEntry(GLOBAL_TABLE, variableOrProcedureName, lineNumber, ARRAY, type, 1, 0);
-                  entry = searchSymbolTable(global_symbol_table, variableOrProcedureName, ARRAY);
-                  setSize(entry, size);
-
-                  if (type == INT_T) {
-                    setAddress(entry, - (allocatedMemory + SIZEOFINT));
-                    allocatedMemory = allocatedMemory + size * SIZEOFINT;
-                  } else {
-                    setAddress(entry, - (allocatedMemory + SIZEOFINTSTAR));
-                    allocatedMemory = allocatedMemory  + size * SIZEOFINTSTAR;
-                  }
-
-                  // revert/correct order in init array
-                  i = globalArrayInitBuffer_Top;
-                  while (i > globalArrayInitBuffer_Top - size) {
-                    temp = globalArrayInit_buffer[globalArrayInitBuffer_Top - size];
-                    globalArrayInit_buffer[globalArrayInitBuffer_Top - size] = globalArrayInit_buffer[i - 1];
-                    globalArrayInit_buffer[i - 1] = temp;
-                    size = size - 1;
-                    i = i - 1;
-                  }
-                  i = 0;
-                  size = 0;
-
-                  if (symbol == SYM_RBRACE) {
-                    getSymbol();
-
-                    if (symbol != SYM_SEMICOLON)
-                      syntaxErrorSymbol(SYM_SEMICOLON);
-                    getSymbol();
-                  }
-                } else
-                  syntaxErrorSymbol(SYM_LBRACKET);
+                  if (symbol != SYM_SEMICOLON)
+                    syntaxErrorSymbol(SYM_SEMICOLON);
+                  getSymbol();
+                }
               } else
-                syntaxErrorSymbol(SYM_ASSIGN);
-            } else {
-              gr_shiftExpression(constantVal);
+                syntaxErrorSymbol(SYM_LBRACKET);
+            } else
+              syntaxErrorSymbol(SYM_ASSIGN);
+          } else {
+            gr_shiftExpression(constantVal);
 
-              if (symbol == SYM_RBRACKET) {
+            if (symbol == SYM_RBRACKET) {
+              getSymbol();
+
+              // type identifier "[" integer "]" "[" integer "]" ";"
+              if (symbol == SYM_LBRACKET){
                 getSymbol();
 
-                // type identifier "[" integer "]" "[" integer "]" ";"
-                if (symbol == SYM_LBRACKET){
+                gr_shiftExpression(constantValRight);
+
+                if (symbol == SYM_RBRACKET) {
                   getSymbol();
 
-                  gr_shiftExpression(constantValRight);
+                  if (constantVal[1] == 1){
+                    if (constantValRight[1] == 1) {
+                      if(*constantVal > 0) {
+                        if (*constantValRight > 0) {
+                          createSymbolTableEntry(GLOBAL_TABLE, variableOrProcedureName, lineNumber, ARRAY, type, *constantValRight, 0);
+                          entry = searchSymbolTable(global_symbol_table, variableOrProcedureName, ARRAY);
+                          setSize(entry, *constantVal * *constantValRight);
 
-                  if (symbol == SYM_RBRACKET) {
-                    getSymbol();
+                          if (type == INT_T) {
+                            setAddress(entry, - (allocatedMemory + SIZEOFINT));
+                            allocatedMemory = allocatedMemory + *constantVal * *constantValRight * SIZEOFINT;
+                          } else {
+                            setAddress(entry, - (allocatedMemory + SIZEOFINTSTAR));
+                            allocatedMemory = allocatedMemory  + *constantVal * *constantValRight * SIZEOFINTSTAR;
+                          }
 
-                    if (constantVal[1] == 1){
-                      if (constantValRight[1] == 1) {
-                        if(*constantVal > 0) {
-                          if (*constantValRight > 0) {
-                            createSymbolTableEntry(GLOBAL_TABLE, variableOrProcedureName, lineNumber, ARRAY, type, *constantValRight, 0);
-                            entry = searchSymbolTable(global_symbol_table, variableOrProcedureName, ARRAY);
-                            setSize(entry, *constantVal * *constantValRight);
+                          if (symbol != SYM_SEMICOLON)
+                            syntaxErrorSymbol(SYM_SEMICOLON);
 
-                            if (type == INT_T) {
-                              setAddress(entry, - (allocatedMemory + SIZEOFINT));
-                              allocatedMemory = allocatedMemory + *constantVal * *constantValRight * SIZEOFINT;
-                            } else {
-                              setAddress(entry, - (allocatedMemory + SIZEOFINTSTAR));
-                              allocatedMemory = allocatedMemory  + *constantVal * *constantValRight * SIZEOFINTSTAR;
-                            }
-
-                            if (symbol != SYM_SEMICOLON)
-                              syntaxErrorSymbol(SYM_SEMICOLON);
-
-                            getSymbol();
-                          } else
-                            syntaxErrorMessage((int*) "arraysize must be greater than 0");
+                          getSymbol();
                         } else
                           syntaxErrorMessage((int*) "arraysize must be greater than 0");
                       } else
-                        syntaxErrorMessage((int*) "expected integer as array selector");
+                        syntaxErrorMessage((int*) "arraysize must be greater than 0");
                     } else
                       syntaxErrorMessage((int*) "expected integer as array selector");
                   } else
-                    syntaxErrorSymbol(SYM_RBRACKET);
-                } else if (symbol == SYM_SEMICOLON){
-                  // type identifier "[" integer "]" ";"
-                  getSymbol();
-
-                  if (constantVal[1] == 1) {
-                    if (*constantVal > 0) {
-                      createSymbolTableEntry(GLOBAL_TABLE, variableOrProcedureName, lineNumber, ARRAY, type, 0, 0);
-                      entry = searchSymbolTable(global_symbol_table, variableOrProcedureName, ARRAY);
-                      setSize(entry, *constantVal);
-
-                      if (type == INT_T) {
-                        setAddress(entry, - (allocatedMemory + SIZEOFINT));
-                        allocatedMemory = allocatedMemory + *constantVal * SIZEOFINT;
-                      } else {
-                        setAddress(entry, - (allocatedMemory + SIZEOFINTSTAR));
-                        allocatedMemory = allocatedMemory  + *constantVal * SIZEOFINTSTAR;
-                      }
-                    } else
-                      syntaxErrorMessage((int*) "arraysize must be greater than 0");
-                  } else
                     syntaxErrorMessage((int*) "expected integer as array selector");
                 } else
-                  syntaxErrorSymbol(SYM_SEMICOLON);
+                  syntaxErrorSymbol(SYM_RBRACKET);
+              } else if (symbol == SYM_SEMICOLON){
+                // type identifier "[" integer "]" ";"
+                getSymbol();
+
+                if (constantVal[1] == 1) {
+                  if (*constantVal > 0) {
+                    createSymbolTableEntry(GLOBAL_TABLE, variableOrProcedureName, lineNumber, ARRAY, type, 0, 0);
+                    entry = searchSymbolTable(global_symbol_table, variableOrProcedureName, ARRAY);
+                    setSize(entry, *constantVal);
+
+                    if (type == INT_T) {
+                      setAddress(entry, - (allocatedMemory + SIZEOFINT));
+                      allocatedMemory = allocatedMemory + *constantVal * SIZEOFINT;
+                    } else {
+                      setAddress(entry, - (allocatedMemory + SIZEOFINTSTAR));
+                      allocatedMemory = allocatedMemory  + *constantVal * SIZEOFINTSTAR;
+                    }
+                  } else
+                    syntaxErrorMessage((int*) "arraysize must be greater than 0");
+                } else
+                  syntaxErrorMessage((int*) "expected integer as array selector");
               } else
-                syntaxErrorSymbol(SYM_RBRACKET);
-            }
-          } else if (type == STRUCT_T) {
-            // PROLOG typedef
-            createSymbolTableEntry(GLOBAL_TABLE, variableOrProcedureName, lineNumber, VARIABLE, type, 0, -(allocatedMemory + WORDSIZE));
-            entry = searchSymbolTable(global_symbol_table, variableOrProcedureName, VARIABLE);
-            structEntry = getStructTableEntry(structName);
-            setValue(entry, (int) structEntry);
-            setSize(entry, getStructSize(structEntry));
-            allocatedMemory = (getStructSize(structEntry) * WORDSIZE) - WORDSIZE;
-            if (symbol == SYM_SEMICOLON)
-              getSymbol();
-            else
-              syntaxErrorSymbol(SYM_SEMICOLON);
-          } else {
-            allocatedMemory = allocatedMemory + WORDSIZE;
-
-            // type identifier ";" global variable declaration
-            if (symbol == SYM_SEMICOLON) {
-              createSymbolTableEntry(GLOBAL_TABLE, variableOrProcedureName, lineNumber, VARIABLE, type, 0, -allocatedMemory);
-
-              getSymbol();
-
-            // type identifier "=" global variable definition
+                syntaxErrorSymbol(SYM_SEMICOLON);
             } else
-              gr_initialization(variableOrProcedureName, -allocatedMemory, type);
+              syntaxErrorSymbol(SYM_RBRACKET);
           }
-        } else if (symbol == SYM_STRUCT) {
-          getSymbol();
-
-          gr_struct(GLOBAL_TABLE);
+        } else if (type == STRUCT_T) {
+          size = gr_struct(GLOBAL_TABLE, variableOrProcedureName);
 
           if (symbol == SYM_SEMICOLON)
             getSymbol();
           else
             syntaxErrorSymbol(SYM_SEMICOLON);
-        } else
-          syntaxErrorSymbol(SYM_IDENTIFIER);
+        } else {
+          allocatedMemory = allocatedMemory + WORDSIZE;
+
+          // type identifier ";" global variable declaration
+          if (symbol == SYM_SEMICOLON) {
+            createSymbolTableEntry(GLOBAL_TABLE, variableOrProcedureName, lineNumber, VARIABLE, type, 0, -allocatedMemory);
+
+            getSymbol();
+
+          // type identifier "=" global variable definition
+          } else
+            gr_initialization(variableOrProcedureName, -allocatedMemory, type);
+        }
+      } else
+        syntaxErrorSymbol(SYM_IDENTIFIER);
     }
     constantVal[1] = 0;
     constantValRight[1] = 0;
@@ -8023,16 +8063,16 @@ int selfie(int argc, int* argv) {
 }
 
 int main(int argc, int* argv) {
+  int abc;
   // int localArr[] = {1,2,3,4,5,6,7,8};
-  struct localStruct {
-    int a;
-    int b;
-    int* c;
-  };
+  // struct localStruct {
+  //   int a;
+  //   int b;
+  //   int* c;
+  // };
 
-  // typedef:
-  // localStruct testStruct;
-  // globalStruct otherStruct;
+  // struct localStruct myStruct;
+  // struct localStruct secondStruct;
 
   initLibrary();
 
@@ -8067,6 +8107,9 @@ int main(int argc, int* argv) {
   println();
   print((int*) "local struct: localStruct{int a, int b, int* c}");
   println();
+
+  // myStruct->a = 1;
+  // abc = myStruct.a;
 
   //------------------
   println(); println();
