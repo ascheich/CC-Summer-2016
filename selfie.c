@@ -414,6 +414,18 @@ int* getSymbolTableEntry(int* string, int class);
 int isUndefinedProcedure(int* entry);
 int reportUndefinedProcedures();
 
+struct symbolTable {
+  // struct* next;
+  int* string;
+  int line;
+  int class;
+  int type;
+  int value;
+  int address;
+  int scope;
+  int size;
+};
+
 // symbol table entry:
 // +----+---------+
 // |  0 | next    | pointer to next entry
@@ -489,10 +501,11 @@ int STRING    = 3;
 int ARRAY     = 4;
 
 // types
-int INT_T      = 1;
-int INTSTAR_T  = 2;
-int VOID_T     = 3;
-int STRUCT_T   = 4;
+int INT_T       = 1;
+int INTSTAR_T   = 2;
+int VOID_T      = 3;
+int STRUCT_T    = 4;
+int STRUCT_PT_T = 5;
 
 // symbol tables
 int GLOBAL_TABLE  = 1;
@@ -561,7 +574,7 @@ int  gr_term(int* constantVal);
 int  gr_simpleExpression(int* constantVal);
 int  gr_shiftExpression(int* constantVal);
 int  gr_expression(int* constantVal);
-int  gr_boolExpression(int* constantVal);
+// int  gr_boolExpression(int* constantVal);
 void gr_while(int* constantVal);
 void gr_if(int* constantVal);
 void gr_return(int returnType, int* constantVal);
@@ -2928,9 +2941,18 @@ int gr_factor(int* constantVal) {
         getSymbol();
       else
         syntaxErrorSymbol(SYM_RPARENTHESIS);
+  } else if (symbol == SYM_STRUCT) {
+    hasCast = 1;
 
-    // not a cast: "(" expression ")"
-    } else {
+    cast = gr_type();
+
+    if (symbol == SYM_RPARENTHESIS)
+      getSymbol();
+    else
+      syntaxErrorSymbol(SYM_RPARENTHESIS);
+
+      // not a cast: "(" expression ")"
+  } else {
       type = gr_expression(constantVal);
 
       if (symbol == SYM_RPARENTHESIS)
@@ -3171,6 +3193,28 @@ int gr_factor(int* constantVal) {
           syntaxErrorSymbol(SYM_RBRACKET);
         *(constantVal + 1) = 0;
     } else if (symbol == SYM_DOT) {
+      getSymbol();
+
+      entry = searchSymbolTable(local_symbol_table, variableOrProcedureName, VARIABLE);
+      if (entry == (int*) 0)
+        entry = searchSymbolTable(global_symbol_table, variableOrProcedureName, VARIABLE);
+      if (getType(entry) == STRUCT_T) {
+        if (symbol == SYM_IDENTIFIER) {
+          getSymbol();
+
+          strct_entry = (int*) getValue(entry);
+
+          talloc();
+          emitIFormat(OP_ADDIU, REG_ZR, currentTemporary(), getAddress(entry) - getMemberOffset(strct_entry, identifier) * WORDSIZE);
+          emitRFormat(OP_SPECIAL, getScope(entry), currentTemporary(), currentTemporary(), FCT_ADDU);
+          emitIFormat(OP_LW, currentTemporary(), currentTemporary(), 0);
+
+          // assert: allocatedTemporaries == n + 1
+        } else
+          syntaxErrorSymbol(SYM_IDENTIFIER);
+      } else
+        syntaxErrorMessage((int*) "expected struct for arrow usage");
+    } else if (symbol == SYM_RARROW) {
       getSymbol();
 
       entry = searchSymbolTable(local_symbol_table, variableOrProcedureName, VARIABLE);
@@ -3742,90 +3786,90 @@ int gr_expression(int* constantVal) {
   return ltype;
 }
 
-int gr_boolExpression(int* constantVal) {
-  int ltype;
-  int leftFoldable;
-  int leftVal;
-  int operatorSymbol;
-  int rtype;
-  int not;
-
-  // assert: n = allocatedTemporaries
-
-  // optional: !
-  if (symbol == SYM_NOT) {
-    not = 1;
-
-    getSymbol();
-
-  } else
-    not = 0;
-
-   ltype = gr_expression(constantVal);
-
-  // assert: allocatedTemporaries == n + 1
-
-  if (isBoolOp()) {
-    operatorSymbol = symbol;
-
-    if (constantVal[1] == 1){
-      leftFoldable = 1;
-      leftVal = *constantVal;
-    } else
-      leftFoldable = 0;
-
-    getSymbol();
-    rtype = gr_expression(constantVal);
-
-    // assert: allocatedTemporaries == n + 2
-
-    if (ltype != rtype)
-      typeWarning(ltype, rtype);
-
-    if (leftFoldable == 1){
-      if (constantVal[1] == 1){
-        if(prologDebug){
-          print((int*)"  _____BOOLEAN_EXPRESSION__");
-          print((int*)"line: ");
-          print(itoa(lineNumber,string_buffer,10,0,0));
-          println();
-        }
-        // if (operatorSymbol == SYM_AND)
-        //   *constantVal = (leftVal && *constantVal);
-        // else if (operatorSymbol == SYM_OR)
-        //   *constantVal = (leftVal || *constantVal);
-      } else {
-        load_integer(leftVal);
-        if (operatorSymbol == SYM_AND) {
-          // PROLOG
-
-        } else if (operatorSymbol == SYM_OR) {
-          // PROLOG
-
-        }
-      }
-    } else {
-      if (constantVal[1] == 1)
-        load_integer(*constantVal);
-      constantVal[1] = 0;
-
-      if (operatorSymbol == SYM_AND) {
-        // PROLOG
-
-      } else if (operatorSymbol == SYM_OR) {
-        // PROLOG
-
-      }
-    }
-  }
-  if (constantVal[1] == 1)
-    load_integer(*constantVal);
-  constantVal[1] = 0;
-
-  // assert: allocatedTemporaries == n + 1
-
-   return ltype;
-}
+// int gr_boolExpression(int* constantVal) {
+//   int ltype;
+//   int leftFoldable;
+//   int leftVal;
+//   int operatorSymbol;
+//   int rtype;
+//   int not;
+//
+//   // assert: n = allocatedTemporaries
+//
+//   // optional: !
+//   if (symbol == SYM_NOT) {
+//     not = 1;
+//
+//     getSymbol();
+//
+//   } else
+//     not = 0;
+//
+//    ltype = gr_expression(constantVal);
+//
+//   // assert: allocatedTemporaries == n + 1
+//
+//   if (isBoolOp()) {
+//     operatorSymbol = symbol;
+//
+//     if (constantVal[1] == 1){
+//       leftFoldable = 1;
+//       leftVal = *constantVal;
+//     } else
+//       leftFoldable = 0;
+//
+//     getSymbol();
+//     rtype = gr_expression(constantVal);
+//
+//     // assert: allocatedTemporaries == n + 2
+//
+//     if (ltype != rtype)
+//       typeWarning(ltype, rtype);
+//
+//     if (leftFoldable == 1){
+//       if (constantVal[1] == 1){
+//         if(prologDebug){
+//           print((int*)"  _____BOOLEAN_EXPRESSION__");
+//           print((int*)"line: ");
+//           print(itoa(lineNumber,string_buffer,10,0,0));
+//           println();
+//         }
+//         // if (operatorSymbol == SYM_AND)
+//         //   *constantVal = (leftVal && *constantVal);
+//         // else if (operatorSymbol == SYM_OR)
+//         //   *constantVal = (leftVal || *constantVal);
+//       } else {
+//         load_integer(leftVal);
+//         if (operatorSymbol == SYM_AND) {
+//           // PROLOG
+//
+//         } else if (operatorSymbol == SYM_OR) {
+//           // PROLOG
+//
+//         }
+//       }
+//     } else {
+//       if (constantVal[1] == 1)
+//         load_integer(*constantVal);
+//       constantVal[1] = 0;
+//
+//       if (operatorSymbol == SYM_AND) {
+//         // PROLOG
+//
+//       } else if (operatorSymbol == SYM_OR) {
+//         // PROLOG
+//
+//       }
+//     }
+//   }
+//   if (constantVal[1] == 1)
+//     load_integer(*constantVal);
+//   constantVal[1] = 0;
+//
+//   // assert: allocatedTemporaries == n + 1
+//
+//    return ltype;
+// }
 
 void gr_while(int* constantVal) {
   int brBackToWhile;
@@ -4361,7 +4405,6 @@ void gr_statement(int* constantVal) {
         if (symbol == SYM_IDENTIFIER) {
           getSymbol();
 
-
           strct_entry = (int*) getValue(entry);
 
           ltype = getMemberType(strct_entry, identifier);
@@ -4417,6 +4460,7 @@ void gr_statement(int* constantVal) {
 
 int gr_type() {
   int type;
+  int* entry;
 
   type = INT_T;
 
@@ -4429,9 +4473,9 @@ int gr_type() {
       getSymbol();
     }
   } else if (symbol == SYM_STRUCT) {
-    type = STRUCT_T;
-
     getSymbol();
+
+    type = STRUCT_T;
   } else {
     printLineNumber((int*) "invalid type; int or struct required", lineNumber);
     printSymbol(symbol);
@@ -4451,8 +4495,9 @@ int gr_struct(int whichTable, int* structName){
 
   size = 0;
   entry = (int*) 0;
+  strct_entry = getStructTableEntry(structName);
 
-  if (getStructTableEntry(structName) == (int*) 0) {
+  if (strct_entry == (int*) 0) {
     //define new struct type;
     createStructTableEntry(whichTable, structName);
     strct_entry = getStructTableEntry(structName);
@@ -4493,13 +4538,28 @@ int gr_struct(int whichTable, int* structName){
       setStructFields(strct_entry, fields);
       setStructMembers(strct_entry, size);
     }
-  } else {
-    strct_entry = getStructTableEntry(structName);
-
-    if (symbol == SYM_IDENTIFIER) {
+  } else if (symbol == SYM_ASTERISK) {
       getSymbol();
 
-      createSymbolTableEntry(whichTable, identifier, lineNumber, VARIABLE, STRUCT_T, 0, 0);
+      if (symbol == SYM_IDENTIFIER) {
+        getSymbol();
+
+        createSymbolTableEntry(whichTable, identifier, lineNumber, VARIABLE, STRUCT_PT_T, (int) strct_entry, 0);
+
+        if (whichTable == LOCAL_TABLE)
+          size = 1;
+        else {
+          entry = searchSymbolTable(global_symbol_table, identifier, VARIABLE);
+          allocatedMemory = allocatedMemory + WORDSIZE;
+          setAddress(entry,-allocatedMemory);
+        }
+        setValue(entry, (int) strct_entry);
+      } else
+        syntaxErrorSymbol(SYM_IDENTIFIER);
+    } else if (symbol == SYM_IDENTIFIER) {
+      getSymbol();
+
+      createSymbolTableEntry(whichTable, identifier, lineNumber, VARIABLE, STRUCT_T, (int) strct_entry, 0);
 
       size = getStructSize(strct_entry);
 
@@ -4510,12 +4570,9 @@ int gr_struct(int whichTable, int* structName){
         setAddress(entry,-(allocatedMemory + WORDSIZE));
         allocatedMemory = (size * WORDSIZE) - WORDSIZE;
       }
-
-      setValue(entry, (int) strct_entry);
       setSize(entry, size);
     } else
       syntaxErrorSymbol(SYM_IDENTIFIER);
-  }
 
   return size;
 }
@@ -8270,6 +8327,8 @@ int main(int argc, int* argv) {
   struct localStruct myStruct;
   struct localStruct secondStruct;
 
+  // struct localStruct* pt;
+
   initLibrary();
 
   initScanner();
@@ -8306,6 +8365,10 @@ int main(int argc, int* argv) {
 
   abc = 77;
   myStruct.a = abc;
+  secondStruct.b = myStruct.a;
+  secondStruct.a = secondStruct.b / myStruct.a;
+  print((int*) "secondStruct.a (1): ");
+  print(itoa(secondStruct.a,string_buffer,10,0,0));
 
   //------------------
   println(); println();
