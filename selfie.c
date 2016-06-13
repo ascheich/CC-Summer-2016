@@ -2942,16 +2942,25 @@ int gr_factor(int* constantVal) {
       else
         syntaxErrorSymbol(SYM_RPARENTHESIS);
   } else if (symbol == SYM_STRUCT) {
-    hasCast = 1;
+    getSymbol();
 
-    cast = gr_type();
-
-    if (symbol == SYM_RPARENTHESIS)
+    if (symbol == SYM_IDENTIFIER) {
       getSymbol();
-    else
-      syntaxErrorSymbol(SYM_RPARENTHESIS);
 
-      // not a cast: "(" expression ")"
+      if (symbol == SYM_ASTERISK) {
+        getSymbol();
+
+        hasCast = 1;
+
+        cast = STRUCT_PT_T;
+
+        if (symbol == SYM_RPARENTHESIS)
+        getSymbol();
+        else
+        syntaxErrorSymbol(SYM_RPARENTHESIS);
+      }
+    }
+    // not a cast: "(" expression ")"
   } else {
       type = gr_expression(constantVal);
 
@@ -3220,7 +3229,7 @@ int gr_factor(int* constantVal) {
       entry = searchSymbolTable(local_symbol_table, variableOrProcedureName, VARIABLE);
       if (entry == (int*) 0)
         entry = searchSymbolTable(global_symbol_table, variableOrProcedureName, VARIABLE);
-      if (getType(entry) == STRUCT_T) {
+      if (getType(entry) == STRUCT_PT_T) {
         if (symbol == SYM_IDENTIFIER) {
           getSymbol();
 
@@ -4434,6 +4443,45 @@ void gr_statement(int* constantVal) {
           syntaxErrorSymbol(SYM_IDENTIFIER);
       } else
         syntaxErrorMessage((int*) "expected struct for arrow usage");
+    } else if (symbol == SYM_RARROW) {
+      getSymbol();
+
+      entry = searchSymbolTable(local_symbol_table, variableOrProcedureName, VARIABLE);
+      if (entry == (int*) 0)
+        entry = searchSymbolTable(global_symbol_table, variableOrProcedureName, VARIABLE);
+      if (getType(entry) == STRUCT_PT_T) {
+        if (symbol == SYM_IDENTIFIER) {
+          getSymbol();
+
+          strct_entry = (int*) getValue(entry);
+
+          ltype = getMemberType(strct_entry, identifier);
+
+          if (symbol == SYM_ASSIGN) {
+            getSymbol();
+
+            rtype = gr_expression(constantVal);
+
+            if (ltype != rtype)
+              typeWarning(ltype, rtype);
+
+            if (symbol == SYM_SEMICOLON) {
+              getSymbol();
+
+              talloc();
+              emitIFormat(OP_ADDIU, REG_ZR, currentTemporary(), getAddress(entry) - getMemberOffset(strct_entry, identifier) * WORDSIZE);
+              emitRFormat(OP_SPECIAL, getScope(entry), currentTemporary(), currentTemporary(), FCT_ADDU);
+              emitIFormat(OP_SW, currentTemporary(), previousTemporary(), 0);
+              tfree(2);
+
+              // assert: allocated temporaries = 0
+            } else
+              syntaxErrorSymbol(SYM_SEMICOLON);
+          }
+        } else
+          syntaxErrorSymbol(SYM_IDENTIFIER);
+      } else
+        syntaxErrorMessage((int*) "expected struct for arrow usage");
     } else
         syntaxErrorUnexpected();
   }
@@ -4460,7 +4508,6 @@ void gr_statement(int* constantVal) {
 
 int gr_type() {
   int type;
-  int* entry;
 
   type = INT_T;
 
@@ -4547,13 +4594,12 @@ int gr_struct(int whichTable, int* structName){
         createSymbolTableEntry(whichTable, identifier, lineNumber, VARIABLE, STRUCT_PT_T, (int) strct_entry, 0);
 
         if (whichTable == LOCAL_TABLE)
-          size = 1;
+          return 1;
         else {
           entry = searchSymbolTable(global_symbol_table, identifier, VARIABLE);
           allocatedMemory = allocatedMemory + WORDSIZE;
           setAddress(entry,-allocatedMemory);
         }
-        setValue(entry, (int) strct_entry);
       } else
         syntaxErrorSymbol(SYM_IDENTIFIER);
     } else if (symbol == SYM_IDENTIFIER) {
@@ -8327,7 +8373,10 @@ int main(int argc, int* argv) {
   struct localStruct myStruct;
   struct localStruct secondStruct;
 
-  // struct localStruct* pt;
+  struct localStruct* pt;
+
+  pt = (struct localStruct*) malloc(3 * WORDSIZE);
+  // pt = (struct localStruct*) myStruct;
 
   initLibrary();
 
@@ -8369,6 +8418,11 @@ int main(int argc, int* argv) {
   secondStruct.a = secondStruct.b / myStruct.a;
   print((int*) "secondStruct.a (1): ");
   print(itoa(secondStruct.a,string_buffer,10,0,0));
+  println();
+  pt->a = 123;
+  abc = pt->a;
+  print((int*) "structPointer.a (123): ");
+  print(itoa(pt->a,string_buffer,10,0,0));
 
   //------------------
   println(); println();
