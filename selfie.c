@@ -297,19 +297,20 @@ int SYM_MOD          = 25; // %
 int SYM_CHARACTER    = 26; // character
 int SYM_STRING       = 27; // string
 int SYM_STRUCT       = 28; // STRUCT identifier {
-int SYM_DOT          = 29; // .
-int SYM_RARROW       = 30; // ->
+int SYM_AMPERSAND    = 29; // &
+int SYM_DOT          = 30; // .
+int SYM_RARROW       = 31; // ->
 
-int SYM_SLLV          = 31; // <<
-int SYM_SRLV          = 32; // >>
-int SYM_LBRACKET      = 33; // [
-int SYM_RBRACKET      = 34; // ]
+int SYM_SLLV         = 32; // <<
+int SYM_SRLV         = 33; // >>
+int SYM_LBRACKET     = 34; // [
+int SYM_RBRACKET     = 35; // ]
 
-int SYM_AND          = 35; // &&
-int SYM_OR           = 36; // ||
-int SYM_NOT          = 37; // !
+int SYM_AND          = 36; // &&
+int SYM_OR           = 37; // ||
+int SYM_NOT          = 38; // !
 
-int SYMBOLS[38][2]; // array of strings representing symbols
+int SYMBOLS[39][2]; // array of strings representing symbols
 
 int maxIdentifierLength = 64; // maximum number of characters in an identifier
 int maxIntegerLength    = 10; // maximum number of characters in an integer
@@ -370,6 +371,7 @@ void initScanner () {
   SYMBOLS[SYM_CHARACTER][0]    = (int) "character";
   SYMBOLS[SYM_STRING][0]       = (int) "string";
   SYMBOLS[SYM_STRUCT][0]       = (int) "struct";
+  SYMBOLS[SYM_AMPERSAND][0]    = (int) "&";
   SYMBOLS[SYM_DOT][0]          = (int) ".";
   SYMBOLS[SYM_RARROW][0]       = (int) "->";
 
@@ -387,7 +389,7 @@ void initScanner () {
 
   if (prologDebug) {
     i = 0;
-    while (i < 38) {
+    while (i < 39) {
       SYMBOLS[i][1] = 0;
       i = i + 1;
     }
@@ -542,7 +544,8 @@ int isStarOrDivOrModulo();
 int isPlusOrMinus();
 int isComparison();
 
-int isBoolOp();
+int isBoolOpAnd();
+int isBoolOpOr();
 
 int isShift();
 int isIntegerList();
@@ -574,7 +577,8 @@ int  gr_term(int* constantVal);
 int  gr_simpleExpression(int* constantVal);
 int  gr_shiftExpression(int* constantVal);
 int  gr_expression(int* constantVal);
-// int  gr_boolExpression(int* constantVal);
+int  gr_boolAndExpression(int* constantVal, int* branches);
+int  gr_boolOrExpression(int* constantVal, int* branches);
 void gr_while(int* constantVal);
 void gr_if(int* constantVal);
 void gr_return(int returnType, int* constantVal);
@@ -2076,7 +2080,7 @@ int getSymbol() {
 
         symbol = SYM_AND;
       } else
-        syntaxErrorCharacter(CHAR_AMPERSAND);
+        symbol = SYM_AMPERSAND;
 
   } else if (character == CHAR_PIPE) {
     getCharacter();
@@ -2156,6 +2160,8 @@ int getSymbol() {
       SYMBOLS[SYM_STRING][1] = SYMBOLS[SYM_STRING][1] + 1;
     else if (symbol == SYM_STRUCT)
       SYMBOLS[SYM_STRUCT][1] = SYMBOLS[SYM_STRUCT][1] + 1;
+    else if (symbol == SYM_AMPERSAND)
+      SYMBOLS[SYM_AMPERSAND][1] = SYMBOLS[SYM_AMPERSAND][1] + 1;
     else if (symbol == SYM_DOT)
       SYMBOLS[SYM_DOT][1] = SYMBOLS[SYM_DOT][1] + 1;
     else if (symbol == SYM_RARROW)
@@ -2463,10 +2469,17 @@ int isComparison() {
     return 0;
 }
 
-int isBoolOp() {
+int isBoolOpAnd() {
   if (symbol == SYM_AND)
     return 1;
-  else if (symbol == SYM_OR)
+  else if (symbol == SYM_NOT)
+    return 1;
+  else
+    return 0;
+}
+
+int isBoolOpOr() {
+  if (symbol == SYM_OR)
     return 1;
   else if (symbol == SYM_NOT)
     return 1;
@@ -2955,9 +2968,9 @@ int gr_factor(int* constantVal) {
         cast = STRUCT_PT_T;
 
         if (symbol == SYM_RPARENTHESIS)
-        getSymbol();
+          getSymbol();
         else
-        syntaxErrorSymbol(SYM_RPARENTHESIS);
+          syntaxErrorSymbol(SYM_RPARENTHESIS);
       }
     }
     // not a cast: "(" expression ")"
@@ -3333,12 +3346,6 @@ int gr_term(int* constantVal) {
 
     if (leftFoldable == 1){
       if (constantVal[1] == 1){
-        if (prologDebug){
-          print((int*)"  _____DIV/MULT__");
-          print((int*)"line: ");
-          print(itoa(lineNumber,string_buffer,10,0,0));
-          println();
-        }
         if (operatorSymbol == SYM_ASTERISK)
           *constantVal = leftVal * *constantVal;
         else
@@ -3470,12 +3477,6 @@ int gr_simpleExpression(int* constantVal) {
 
     if (leftFoldable == 1){
       if (constantVal[1] == 1){
-        if (prologDebug){
-          print((int*)"  _____ADD/SUB__");
-          print((int*)"line: ");
-          print(itoa(lineNumber,string_buffer,10,0,0));
-          println();
-        }
         if (operatorSymbol == SYM_PLUS) {
           *constantVal = leftVal + *constantVal;
         } else if (operatorSymbol == SYM_MINUS) {
@@ -3570,12 +3571,6 @@ int gr_shiftExpression(int* constantVal) {
 
     if (leftFoldable == 1){
       if (constantVal[1] == 1){
-        if (prologDebug){
-          print((int*)"  _____SHIFT__");
-          print((int*)"line: ");
-          print(itoa(lineNumber,string_buffer,10,0,0));
-          println();
-        }
         if (operatorSymbol == SYM_SLLV) {
           *constantVal = leftVal << *constantVal;
         } else if (operatorSymbol == SYM_SRLV) {
@@ -3645,12 +3640,6 @@ int gr_expression(int* constantVal) {
 
     if (leftFoldable == 1){
       if (constantVal[1] == 1){
-        if(prologDebug){
-          print((int*)"  _____EXPRESSION__");
-          print((int*)"line: ");
-          print(itoa(lineNumber,string_buffer,10,0,0));
-          println();
-        }
         if (operatorSymbol == SYM_EQUALITY) {
           *constantVal = (leftVal == *constantVal);
         } else if (operatorSymbol == SYM_NOTEQ) {
@@ -3795,6 +3784,112 @@ int gr_expression(int* constantVal) {
   return ltype;
 }
 
+int gr_boolAndExpression(int* constantVal, int* branches) {
+  int leftExpr;
+  int rightExpr;
+
+  if (symbol == SYM_NOT) {
+    getSymbol();
+
+    if (symbol == SYM_LPARENTHESIS) {
+      getSymbol();
+
+      leftExpr = gr_boolOrExpression(constantVal, branches);
+
+      // assert: allocated Temporaries == n + 1
+
+      if (symbol == SYM_RPARENTHESIS)
+        getSymbol();
+      else
+        syntaxErrorSymbol(SYM_RPARENTHESIS);
+    } else
+      syntaxErrorSymbol(SYM_LPARENTHESIS);
+  } else {
+    while (symbol == SYM_AND) {
+      getSymbol();
+
+      if (symbol == SYM_LPARENTHESIS) {
+        getSymbol();
+
+        leftExpr = gr_boolOrExpression(constantVal, branches);
+
+      }
+    }
+  }
+
+  return leftExpr;
+}
+
+int gr_boolOrExpression(int* constantVal, int* branches) {
+  int leftExpr;
+  int rightExpr;
+
+  if (symbol == SYM_NOT) {
+    getSymbol();
+
+    if (symbol == SYM_LPARENTHESIS) {
+      getSymbol();
+
+      leftExpr = gr_boolOrExpression(constantVal, branches);
+
+      // assert: allocated Temporaries == n + 1
+
+      if (symbol == SYM_RPARENTHESIS)
+        getSymbol();
+      else
+        syntaxErrorSymbol(SYM_RPARENTHESIS);
+    } else
+      syntaxErrorSymbol(SYM_LPARENTHESIS);
+  } else {
+    if (symbol == SYM_LPARENTHESIS) {
+      getSymbol();
+
+      leftExpr = gr_boolOrExpression(constantVal, branches);
+
+      // assert: allocated Temporaries == n + 1
+
+      if (symbol == SYM_RPARENTHESIS)
+        getSymbol();
+      else
+        syntaxErrorSymbol(SYM_RPARENTHESIS);
+    } else {
+      leftExpr = gr_boolAndExpression(constantVal, branches);
+
+      // assert: allocated Temporaries == n + 1
+
+      while (symbol == SYM_OR) {
+        getSymbol();
+
+        // assert: allocated Temporaries == m
+
+        if (symbol == SYM_LPARENTHESIS) {
+          getSymbol();
+
+          rightExpr = gr_boolOrExpression(constantVal, branches);
+
+          // assert: allocated Temporaries == m + 1
+
+          if (symbol == SYM_RPARENTHESIS)
+            getSymbol();
+          else
+            syntaxErrorSymbol(SYM_RPARENTHESIS);
+
+        } else {
+
+          rightExpr = gr_boolOrExpression(constantVal, branches);
+
+          // assert: allocated Temporaries == m + 1
+
+        }
+      }
+    }
+  }
+
+
+
+  return leftExpr;
+}
+
 // int gr_boolExpression(int* constantVal) {
 //   int ltype;
 //   int leftFoldable;
@@ -3881,10 +3976,20 @@ int gr_expression(int* constantVal) {
 // }
 
 void gr_while(int* constantVal) {
-  int brBackToWhile;
-  int brForwardToEnd;
+  int  brBackToWhile;
+  int  brForwardToEnd;
+  int* branches;
 
   // assert: allocatedTemporaries == 0
+
+  // branches[x][3]:
+  //    branches[x][0] = pointer to next to-be-fixed branch instruction
+  //    branches[x][1] = flag for AND or OR: 0 = AND; 1 = OR
+  //    branches[x][2] = level
+  branches = malloc(3 * WORDSIZE);
+  *(branches + 0) = 0;
+  *(branches + 1) = 0;
+  *(branches + 2) = 0;
 
   brBackToWhile = binaryLength;
 
@@ -3898,6 +4003,7 @@ void gr_while(int* constantVal) {
       getSymbol();
 
       gr_expression(constantVal);
+      // gr_boolOrExpression(constantVal, branches);
 
       // do not know where to branch, fixup later
       brForwardToEnd = binaryLength;
@@ -3948,8 +4054,18 @@ void gr_while(int* constantVal) {
 void gr_if(int* constantVal) {
   int brForwardToElseOrEnd;
   int brForwardToEnd;
+  int* branches;
 
   // assert: allocatedTemporaries == 0
+
+  // branches[x][3]:
+  //    branches[x][0] = pointer to next to-be-fixed branch instruction
+  //    branches[x][1] = flag for AND or OR: 0 = AND; 1 = OR
+  //    branches[x][2] = level
+  branches = malloc(3 * WORDSIZE);
+  *(branches + 0) = 0;
+  *(branches + 1) = 0;
+  *(branches + 2) = 0;
 
   // if ( expression )
   if (symbol == SYM_IF) {
@@ -3959,6 +4075,7 @@ void gr_if(int* constantVal) {
       getSymbol();
 
       gr_expression(constantVal);
+      // gr_boolOrExpression(constantVal, branches);
 
       // if the "if" case is not true, we jump to "else" (if provided)
       brForwardToElseOrEnd = binaryLength;
@@ -8235,7 +8352,7 @@ int selfie(int argc, int* argv) {
 
         if (prologDebug) {
           i = 0;
-          while (i < 33){
+          while (i < 39){
               print((int*) "SYMBOL ");
               print((int*) SYMBOLS[i][0]);
               print((int*) " # ");
@@ -8423,6 +8540,10 @@ int main(int argc, int* argv) {
   abc = pt->a;
   print((int*) "structPointer.a (123): ");
   print(itoa(pt->a,string_buffer,10,0,0));
+
+  // if ( (1 == 1) || ((3 != 2) && (1 == 1))) {
+  //
+  // }
 
   //------------------
   println(); println();
