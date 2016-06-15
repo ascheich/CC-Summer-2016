@@ -3764,23 +3764,21 @@ int gr_expression(int* constantVal) {
 }
 
 int gr_boolAndExpression(int* constantVal, int* branches) {
-  int leftExpr;
-  int rightExpr;
   int* tempBrPt;
 
-  // useless not? - I think this case will never occur -> PROLOG test
+  tempBrPt = malloc(3 * WORDSIZE);
+  *(tempBrPt + 0) = (int) branches;
+  // *(tempBrPt + 3) = *(branches + 3) + 1;
+  branches = tempBrPt;
+
+  // useless "not"? - I think this case will never occur -> PROLOG test
   if (symbol == SYM_NOT) {
     getSymbol();
 
     if (symbol == SYM_LPARENTHESIS) {
       getSymbol();
 
-      tempBrPt = malloc(3 * WORDSIZE);
-      *(tempBrPt + 0) = (int) branches;
-      *(tempBrPt + 3) = *(branches + 3) + 1;
-      branches = tempBrPt;
-
-      leftExpr = gr_boolOrExpression(constantVal, branches);
+      gr_boolOrExpression(constantVal, branches);
 
       // assert: allocated Temporaries == n + 1
 
@@ -3802,7 +3800,7 @@ int gr_boolAndExpression(int* constantVal, int* branches) {
       *(tempBrPt + 3) = *(branches + 3) + 1;
       branches = tempBrPt;
 
-      leftExpr = gr_boolOrExpression(constantVal, branches);
+      gr_boolOrExpression(constantVal, branches);
 
       // assert: allocated Temporaries == n + 1
 
@@ -3814,7 +3812,7 @@ int gr_boolAndExpression(int* constantVal, int* branches) {
       } else
         syntaxErrorSymbol(SYM_RPARENTHESIS);
     } else {
-      leftExpr = gr_expression(constantVal);
+      gr_expression(constantVal);
 
       // assert: allocated Temporaries == n + 1
 
@@ -3829,7 +3827,7 @@ int gr_boolAndExpression(int* constantVal, int* branches) {
           *(tempBrPt + 3) = *(branches + 3) + 1;
           branches = tempBrPt;
 
-          leftExpr = gr_boolOrExpression(constantVal, branches);
+          gr_boolOrExpression(constantVal, branches);
 
           // assert: allocated Temporaries == n + 1
 
@@ -3841,22 +3839,19 @@ int gr_boolAndExpression(int* constantVal, int* branches) {
           } else
             syntaxErrorSymbol(SYM_RPARENTHESIS);
         } else {
-          rightExpr = gr_expression(constantVal);
+          gr_expression(constantVal);
 
           // assert: allocated Temporaries == n + 1
 
-          emitRFormat();
+          emitIFormat(OP_BEQ, REG_ZR, previousTemporary(), 0);
+          emitIFormat(OP_BEQ, REG_ZR, currentTemporary(), 0);
         }
       }
     }
   }
-
-  return leftExpr;
 }
 
 int gr_boolOrExpression(int* constantVal, int* branches) {
-  int leftExpr;
-  int rightExpr;
   int* tempBrPt;
 
   if (symbol == SYM_NOT) {
@@ -3870,15 +3865,17 @@ int gr_boolOrExpression(int* constantVal, int* branches) {
       *(tempBrPt + 3) = *(branches + 3) + 1;
       branches = tempBrPt;
 
-      leftExpr = gr_boolOrExpression(constantVal, branches);
+      gr_boolOrExpression(constantVal, branches);
 
       // assert: allocated Temporaries == n + 1
 
       if (symbol == SYM_RPARENTHESIS) {
         getSymbol();
 
-        //PROLOG
-
+        emitIFormat(OP_BEQ, REG_ZR, currentTemporary(), 4);
+        emitIFormat(OP_ADDIU, REG_ZR, currentTemporary(), 0);
+        emitIFormat(OP_BEQ, REG_ZR, currentTemporary(), 2);
+        emitIFormat(OP_ADDIU, REG_ZR, currentTemporary(), 1);
       } else
         syntaxErrorSymbol(SYM_RPARENTHESIS);
     } else
@@ -3892,7 +3889,7 @@ int gr_boolOrExpression(int* constantVal, int* branches) {
       *(tempBrPt + 3) = *(branches + 3) + 1;
       branches = tempBrPt;
 
-      leftExpr = gr_boolOrExpression(constantVal, branches);
+      gr_boolOrExpression(constantVal, branches);
 
       // assert: allocated Temporaries == n + 1
 
@@ -3904,7 +3901,7 @@ int gr_boolOrExpression(int* constantVal, int* branches) {
       } else
         syntaxErrorSymbol(SYM_RPARENTHESIS);
     } else {
-      leftExpr = gr_boolAndExpression(constantVal, branches);
+      gr_boolAndExpression(constantVal, branches);
 
       // assert: allocated Temporaries == n + 1
 
@@ -3921,7 +3918,7 @@ int gr_boolOrExpression(int* constantVal, int* branches) {
           *(tempBrPt + 3) = *(branches + 3) + 1;
           branches = tempBrPt;
 
-          rightExpr = gr_boolOrExpression(constantVal, branches);
+          gr_boolOrExpression(constantVal, branches);
 
           // assert: allocated Temporaries == m + 1
 
@@ -3936,18 +3933,15 @@ int gr_boolOrExpression(int* constantVal, int* branches) {
 
         } else {
 
-          rightExpr = gr_boolAndExpression(constantVal, branches);
+          gr_boolAndExpression(constantVal, branches);
 
           // assert: allocated Temporaries == m + 1
 
+          // PROLOG
         }
       }
     }
   }
-
-
-
-  return leftExpr;
 }
 
 void gr_while(int* constantVal) {
