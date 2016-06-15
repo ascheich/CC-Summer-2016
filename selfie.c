@@ -3777,16 +3777,19 @@ int gr_boolAndExpression(int* constantVal, int* branches) {
 
       tempBrPt = malloc(3 * WORDSIZE);
       *(tempBrPt + 0) = (int) branches;
-      *(tempBrPt + 2) = *(branches + 2) + 1;
+      *(tempBrPt + 3) = *(branches + 3) + 1;
       branches = tempBrPt;
 
       leftExpr = gr_boolOrExpression(constantVal, branches);
 
       // assert: allocated Temporaries == n + 1
 
-      if (symbol == SYM_RPARENTHESIS)
+      if (symbol == SYM_RPARENTHESIS) {
         getSymbol();
-      else
+
+        // PROLOG
+
+      } else
         syntaxErrorSymbol(SYM_RPARENTHESIS);
     } else
       syntaxErrorSymbol(SYM_LPARENTHESIS);
@@ -3796,19 +3799,22 @@ int gr_boolAndExpression(int* constantVal, int* branches) {
 
       tempBrPt = malloc(3 * WORDSIZE);
       *(tempBrPt + 0) = (int) branches;
-      *(tempBrPt + 2) = *(branches + 2) + 1;
+      *(tempBrPt + 3) = *(branches + 3) + 1;
       branches = tempBrPt;
 
       leftExpr = gr_boolOrExpression(constantVal, branches);
 
       // assert: allocated Temporaries == n + 1
 
-      if (symbol == SYM_RPARENTHESIS)
+      if (symbol == SYM_RPARENTHESIS) {
         getSymbol();
-      else
+
+        // PROLOG
+
+      } else
         syntaxErrorSymbol(SYM_RPARENTHESIS);
     } else {
-      leftExpr = gr_expression(constantVal, branches);
+      leftExpr = gr_expression(constantVal);
 
       // assert: allocated Temporaries == n + 1
 
@@ -3820,21 +3826,26 @@ int gr_boolAndExpression(int* constantVal, int* branches) {
 
           tempBrPt = malloc(3 * WORDSIZE);
           *(tempBrPt + 0) = (int) branches;
-          *(tempBrPt + 2) = *(branches + 2) + 1;
+          *(tempBrPt + 3) = *(branches + 3) + 1;
           branches = tempBrPt;
 
           leftExpr = gr_boolOrExpression(constantVal, branches);
 
           // assert: allocated Temporaries == n + 1
 
-          if (symbol == SYM_RPARENTHESIS)
+          if (symbol == SYM_RPARENTHESIS) {
             getSymbol();
-          else
+
+            // PROLOG
+
+          } else
             syntaxErrorSymbol(SYM_RPARENTHESIS);
         } else {
           rightExpr = gr_expression(constantVal);
 
           // assert: allocated Temporaries == n + 1
+
+          emitRFormat();
         }
       }
     }
@@ -3856,16 +3867,19 @@ int gr_boolOrExpression(int* constantVal, int* branches) {
 
       tempBrPt = malloc(3 * WORDSIZE);
       *(tempBrPt + 0) = (int) branches;
-      *(tempBrPt + 2) = *(branches + 2) + 1;
+      *(tempBrPt + 3) = *(branches + 3) + 1;
       branches = tempBrPt;
 
       leftExpr = gr_boolOrExpression(constantVal, branches);
 
       // assert: allocated Temporaries == n + 1
 
-      if (symbol == SYM_RPARENTHESIS)
+      if (symbol == SYM_RPARENTHESIS) {
         getSymbol();
-      else
+
+        //PROLOG
+
+      } else
         syntaxErrorSymbol(SYM_RPARENTHESIS);
     } else
       syntaxErrorSymbol(SYM_LPARENTHESIS);
@@ -3875,16 +3889,19 @@ int gr_boolOrExpression(int* constantVal, int* branches) {
 
       tempBrPt = malloc(3 * WORDSIZE);
       *(tempBrPt + 0) = (int) branches;
-      *(tempBrPt + 2) = *(branches + 2) + 1;
+      *(tempBrPt + 3) = *(branches + 3) + 1;
       branches = tempBrPt;
 
       leftExpr = gr_boolOrExpression(constantVal, branches);
 
       // assert: allocated Temporaries == n + 1
 
-      if (symbol == SYM_RPARENTHESIS)
+      if (symbol == SYM_RPARENTHESIS) {
         getSymbol();
-      else
+
+        // PROLOG
+
+      } else
         syntaxErrorSymbol(SYM_RPARENTHESIS);
     } else {
       leftExpr = gr_boolAndExpression(constantVal, branches);
@@ -3901,16 +3918,20 @@ int gr_boolOrExpression(int* constantVal, int* branches) {
 
           tempBrPt = malloc(3 * WORDSIZE);
           *(tempBrPt + 0) = (int) branches;
-          *(tempBrPt + 2) = *(branches + 2) + 1;
+          *(tempBrPt + 3) = *(branches + 3) + 1;
           branches = tempBrPt;
 
           rightExpr = gr_boolOrExpression(constantVal, branches);
 
           // assert: allocated Temporaries == m + 1
 
-          if (symbol == SYM_RPARENTHESIS)
+          if (symbol == SYM_RPARENTHESIS) {
             getSymbol();
-          else
+
+            // PROLOG
+
+
+          } else
             syntaxErrorSymbol(SYM_RPARENTHESIS);
 
         } else {
@@ -3929,91 +3950,6 @@ int gr_boolOrExpression(int* constantVal, int* branches) {
   return leftExpr;
 }
 
-// int gr_boolExpression(int* constantVal) {
-//   int ltype;
-//   int leftFoldable;
-//   int leftVal;
-//   int operatorSymbol;
-//   int rtype;
-//   int not;
-//
-//   // assert: n = allocatedTemporaries
-//
-//   // optional: !
-//   if (symbol == SYM_NOT) {
-//     not = 1;
-//
-//     getSymbol();
-//
-//   } else
-//     not = 0;
-//
-//    ltype = gr_expression(constantVal);
-//
-//   // assert: allocatedTemporaries == n + 1
-//
-//   if (isBoolOp()) {
-//     operatorSymbol = symbol;
-//
-//     if (constantVal[1] == 1){
-//       leftFoldable = 1;
-//       leftVal = *constantVal;
-//     } else
-//       leftFoldable = 0;
-//
-//     getSymbol();
-//     rtype = gr_expression(constantVal);
-//
-//     // assert: allocatedTemporaries == n + 2
-//
-//     if (ltype != rtype)
-//       typeWarning(ltype, rtype);
-//
-//     if (leftFoldable == 1){
-//       if (constantVal[1] == 1){
-//         if(prologDebug){
-//           print((int*)"  _____BOOLEAN_EXPRESSION__");
-//           print((int*)"line: ");
-//           print(itoa(lineNumber,string_buffer,10,0,0));
-//           println();
-//         }
-//         // if (operatorSymbol == SYM_AND)
-//         //   *constantVal = (leftVal && *constantVal);
-//         // else if (operatorSymbol == SYM_OR)
-//         //   *constantVal = (leftVal || *constantVal);
-//       } else {
-//         load_integer(leftVal);
-//         if (operatorSymbol == SYM_AND) {
-//           // PROLOG
-//
-//         } else if (operatorSymbol == SYM_OR) {
-//           // PROLOG
-//
-//         }
-//       }
-//     } else {
-//       if (constantVal[1] == 1)
-//         load_integer(*constantVal);
-//       constantVal[1] = 0;
-//
-//       if (operatorSymbol == SYM_AND) {
-//         // PROLOG
-//
-//       } else if (operatorSymbol == SYM_OR) {
-//         // PROLOG
-//
-//       }
-//     }
-//   }
-//   if (constantVal[1] == 1)
-//     load_integer(*constantVal);
-//   constantVal[1] = 0;
-//
-//   // assert: allocatedTemporaries == n + 1
-//
-//    return ltype;
-// }
-
 void gr_while(int* constantVal) {
   int  brBackToWhile;
   int  brForwardToEnd;
@@ -4023,12 +3959,14 @@ void gr_while(int* constantVal) {
 
   // branches[x][3]:
   //    branches[x][0] = pointer to next to-be-fixed branch instruction
-  //    branches[x][1] = flag for AND or OR: 0 = AND; 1 = OR
-  //    branches[x][2] = level
+  //    branches[x][1] = binary address for to-be-fixed instruction
+  //    branches[x][2] = flag for AND or OR: 0 = AND; 1 = OR
+  //    branches[x][3] = level
   branches = malloc(3 * WORDSIZE);
   *(branches + 0) = 0;
   *(branches + 1) = 0;
   *(branches + 2) = 0;
+  *(branches + 3) = 0;
 
   brBackToWhile = binaryLength;
 
@@ -4099,12 +4037,14 @@ void gr_if(int* constantVal) {
 
   // branches[x][3]:
   //    branches[x][0] = pointer to next to-be-fixed branch instruction
-  //    branches[x][1] = flag for AND or OR: 0 = AND; 1 = OR
-  //    branches[x][2] = level
+  //    branches[x][1] = binary address for to-be-fixed instruction
+  //    branches[x][2] = flag for AND or OR: 0 = AND; 1 = OR
+  //    branches[x][3] = level
   branches = malloc(3 * WORDSIZE);
   *(branches + 0) = 0;
   *(branches + 1) = 0;
   *(branches + 2) = 0;
+  *(branches + 3) = 0;
 
   // if ( expression )
   if (symbol == SYM_IF) {
