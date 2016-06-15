@@ -3795,11 +3795,6 @@ int gr_boolAndExpression(int* constantVal, int* branches) {
     if (symbol == SYM_LPARENTHESIS) {
       getSymbol();
 
-      tempBrPt = malloc(3 * WORDSIZE);
-      *(tempBrPt + 0) = (int) branches;
-      *(tempBrPt + 3) = *(branches + 3) + 1;
-      branches = tempBrPt;
-
       gr_boolOrExpression(constantVal, branches);
 
       // assert: allocated Temporaries == n + 1
@@ -3821,11 +3816,6 @@ int gr_boolAndExpression(int* constantVal, int* branches) {
 
         if (symbol == SYM_LPARENTHESIS) {
           getSymbol();
-
-          tempBrPt = malloc(3 * WORDSIZE);
-          *(tempBrPt + 0) = (int) branches;
-          *(tempBrPt + 3) = *(branches + 3) + 1;
-          branches = tempBrPt;
 
           gr_boolOrExpression(constantVal, branches);
 
@@ -3854,16 +3844,16 @@ int gr_boolAndExpression(int* constantVal, int* branches) {
 int gr_boolOrExpression(int* constantVal, int* branches) {
   int* tempBrPt;
 
+  tempBrPt = malloc(3 * WORDSIZE);
+  *(tempBrPt + 0) = (int) branches;
+  *(tempBrPt + 3) = *(branches + 3) + 1;
+  branches = tempBrPt;
+
   if (symbol == SYM_NOT) {
     getSymbol();
 
     if (symbol == SYM_LPARENTHESIS) {
       getSymbol();
-
-      tempBrPt = malloc(3 * WORDSIZE);
-      *(tempBrPt + 0) = (int) branches;
-      *(tempBrPt + 3) = *(branches + 3) + 1;
-      branches = tempBrPt;
 
       gr_boolOrExpression(constantVal, branches);
 
@@ -3883,11 +3873,6 @@ int gr_boolOrExpression(int* constantVal, int* branches) {
   } else {
     if (symbol == SYM_LPARENTHESIS) {
       getSymbol();
-
-      tempBrPt = malloc(3 * WORDSIZE);
-      *(tempBrPt + 0) = (int) branches;
-      *(tempBrPt + 3) = *(branches + 3) + 1;
-      branches = tempBrPt;
 
       gr_boolOrExpression(constantVal, branches);
 
@@ -3912,11 +3897,6 @@ int gr_boolOrExpression(int* constantVal, int* branches) {
 
         if (symbol == SYM_LPARENTHESIS) {
           getSymbol();
-
-          tempBrPt = malloc(3 * WORDSIZE);
-          *(tempBrPt + 0) = (int) branches;
-          *(tempBrPt + 3) = *(branches + 3) + 1;
-          branches = tempBrPt;
 
           gr_boolOrExpression(constantVal, branches);
 
