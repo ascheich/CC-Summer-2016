@@ -544,9 +544,6 @@ int isStarOrDivOrModulo();
 int isPlusOrMinus();
 int isComparison();
 
-int isBoolOpAnd();
-int isBoolOpOr();
-
 int isShift();
 int isIntegerList();
 
@@ -2464,24 +2461,6 @@ int isComparison() {
   else if (symbol == SYM_LEQ)
     return 1;
   else if (symbol == SYM_GEQ)
-    return 1;
-  else
-    return 0;
-}
-
-int isBoolOpAnd() {
-  if (symbol == SYM_AND)
-    return 1;
-  else if (symbol == SYM_NOT)
-    return 1;
-  else
-    return 0;
-}
-
-int isBoolOpOr() {
-  if (symbol == SYM_OR)
-    return 1;
-  else if (symbol == SYM_NOT)
     return 1;
   else
     return 0;
