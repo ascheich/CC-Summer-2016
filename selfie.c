@@ -3766,12 +3766,19 @@ int gr_expression(int* constantVal) {
 int gr_boolAndExpression(int* constantVal, int* branches) {
   int leftExpr;
   int rightExpr;
+  int* tempBrPt;
 
+  // useless not? - I think this case will never occur -> PROLOG test
   if (symbol == SYM_NOT) {
     getSymbol();
 
     if (symbol == SYM_LPARENTHESIS) {
       getSymbol();
+
+      tempBrPt = malloc(3 * WORDSIZE);
+      *(tempBrPt + 0) = (int) branches;
+      *(tempBrPt + 2) = *(branches + 2) + 1;
+      branches = tempBrPt;
 
       leftExpr = gr_boolOrExpression(constantVal, branches);
 
@@ -3784,14 +3791,51 @@ int gr_boolAndExpression(int* constantVal, int* branches) {
     } else
       syntaxErrorSymbol(SYM_LPARENTHESIS);
   } else {
-    while (symbol == SYM_AND) {
+    if (symbol == SYM_LPARENTHESIS) {
       getSymbol();
 
-      if (symbol == SYM_LPARENTHESIS) {
+      tempBrPt = malloc(3 * WORDSIZE);
+      *(tempBrPt + 0) = (int) branches;
+      *(tempBrPt + 2) = *(branches + 2) + 1;
+      branches = tempBrPt;
+
+      leftExpr = gr_boolOrExpression(constantVal, branches);
+
+      // assert: allocated Temporaries == n + 1
+
+      if (symbol == SYM_RPARENTHESIS)
+        getSymbol();
+      else
+        syntaxErrorSymbol(SYM_RPARENTHESIS);
+    } else {
+      leftExpr = gr_expression(constantVal, branches);
+
+      // assert: allocated Temporaries == n + 1
+
+      while (symbol == SYM_AND) {
         getSymbol();
 
-        leftExpr = gr_boolOrExpression(constantVal, branches);
+        if (symbol == SYM_LPARENTHESIS) {
+          getSymbol();
 
+          tempBrPt = malloc(3 * WORDSIZE);
+          *(tempBrPt + 0) = (int) branches;
+          *(tempBrPt + 2) = *(branches + 2) + 1;
+          branches = tempBrPt;
+
+          leftExpr = gr_boolOrExpression(constantVal, branches);
+
+          // assert: allocated Temporaries == n + 1
+
+          if (symbol == SYM_RPARENTHESIS)
+            getSymbol();
+          else
+            syntaxErrorSymbol(SYM_RPARENTHESIS);
+        } else {
+          rightExpr = gr_expression(constantVal);
+
+          // assert: allocated Temporaries == n + 1
+        }
       }
     }
   }
@@ -3802,12 +3846,18 @@ int gr_boolAndExpression(int* constantVal, int* branches) {
 int gr_boolOrExpression(int* constantVal, int* branches) {
   int leftExpr;
   int rightExpr;
+  int* tempBrPt;
 
   if (symbol == SYM_NOT) {
     getSymbol();
 
     if (symbol == SYM_LPARENTHESIS) {
       getSymbol();
+
+      tempBrPt = malloc(3 * WORDSIZE);
+      *(tempBrPt + 0) = (int) branches;
+      *(tempBrPt + 2) = *(branches + 2) + 1;
+      branches = tempBrPt;
 
       leftExpr = gr_boolOrExpression(constantVal, branches);
 
@@ -3822,6 +3872,11 @@ int gr_boolOrExpression(int* constantVal, int* branches) {
   } else {
     if (symbol == SYM_LPARENTHESIS) {
       getSymbol();
+
+      tempBrPt = malloc(3 * WORDSIZE);
+      *(tempBrPt + 0) = (int) branches;
+      *(tempBrPt + 2) = *(branches + 2) + 1;
+      branches = tempBrPt;
 
       leftExpr = gr_boolOrExpression(constantVal, branches);
 
@@ -3844,6 +3899,11 @@ int gr_boolOrExpression(int* constantVal, int* branches) {
         if (symbol == SYM_LPARENTHESIS) {
           getSymbol();
 
+          tempBrPt = malloc(3 * WORDSIZE);
+          *(tempBrPt + 0) = (int) branches;
+          *(tempBrPt + 2) = *(branches + 2) + 1;
+          branches = tempBrPt;
+
           rightExpr = gr_boolOrExpression(constantVal, branches);
 
           // assert: allocated Temporaries == m + 1
@@ -3855,7 +3915,7 @@ int gr_boolOrExpression(int* constantVal, int* branches) {
 
         } else {
 
-          rightExpr = gr_boolOrExpression(constantVal, branches);
+          rightExpr = gr_boolAndExpression(constantVal, branches);
 
           // assert: allocated Temporaries == m + 1
 
