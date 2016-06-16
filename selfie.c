@@ -3766,66 +3766,66 @@ int gr_expression(int* constantVal) {
 void gr_boolAndExpression(int* constantVal, int* branches, int level) {
   int* tempBrPt;
 
-  tempBrPt = malloc(3 * WORDSIZE);
-  *(tempBrPt + 0) = (int) branches;
-  // *(tempBrPt + 3) = *(branches + 3) + 1;
-  branches = tempBrPt;
-
   if (symbol == SYM_LPARENTHESIS) {
     getSymbol();
 
-    gr_boolOrExpression(constantVal, branches, *(branches + 3) + 1);
+    gr_boolOrExpression(constantVal, branches, level + 1);
 
     // assert: allocated Temporaries == n + 1
 
-    if (symbol == SYM_RPARENTHESIS) {
+    if (symbol == SYM_RPARENTHESIS)
       getSymbol();
-
-      // PROLOG
-
-    } else
+    else
       syntaxErrorSymbol(SYM_RPARENTHESIS);
   } else {
     gr_expression(constantVal);
 
     // assert: allocated Temporaries == n + 1
+  }
+  while (symbol == SYM_AND) {
+    getSymbol();
 
-    while (symbol == SYM_AND) {
+    // assert: allocated Temporaries = m
+
+    if (symbol == SYM_LPARENTHESIS) {
       getSymbol();
 
-      if (symbol == SYM_LPARENTHESIS) {
+      gr_boolOrExpression(constantVal, branches, level + 1);
+
+      // assert: allocated Temporaries == m + 1
+
+      if (symbol == SYM_RPARENTHESIS)
         getSymbol();
+      else
+        syntaxErrorSymbol(SYM_RPARENTHESIS);
+    } else {
+      gr_expression(constantVal);
 
-        gr_boolOrExpression(constantVal, branches, *(branches + 3) + 1);
-
-        // assert: allocated Temporaries == n + 1
-
-        if (symbol == SYM_RPARENTHESIS) {
-          getSymbol();
-
-          // PROLOG
-
-        } else
-          syntaxErrorSymbol(SYM_RPARENTHESIS);
-      } else {
-        gr_expression(constantVal);
-
-        // assert: allocated Temporaries == n + 1
-
-        emitIFormat(OP_BEQ, REG_ZR, previousTemporary(), 0);
-        emitIFormat(OP_BEQ, REG_ZR, currentTemporary(), 0);
-      }
+      // assert: allocated Temporaries == m + 1
     }
+    tempBrPt = malloc(4 * WORDSIZE);
+    *tempBrPt = (int) branches;
+    tempBrPt[1] = binaryLength;
+    tempBrPt[2] = 0;
+    tempBrPt[3] = level;
+    branches = tempBrPt;
+
+    emitIFormat(OP_BEQ, REG_ZR, previousTemporary(), 0);
+
+    tempBrPt = malloc(4 * WORDSIZE);
+    *tempBrPt = (int) branches;
+    tempBrPt[1] = binaryLength;
+    tempBrPt[2] = 0;
+    tempBrPt[3] = level;
+    branches = tempBrPt;
+
+    emitIFormat(OP_BEQ, REG_ZR, currentTemporary(), 0);
+    tfree(1);
   }
 }
 
 void gr_boolOrExpression(int* constantVal, int* branches, int level) {
   int* tempBrPt;
-
-  tempBrPt = malloc(3 * WORDSIZE);
-  *(tempBrPt + 0) = (int) branches;
-  // *(tempBrPt + 3) = *(branches + 3) + 1;
-  branches = tempBrPt;
 
   if (symbol == SYM_NOT) {
     getSymbol();
@@ -3833,7 +3833,7 @@ void gr_boolOrExpression(int* constantVal, int* branches, int level) {
     if (symbol == SYM_LPARENTHESIS) {
       getSymbol();
 
-      gr_boolOrExpression(constantVal, branches, *(branches + 3));
+      gr_boolOrExpression(constantVal, branches, level + 1);
 
       // assert: allocated Temporaries == n + 1
 
@@ -3848,57 +3848,66 @@ void gr_boolOrExpression(int* constantVal, int* branches, int level) {
         syntaxErrorSymbol(SYM_RPARENTHESIS);
     } else
       syntaxErrorSymbol(SYM_LPARENTHESIS);
+  } else if (symbol == SYM_LPARENTHESIS) {
+    getSymbol();
+
+    gr_boolOrExpression(constantVal, branches, level + 1);
+
+    // assert: allocated Temporaries == n + 1
+
+    if (symbol == SYM_RPARENTHESIS)
+      getSymbol();
+    else
+      syntaxErrorSymbol(SYM_RPARENTHESIS);
   } else {
+    gr_boolAndExpression(constantVal, branches, level);
+
+    // assert: allocated Temporaries == n + 1
+  }
+
+  while (symbol == SYM_OR) {
+    getSymbol();
+
+    // assert: allocated Temporaries == m
+
     if (symbol == SYM_LPARENTHESIS) {
       getSymbol();
 
-      gr_boolOrExpression(constantVal, branches, *(branches + 3) + 1);
+      gr_boolOrExpression(constantVal, branches, level + 1);
 
-      // assert: allocated Temporaries == n + 1
+      // assert: allocated Temporaries == m + 1
 
-      if (symbol == SYM_RPARENTHESIS) {
+      if (symbol == SYM_RPARENTHESIS)
         getSymbol();
-
-        // PROLOG
-
-      } else
+      else
         syntaxErrorSymbol(SYM_RPARENTHESIS);
     } else {
-      gr_boolAndExpression(constantVal, branches, *(branches + 3));
+      gr_boolAndExpression(constantVal, branches, level);
 
-      // assert: allocated Temporaries == n + 1
-
-      while (symbol == SYM_OR) {
-        getSymbol();
-
-        // assert: allocated Temporaries == m
-
-        if (symbol == SYM_LPARENTHESIS) {
-          getSymbol();
-
-          gr_boolOrExpression(constantVal, branches, *(branches + 3));
-
-          // assert: allocated Temporaries == m + 1
-
-          if (symbol == SYM_RPARENTHESIS) {
-            getSymbol();
-
-            // PROLOG
-
-
-          } else
-            syntaxErrorSymbol(SYM_RPARENTHESIS);
-
-        } else {
-
-          gr_boolAndExpression(constantVal, branches, *(branches + 3));
-
-          // assert: allocated Temporaries == m + 1
-
-          // PROLOG
-        }
-      }
+      // assert: allocated Temporaries == m + 1
     }
+    emitIFormat(OP_BEQ, REG_ZR, previousTemporary(), 4);
+
+    tempBrPt = malloc(4 * WORDSIZE);
+    *tempBrPt = (int) branches;
+    tempBrPt[1] = binaryLength;
+    tempBrPt[2] = 1;
+    tempBrPt[3] = level;
+    branches = tempBrPt;
+
+    emitJFormat(OP_J, 0);
+
+    tempBrPt = malloc(4 * WORDSIZE);
+    *tempBrPt = (int) branches;
+    tempBrPt[1] = binaryLength;
+    tempBrPt[2] = 1;
+    tempBrPt[3] = level;
+    branches = tempBrPt;
+
+    emitIFormat(OP_BEQ, REG_ZR, currentTemporary(), 0);
+    tfree(1);
+
+    emitIFormat(OP_ADDIU, REG_ZR, currentTemporary(), 1);
   }
 }
 
@@ -3909,16 +3918,16 @@ void gr_while(int* constantVal) {
 
   // assert: allocatedTemporaries == 0
 
-  // branches[x][3]:
-  //    branches[x][0] = pointer to next to-be-fixed branch instruction
-  //    branches[x][1] = binary address for to-be-fixed instruction
-  //    branches[x][2] = flag for AND or OR: 0 = AND; 1 = OR
-  //    branches[x][3] = level
+  // branches[3]:
+  //    branches[0] = pointer to next to-be-fixed branch instruction
+  //    branches[1] = binary address for to-be-fixed instruction
+  //    branches[2] = flag for AND or OR: 0 = AND; 1 = OR
+  //    branches[3] = level
   branches = malloc(4 * WORDSIZE);
-  *(branches + 0) = 0;
-  *(branches + 1) = 0;
-  *(branches + 2) = 0;
-  *(branches + 3) = 0;
+  *branches   = 0;
+  branches[1] = 0;
+  branches[2] = 0;
+  branches[3] = 0;
 
   brBackToWhile = binaryLength;
 
@@ -3987,16 +3996,16 @@ void gr_if(int* constantVal) {
 
   // assert: allocatedTemporaries == 0
 
-  // branches[x][3]:
-  //    branches[x][0] = pointer to next to-be-fixed branch instruction
-  //    branches[x][1] = binary address for to-be-fixed instruction
-  //    branches[x][2] = flag for AND or OR: 0 = AND; 1 = OR
-  //    branches[x][3] = level
+  // branches[3]:
+  //    branches[0] = pointer to next to-be-fixed branch instruction
+  //    branches[1] = binary address for to-be-fixed instruction
+  //    branches[2] = flag for AND or OR: 0 = AND; 1 = OR
+  //    branches[3] = level
   branches = malloc(4 * WORDSIZE);
-  *(branches + 0) = 0;
-  *(branches + 1) = 0;
-  *(branches + 2) = 0;
-  *(branches + 3) = 0;
+  branches[0] = 0;
+  branches[1] = 0;
+  branches[2] = 0;
+  branches[3] = 0;
 
   // if ( expression )
   if (symbol == SYM_IF) {
