@@ -3798,6 +3798,27 @@ void gr_boolAndExpression(int* constantVal, int* branches, int level) {
         getSymbol();
       else
         syntaxErrorSymbol(SYM_RPARENTHESIS);
+    } else if (symbol == SYM_NOT) {
+      getSymbol();
+
+      if (symbol == SYM_LPARENTHESIS) {
+        getSymbol();
+
+        gr_boolOrExpression(constantVal, branches, level + 1);
+
+        // assert: allocated Temporaries == n + 1
+
+        if (symbol == SYM_RPARENTHESIS) {
+          getSymbol();
+
+          emitIFormat(OP_BEQ, REG_ZR, currentTemporary(), 4);
+          emitIFormat(OP_ADDIU, REG_ZR, currentTemporary(), 0);
+          emitIFormat(OP_BEQ, REG_ZR, currentTemporary(), 2);
+          emitIFormat(OP_ADDIU, REG_ZR, currentTemporary(), 1);
+        } else
+          syntaxErrorSymbol(SYM_RPARENTHESIS);
+      } else
+        syntaxErrorSymbol(SYM_LPARENTHESIS);
     } else {
       gr_expression(constantVal);
 
@@ -3881,6 +3902,27 @@ void gr_boolOrExpression(int* constantVal, int* branches, int level) {
         getSymbol();
       else
         syntaxErrorSymbol(SYM_RPARENTHESIS);
+    } else if (symbol == SYM_NOT) {
+      getSymbol();
+
+      if (symbol == SYM_LPARENTHESIS) {
+        getSymbol();
+
+        gr_boolOrExpression(constantVal, branches, level + 1);
+
+        // assert: allocated Temporaries == n + 1
+
+        if (symbol == SYM_RPARENTHESIS) {
+          getSymbol();
+
+          emitIFormat(OP_BEQ, REG_ZR, currentTemporary(), 4);
+          emitIFormat(OP_ADDIU, REG_ZR, currentTemporary(), 0);
+          emitIFormat(OP_BEQ, REG_ZR, currentTemporary(), 2);
+          emitIFormat(OP_ADDIU, REG_ZR, currentTemporary(), 1);
+        } else
+          syntaxErrorSymbol(SYM_RPARENTHESIS);
+      } else
+        syntaxErrorSymbol(SYM_LPARENTHESIS);
     } else {
       gr_boolAndExpression(constantVal, branches, level);
 
@@ -4002,7 +4044,7 @@ void gr_if(int* constantVal) {
   //    branches[2] = flag for AND or OR: 0 = AND; 1 = OR
   //    branches[3] = level
   branches = malloc(4 * WORDSIZE);
-  branches[0] = 0;
+  *branches = 0;
   branches[1] = 0;
   branches[2] = 0;
   branches[3] = 0;
