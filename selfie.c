@@ -824,6 +824,7 @@ void emitJFormat(int opcode, int instr_index);
 void fixup_relative(int fromAddress);
 void fixup_absolute(int fromAddress, int toAddress);
 void fixlink_absolute(int fromAddress, int toAddress);
+void fixup_boolExpr(int* branches);
 
 int copyStringToBinary(int* s, int a);
 
@@ -3782,6 +3783,7 @@ void gr_boolAndExpression(int* constantVal, int* branches, int level) {
 
     // assert: allocated Temporaries == n + 1
   }
+
   while (symbol == SYM_AND) {
     getSymbol();
 
@@ -3842,6 +3844,8 @@ void gr_boolAndExpression(int* constantVal, int* branches, int level) {
 
     emitIFormat(OP_BEQ, REG_ZR, currentTemporary(), 0);
     tfree(1);
+
+    // assert: allocated Temporaries == m
   }
 }
 
@@ -3950,17 +3954,18 @@ void gr_boolOrExpression(int* constantVal, int* branches, int level) {
     tfree(1);
 
     emitIFormat(OP_ADDIU, REG_ZR, currentTemporary(), 1);
+
+    // assert: allocated Temporaries == m
   }
 }
 
 void gr_while(int* constantVal) {
   int  brBackToWhile;
-  int  brForwardToEnd;
   int* branches;
 
   // assert: allocatedTemporaries == 0
 
-  // branches[3]:
+  // branches[4]:
   //    branches[0] = pointer to next to-be-fixed branch instruction
   //    branches[1] = binary address for to-be-fixed instruction
   //    branches[2] = flag for AND or OR: 0 = AND; 1 = OR
@@ -3973,8 +3978,6 @@ void gr_while(int* constantVal) {
 
   brBackToWhile = binaryLength;
 
-  brForwardToEnd = 0;
-
   // while ( expression )
   if (symbol == SYM_WHILE) {
     getSymbol();
@@ -3982,14 +3985,8 @@ void gr_while(int* constantVal) {
     if (symbol == SYM_LPARENTHESIS) {
       getSymbol();
 
-      gr_expression(constantVal);
-      // gr_boolOrExpression(constantVal, branches, 0);
-
-      // do not know where to branch, fixup later
-      brForwardToEnd = binaryLength;
-
-      emitIFormat(OP_BEQ, REG_ZR, currentTemporary(), 0);
-
+      // gr_expression(constantVal);
+      gr_boolOrExpression(constantVal, branches, 0);
       tfree(1);
 
       if (symbol == SYM_RPARENTHESIS) {
@@ -4023,22 +4020,21 @@ void gr_while(int* constantVal) {
   // unconditional branch to beginning of while
   emitIFormat(OP_BEQ, REG_ZR, REG_ZR, (brBackToWhile - binaryLength - WORDSIZE) / WORDSIZE);
 
-  if (brForwardToEnd != 0)
+  // if (brForwardToEnd != 0)
     // first instruction after loop comes here
     // now we have our address for the conditional jump from above
-    fixup_relative(brForwardToEnd);
+    fixup_boolExpr(branches);
 
   // assert: allocatedTemporaries == 0
 }
 
 void gr_if(int* constantVal) {
-  int brForwardToElseOrEnd;
-  int brForwardToEnd;
+  int  brForwardToEnd;
   int* branches;
 
   // assert: allocatedTemporaries == 0
 
-  // branches[3]:
+  // branches[4]:
   //    branches[0] = pointer to next to-be-fixed branch instruction
   //    branches[1] = binary address for to-be-fixed instruction
   //    branches[2] = flag for AND or OR: 0 = AND; 1 = OR
@@ -4056,14 +4052,8 @@ void gr_if(int* constantVal) {
     if (symbol == SYM_LPARENTHESIS) {
       getSymbol();
 
-      gr_expression(constantVal);
-      // gr_boolOrExpression(constantVal, branches, 0);
-
-      // if the "if" case is not true, we jump to "else" (if provided)
-      brForwardToElseOrEnd = binaryLength;
-
-      emitIFormat(OP_BEQ, REG_ZR, currentTemporary(), 0);
-
+      // gr_expression(constantVal);
+      gr_boolOrExpression(constantVal, branches, 0);
       tfree(1);
 
       if (symbol == SYM_RPARENTHESIS) {
@@ -4097,7 +4087,7 @@ void gr_if(int* constantVal) {
           emitIFormat(OP_BEQ, REG_ZR, REG_ZR, 0);
 
           // if the "if" case was not true, we jump here
-          fixup_relative(brForwardToElseOrEnd);
+          fixup_boolExpr(branches);
 
           // zero or more statements: { statement }
           if (symbol == SYM_LBRACE) {
@@ -4122,7 +4112,7 @@ void gr_if(int* constantVal) {
           fixup_relative(brForwardToEnd);
         } else
           // if the "if" case was not true, we jump here
-          fixup_relative(brForwardToElseOrEnd);
+          fixup_boolExpr(branches);
       } else
         syntaxErrorSymbol(SYM_RPARENTHESIS);
     } else
@@ -5759,6 +5749,52 @@ void fixlink_absolute(int fromAddress, int toAddress) {
     previousAddress = getInstrIndex(loadBinary(fromAddress)) * WORDSIZE;
     fixup_absolute(fromAddress, toAddress);
     fromAddress = previousAddress;
+  }
+}
+
+// branches[4]:
+//    branches[0] = pointer to next to-be-fixed branch instruction
+//    branches[1] = binary address for to-be-fixed instruction
+//    branches[2] = flag for AND or OR: 0 = AND; 1 = OR
+//    branches[3] = level
+void fixup_boolExpr(int* branches) {
+  int temp;
+
+  while (*branches != 0) {
+    if (branches[3] == 0) {
+      // level == 0
+      if (branches[2] == 0) {
+        // AND
+        if (brForwardToElseOrEnd == 0) {
+          // "while" || "if" without "else"
+          fixup_relative(branches[1]);
+          branches = (int*) *branches;
+          fixup_relative(branches[1]);
+        } else {
+          // if with "else"
+
+        }
+      } else {
+        // OR
+        fixup_relative();
+        branches = (int*) *branches;
+        fixup_absolute();
+      }
+    } else {
+      // level > 0
+      if (branches[2] == 0) {
+        // AND
+        fixup_relative(branches[1]);
+        branches = (int*) *branches;
+        fixup_relative(branches[1]);
+      } else {
+        // OR
+        fixup_relative(branches[1]);
+        branches = (int*) *branches;
+        fixup_absolute();
+      }
+    }
+    branches = (int*) *branches;
   }
 }
 
