@@ -826,6 +826,9 @@ void implementOpen();
 void emitMalloc();
 void implementMalloc();
 
+void emitFree();
+void implementFree();
+
 // ------------------------ GLOBAL CONSTANTS -----------------------
 
 int debug_read   = 0;
@@ -1074,6 +1077,9 @@ int* loadsPerAddress = (int*) 0; // number of executed loads per load operation
 
 int stores            = 0;        // total number of executed memory stores
 int* storesPerAddress = (int*) 0; // number of executed stores per store operation
+
+int* freePointer = (int*) 0;
+int* freeList;
 
 // ------------------------- INITIALIZATION ------------------------
 
@@ -4738,6 +4744,7 @@ void selfie_compile() {
   emitWrite();
   emitOpen();
   emitMalloc();
+  emitFree();
 
   emitID();
   emitCreate();
@@ -5660,6 +5667,38 @@ void implementMalloc() {
   }
 }
 
+void emitFree() {
+  createSymbolTableEntry(LIBRARY_TABLE, (int*) "free", 0, PROCEDURE, INTSTAR_T, 0, binaryLength);
+
+  emitIFormat(OP_LW, REG_SP, REG_A0, 0); // size
+  emitIFormat(OP_ADDIU, REG_SP, REG_SP, WORDSIZE);
+
+  emitIFormat(OP_ADDIU, REG_ZR, REG_V0, SYSCALL_FREE);
+  emitRFormat(OP_SPECIAL, 0, 0, 0, FCT_SYSCALL);
+
+  emitRFormat(OP_SPECIAL, REG_RA, 0, 0, FCT_JR);
+}
+
+void implementFree() {
+  int toFree; //adress
+  int* temp; 
+
+  if (debug_malloc) {
+    print(binaryName);
+    print((int*) ": trying to free address");
+    print(itoa(*(registers+REG_A0), string_buffer, 10, 0, 0));
+    println();
+ }
+
+    toFree = *(registers+REG_A0);
+
+    *toFree = freePointer;
+    freePointer = toFree;
+
+  }
+}
+
+
 // -----------------------------------------------------------------
 // ----------------------- HYPSTER SYSCALLS ------------------------
 // -----------------------------------------------------------------
@@ -6121,6 +6160,8 @@ void fct_syscall() {
       implementOpen();
     else if (*(registers+REG_V0) == SYSCALL_MALLOC)
       implementMalloc();
+    else if (*registers[REG_V0] == SYSCALL_FREE)
+      implementFree();
     else if (*(registers+REG_V0) == SYSCALL_ID)
       implementID();
     else if (*(registers+REG_V0) == SYSCALL_CREATE)
