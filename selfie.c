@@ -822,6 +822,7 @@ void emitIFormat(int opcode, int rs, int rt, int immediate);
 void emitJFormat(int opcode, int instr_index);
 
 void fixup_relative(int fromAddress);
+void fixup_relativeToAddr(int fromAddress, int toAddress);
 void fixup_absolute(int fromAddress, int toAddress);
 void fixlink_absolute(int fromAddress, int toAddress);
 void fixup_boolExpr(int* branches);
@@ -3826,20 +3827,22 @@ void gr_boolAndExpression(int* constantVal, int* branches, int level) {
 
       // assert: allocated Temporaries == m + 1
     }
-    tempBrPt = malloc(4 * WORDSIZE);
+    tempBrPt = malloc(5 * WORDSIZE);
     *tempBrPt = (int) branches;
     tempBrPt[1] = binaryLength;
     tempBrPt[2] = 0;
     tempBrPt[3] = level;
+    branches[4] = tempBrPt;
     branches = tempBrPt;
 
     emitIFormat(OP_BEQ, REG_ZR, previousTemporary(), 0);
 
-    tempBrPt = malloc(4 * WORDSIZE);
+    tempBrPt = malloc(5 * WORDSIZE);
     *tempBrPt = (int) branches;
     tempBrPt[1] = binaryLength;
     tempBrPt[2] = 0;
     tempBrPt[3] = level;
+    branches[4] = tempBrPt;
     branches = tempBrPt;
 
     emitIFormat(OP_BEQ, REG_ZR, currentTemporary(), 0);
@@ -3934,20 +3937,22 @@ void gr_boolOrExpression(int* constantVal, int* branches, int level) {
     }
     emitIFormat(OP_BEQ, REG_ZR, previousTemporary(), 4);
 
-    tempBrPt = malloc(4 * WORDSIZE);
+    tempBrPt = malloc(5 * WORDSIZE);
     *tempBrPt = (int) branches;
     tempBrPt[1] = binaryLength;
     tempBrPt[2] = 1;
     tempBrPt[3] = level;
+    branches[4] = tempBrPt;
     branches = tempBrPt;
 
-    emitJFormat(OP_J, 0);
+    emitIFormat(OP_BEQ, REG_ZR, REG_ZR, 0);
 
-    tempBrPt = malloc(4 * WORDSIZE);
+    tempBrPt = malloc(5 * WORDSIZE);
     *tempBrPt = (int) branches;
     tempBrPt[1] = binaryLength;
     tempBrPt[2] = 1;
     tempBrPt[3] = level;
+    branches[4] = tempBrPt;
     branches = tempBrPt;
 
     emitIFormat(OP_BEQ, REG_ZR, currentTemporary(), 0);
@@ -3965,16 +3970,16 @@ void gr_while(int* constantVal) {
 
   // assert: allocatedTemporaries == 0
 
-  // branches[4]:
+  // PROLOG : use struct instead when completed
+  // branches[5]:
   //    branches[0] = pointer to next to-be-fixed branch instruction
   //    branches[1] = binary address for to-be-fixed instruction
   //    branches[2] = flag for AND or OR: 0 = AND; 1 = OR
   //    branches[3] = level
-  branches = malloc(4 * WORDSIZE);
-  *branches   = 0;
-  branches[1] = 0;
-  branches[2] = 0;
-  branches[3] = 0;
+  //    branches[4] = pointer to previous to-be-fixed branch instruction
+  // terminal entry (doesn't need more space than this)
+  branches = malloc(WORDSIZE);
+  *branches = 0;
 
   brBackToWhile = binaryLength;
 
@@ -4034,16 +4039,16 @@ void gr_if(int* constantVal) {
 
   // assert: allocatedTemporaries == 0
 
-  // branches[4]:
+  // PROLOG : use struct instead when completed
+  // branches[5]:
   //    branches[0] = pointer to next to-be-fixed branch instruction
   //    branches[1] = binary address for to-be-fixed instruction
   //    branches[2] = flag for AND or OR: 0 = AND; 1 = OR
   //    branches[3] = level
-  branches = malloc(4 * WORDSIZE);
+  //    branches[4] = pointer to previous to-be-fixed branch instruction
+  // terminal entry (doesn't need more space than this)
+  branches = malloc(WORDSIZE);
   *branches = 0;
-  branches[1] = 0;
-  branches[2] = 0;
-  branches[3] = 0;
 
   // if ( expression )
   if (symbol == SYM_IF) {
@@ -5737,6 +5742,18 @@ void fixup_relative(int fromAddress) {
       (binaryLength - fromAddress - WORDSIZE) / WORDSIZE));
 }
 
+void fixup_relativeToAddr(int fromAddress, int toAddress) {
+  int instruction;
+
+  instruction = loadBinary(fromAddress);
+
+  storeBinary(fromAddress,
+    encodeIFormat(getOpcode(instruction),
+      getRS(instruction),
+      getRT(instruction),
+      (toAddress - fromAddress - WORDSIZE) / WORDSIZE));
+}
+
 void fixup_absolute(int fromAddress, int toAddress) {
   storeBinary(fromAddress,
     encodeJFormat(getOpcode(loadBinary(fromAddress)), toAddress / WORDSIZE));
@@ -5752,47 +5769,51 @@ void fixlink_absolute(int fromAddress, int toAddress) {
   }
 }
 
-// branches[4]:
+// branches[5]:
 //    branches[0] = pointer to next to-be-fixed branch instruction
 //    branches[1] = binary address for to-be-fixed instruction
 //    branches[2] = flag for AND or OR: 0 = AND; 1 = OR
 //    branches[3] = level
+//    branches[4] = pointer to previous to-be-fixed branch instruction
 void fixup_boolExpr(int* branches) {
-  int temp;
+  int  opFlag;
+  int* tempPt;
+  int* conditionalAddress;
+
+  opFlag = 0;
+  conditionalAddress = (int*) *branches + WORDSIZE + WORDSIZE;
 
   while (*branches != 0) {
     if (branches[3] == 0) {
       // level == 0
       if (branches[2] == 0) {
         // AND
-        if (brForwardToElseOrEnd == 0) {
-          // "while" || "if" without "else"
-          fixup_relative(branches[1]);
-          branches = (int*) *branches;
-          fixup_relative(branches[1]);
-        } else {
-          // if with "else"
-
-        }
+        fixup_relative(branches[1]);
+        branches = (int*) *branches;
+        fixup_relative(branches[1]);
       } else {
         // OR
-        fixup_relative();
+        fixup_relative(branches[1]);
         branches = (int*) *branches;
-        fixup_absolute();
+        fixup_relativeToAddr(branches[1], conditionalAddress);
       }
     } else {
+      while (tempPt[3] != branches[3] - 1) {
+        tempPt = tempPt[4];
+      }
       // level > 0
       if (branches[2] == 0) {
         // AND
-        fixup_relative(branches[1]);
+        fixup_relativeToAddr(branches[1], tempPt[1]);
         branches = (int*) *branches;
-        fixup_relative(branches[1]);
+        fixup_relativeToAddr(branches[1], tempPt[1]);
       } else {
         // OR
-        fixup_relative(branches[1]);
+        fixup_relativeToAddr(branches[1], tempPt[1]);
         branches = (int*) *branches;
-        fixup_absolute();
+        fixup_relativeToAddr(branches[1], tempPt[1]);
       }
+      tempPt = branches;
     }
     branches = (int*) *branches;
   }
