@@ -843,6 +843,7 @@ int SYSCALL_WRITE  = 4004;
 int SYSCALL_OPEN   = 4005;
 
 int SYSCALL_MALLOC = 4045;
+int SYSCALL_FREE   = 4046;
 
 // -----------------------------------------------------------------
 // ----------------------- HYPSTER SYSCALLS ------------------------
@@ -5680,8 +5681,8 @@ void emitFree() {
 }
 
 void implementFree() {
-  int toFree; //adress
-  int* temp; 
+  int* toFree; //adress
+  int* temp;
 
   if (debug_malloc) {
     print(binaryName);
@@ -5695,7 +5696,6 @@ void implementFree() {
     *toFree = freePointer;
     freePointer = toFree;
 
-  }
 }
 
 
@@ -6160,7 +6160,7 @@ void fct_syscall() {
       implementOpen();
     else if (*(registers+REG_V0) == SYSCALL_MALLOC)
       implementMalloc();
-    else if (*registers[REG_V0] == SYSCALL_FREE)
+    else if (*(registers+REG_V0) == SYSCALL_FREE)
       implementFree();
     else if (*(registers+REG_V0) == SYSCALL_ID)
       implementID();
