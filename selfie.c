@@ -6501,7 +6501,7 @@ void implementFree() {
   bump = brk;
 
   if (bump - size < 0)
-    throwException(EXCEPTION, 0);
+    throwException(EXCEPTION_UNKNOWNINSTRUCTION, 0);
   else {
     registers[REG_V0] = bump;
 
@@ -6980,7 +6980,7 @@ void fct_syscall() {
       implementOpen();
     else if (registers[REG_V0] == SYSCALL_MALLOC)
       implementMalloc();
-    else if (registers[REV_V0] == SYSCALL_FREE)
+    else if (registers[REG_V0] == SYSCALL_FREE)
       implementFree();
     else if (registers[REG_V0] == SYSCALL_ID)
       implementID();
