@@ -5777,16 +5777,29 @@ void fixlink_absolute(int fromAddress, int toAddress) {
 //    branches[4] = pointer to previous to-be-fixed branch instruction
 void fixup_boolExpr(int* branches) {
   int  opFlag;
+  int  previousLevel;
   int* tempPt;
   int* conditionalAddress;
 
   opFlag = 0;
+  previousLevel = 0;
   conditionalAddress = (int*) *branches + WORDSIZE + WORDSIZE;
 
   while (*branches != 0) {
+    if (previousLevel != branches[2]) {
+      if (previousLevel > branches[2]) {
+        opFlag = branches[2];
+        tempLevel = previousLevel - 1;
+
+      } else {
+        tempLevel = previousLevel + 1;
+
+      }
+
+    }
     if (branches[3] == 0) {
       // level == 0
-      if (branches[2] == 0) {
+      if (opFlag == 0) {
         // AND
         fixup_relative(branches[1]);
         branches = (int*) *branches;
@@ -5798,9 +5811,6 @@ void fixup_boolExpr(int* branches) {
         fixup_relativeToAddr(branches[1], conditionalAddress);
       }
     } else {
-      while (tempPt[3] != branches[3] - 1) {
-        tempPt = tempPt[4];
-      }
       // level > 0
       if (branches[2] == 0) {
         // AND
