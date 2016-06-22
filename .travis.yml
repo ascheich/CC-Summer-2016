@@ -1,0 +1,18 @@
+language:
+- c
+os:
+- osx
+- linux
+compiler:
+- clang
+- gcc
+addons:
+  apt:
+    packages:
+    - gcc-multilib
+script: make test
+notifications:
+  email: false
+  slack:
+    secure: jES6YIcmcis3UhzhctAiEgIbWOB8XV5H4Ugm23h0uzU8ZcoUr7zIxsyY62iOk8vI2z9sPnACWU0ChJm66HnATzl5uaYYWpiDaV3kXRy+zpvCx0kt4ztmlgp80t2pgIxV3stPOY0oeI+yBnFJyet2PPOKNWW/3uDBR46cKCWS59c7sqjHlUJRE3oIDQ//NpC3mKDpdRKgjpVaD2YhP26rVL56BwD5LM3JvzljH2e8hYG9+LKogt4Uofs5usNRw57z6B/CokACjupWE1ayW2ziZ/CAmy1dImKkyFCUeLln065XtPHZnMdW+UrOoelMx/3PxeqMmwF47tg3bKsfDq0p6dlCaSfmPzHQcPgS/gtzOaw1iyxdR61nKBDLox6FMp+yARM9dKIlDAa+bqkfjlwy4EPuajjxamxjpiCTQtS+NvsM0yBTgghfG4eoGmIJLVsBqibPdqHx002cmEzGLcRoNotKca9bP3/NDbcoOswtdvgZPn36VGL2u7zwRRhizl25EfOOrSBe34W3X/UdBU0EC5qKSmBXTbrko19LsBdx6lN1oYosGRfLdK5maYVYKo1VHeeNqFuGp2GP91873Zuq8j8Dh45en/s4Nvg3B5QV3YnlIlBFDk/1DHZecKYN5XJE2UDKq3UtMGuwQE2WoCC8FQ+JjHhanuMufr1vtKhfqo4=
+
