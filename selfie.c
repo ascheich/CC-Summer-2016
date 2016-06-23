@@ -843,7 +843,6 @@ int SYSCALL_WRITE  = 4004;
 int SYSCALL_OPEN   = 4005;
 
 int SYSCALL_MALLOC = 4045;
-int SYSCALL_FREE   = 4046;
 
 // -----------------------------------------------------------------
 // ----------------------- HYPSTER SYSCALLS ------------------------
@@ -5651,7 +5650,7 @@ void implementMalloc() {
   size = roundUp(*(registers+REG_A0), WORDSIZE);
 
 
-  if (size <= 2*WORDSIZE && (int)freePointer !=  0){
+  if (size == 9*WORDSIZE && (int) freePointer !=  0){
     temp = (int) freePointer;
     toFree = loadVirtualMemory(pt, temp);
     freePointer = (int*) toFree;
@@ -5691,8 +5690,8 @@ void emitFree() {
 }
 
 void implementFree() {
-  int* toFree; //adress
-  int* temp;
+  int toFree; //adress
+  int* temp; 
 
   if (debug_malloc) {
     print(binaryName);
@@ -5707,6 +5706,7 @@ void implementFree() {
     freePointer = (int*)toFree;
     storeVirtualMemory(pt, toFree, (int)temp);
 
+  }
 }
 
 
