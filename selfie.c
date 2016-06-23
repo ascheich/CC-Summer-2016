@@ -843,7 +843,7 @@ int SYSCALL_WRITE  = 4004;
 int SYSCALL_OPEN   = 4005;
 
 int SYSCALL_MALLOC = 4045;
-
+int SYSCALL_FREE   = 4046;
 // -----------------------------------------------------------------
 // ----------------------- HYPSTER SYSCALLS ------------------------
 // -----------------------------------------------------------------
@@ -5705,8 +5705,6 @@ void implementFree() {
     temp = freePointer;
     freePointer = (int*)toFree;
     storeVirtualMemory(pt, toFree, (int)temp);
-
-  }
 }
 
 
