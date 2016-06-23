@@ -114,6 +114,9 @@ void printString(int* s);
 int roundUp(int n, int m);
 
 int* malloc(int size);
+
+void free(int* address);
+
 void exit(int code);
 
 // ------------------------ GLOBAL CONSTANTS -----------------------
@@ -877,6 +880,10 @@ void implementOpen();
 void emitMalloc();
 void implementMalloc();
 
+void emitFree();
+void implementFree();
+
+
 // ------------------------ GLOBAL CONSTANTS -----------------------
 
 int debug_read   = 0;
@@ -885,12 +892,16 @@ int debug_open   = 0;
 
 int debug_malloc = 0;
 
+int debug_free   = 0;
+
 int SYSCALL_EXIT   = 4001;
 int SYSCALL_READ   = 4003;
 int SYSCALL_WRITE  = 4004;
 int SYSCALL_OPEN   = 4005;
 
 int SYSCALL_MALLOC = 4045;
+
+int SYSCALL_FREE   = 4046;
 
 // -----------------------------------------------------------------
 // ----------------------- HYPSTER SYSCALLS ------------------------
@@ -6456,6 +6467,53 @@ void implementMalloc() {
   }
 }
 
+void emitFree() {
+  createSymbolTableEntry(LIBRARY_TABLE, (int*) "free", 0, PROCEDURE, INTSTAR_T, 0, binaryLength);
+
+  emitIFormat(OP_LW, REG_SP, REG_A0, 0); // size
+  emitIFormat(OP_ADDIU, REG_SP, REG_SP, -WORDSIZE);
+
+  emitIFormat(OP_ADDIU, REG_ZR, REG_V0, SYSCALL_FREE);
+  emitRFormat(OP_SPECIAL, 0, 0, 0, FCT_SYSCALL);
+
+  emitRFormat(OP_SPECIAL, REG_RA, 0, 0, FCT_JR);
+}
+
+void implementFree() {
+  int size;
+  int bump;
+
+  if (debug_free) {
+    print(binaryName);
+    print((int*) ": trying to free ");
+    print(itoa(registers[REG_A0], string_buffer, 10, 0, 0));
+    print((int*) " bytes");
+    println();
+  }
+
+  size = roundUp(registers[REG_A0], WORDSIZE);
+
+  bump = brk;
+
+  if (bump - size < 0)
+    throwException(EXCEPTION_UNKNOWNINSTRUCTION, 0);
+  else {
+    registers[REG_V0] = bump;
+
+    brk = bump - size;
+
+    if (debug_free) {
+      print(binaryName);
+      print((int*) ": actually freeing ");
+      print(itoa(size, string_buffer, 10, 0, 0));
+      print((int*) " bytes at virtual address ");
+      print(itoa(bump, string_buffer, 16, 8, 0));
+      println();
+    }
+  }
+}
+
+
 // -----------------------------------------------------------------
 // ----------------------- HYPSTER SYSCALLS ------------------------
 // -----------------------------------------------------------------
@@ -6917,6 +6975,8 @@ void fct_syscall() {
       implementOpen();
     else if (registers[REG_V0] == SYSCALL_MALLOC)
       implementMalloc();
+    else if (registers[REG_V0] == SYSCALL_FREE)
+      implementFree();
     else if (registers[REG_V0] == SYSCALL_ID)
       implementID();
     else if (registers[REG_V0] == SYSCALL_CREATE)
