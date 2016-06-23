@@ -115,7 +115,7 @@ int roundUp(int n, int m);
 
 int* malloc(int size);
 
-void free(int* address);
+// void free(int* address);
 
 void exit(int code);
 
