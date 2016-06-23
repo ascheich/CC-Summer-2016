@@ -5636,6 +5636,8 @@ void emitMalloc() {
 void implementMalloc() {
   int size;
   int bump;
+  int temp;
+  int toFree;
 
   if (debug_malloc) {
     print(binaryName);
@@ -5646,6 +5648,14 @@ void implementMalloc() {
   }
 
   size = roundUp(*(registers+REG_A0), WORDSIZE);
+
+
+  if (size <= 2*WORDSIZE && (int)freePointer !=  0){
+    temp = (int) freePointer;
+    toFree = loadVirtualMemory(pt, temp);
+    freePointer = (int*) toFree;
+    *(registers+REG_V0) = temp;
+  } else{
 
   bump = brk;
 
@@ -5668,7 +5678,7 @@ void implementMalloc() {
 }
 
 void emitFree() {
-  createSymbolTableEntry(LIBRARY_TABLE, (int*) "free", 0, PROCEDURE, INTSTAR_T, 0, binaryLength);
+  createSymbolTableEntry(LIBRARY_TABLE, (int*) "free", 0, PROCEDURE, INTSTAR_T, 0, binaryLength, 1, (int*) 0));
 
   emitIFormat(OP_LW, REG_SP, REG_A0, 0); // size
   emitIFormat(OP_ADDIU, REG_SP, REG_SP, WORDSIZE);
@@ -5692,8 +5702,9 @@ void implementFree() {
 
     toFree = *(registers+REG_A0);
 
-    *toFree = freePointer;
-    freePointer = toFree;
+    temp = freePointer;
+    freePointer = (int*)toFree;
+    storeVirtualMemory(pt, toFree, (int)temp);
 
   }
 }
