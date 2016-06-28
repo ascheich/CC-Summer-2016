@@ -91,8 +91,6 @@ int twoToThePowerOf(int p);
 int leftShift(int n, int b);
 int rightShift(int n, int b);
 
-
-
 int  loadCharacter(int* s, int i);
 int* storeCharacter(int* s, int i, int c);
 
@@ -114,9 +112,7 @@ void printString(int* s);
 int roundUp(int n, int m);
 
 int* malloc(int size);
-
-// void free(int* address);
-
+void free(int* address);
 void exit(int code);
 
 // ------------------------ GLOBAL CONSTANTS -----------------------
@@ -170,8 +166,8 @@ int* character_buffer; // buffer for reading and writing characters
 int* string_buffer;    // buffer for string output
 int* filename_buffer;  // buffer for filenames
 int* io_buffer;        // buffer for binary I/O
-int globalArrayInit_buffer[100];      // buffer for direct array initialization
-int globalArrayInitBuffer_Top = 0;   // index of 1st free field in init-array
+int globalArrayInit_buffer[100];   // buffer for direct array initialization
+int globalArrayInitBuffer_Top = 0; // index of 1st free field in init-array
 int structMember_buffer[50][3];
 
 // 0 = O_RDONLY (0x0000)
@@ -188,15 +184,6 @@ int S_IRUSR_IWUSR_IRGRP_IROTH = 420; // flags for rw-r--r-- file permissions
 int* outputName = (int*) 0;
 int outputFD    = 1;
 
-// Variable for Testing Purposes
-int prolog_Test = 42;
-struct globalStruct{
-  int a;
-  int b;
-  int* c;
-};
-//---------------------
-int prologDebug = 0;
 // ------------------------- INITIALIZATION ------------------------
 
 void initLibrary() {
@@ -313,7 +300,10 @@ int SYM_AND          = 36; // &&
 int SYM_OR           = 37; // ||
 int SYM_NOT          = 38; // !
 
-int SYMBOLS[39][2]; // array of strings representing symbols
+int SYM_INC          = 39; // ++
+int SYM_DEC          = 40; // --
+
+int SYMBOLS[41][2]; // array of strings representing symbols
 
 int maxIdentifierLength = 64; // maximum number of characters in an identifier
 int maxIntegerLength    = 10; // maximum number of characters in an integer
@@ -387,15 +377,16 @@ void initScanner () {
   SYMBOLS[SYM_OR][0]           = (int) "||";
   SYMBOLS[SYM_NOT][0]          = (int) "!";
 
+  SYMBOLS[SYM_INC][0]          = (int) "++";
+  SYMBOLS[SYM_DEC][0]          = (int) "--";
+
   character = CHAR_EOF;
   symbol    = SYM_EOF;
 
-  if (prologDebug) {
-    i = 0;
-    while (i < 39) {
-      SYMBOLS[i][1] = 0;
-      i = i + 1;
-    }
+  i = 0;
+  while (i < 41) {
+    SYMBOLS[i][1] = 0;
+    i = i + 1;
   }
 }
 
@@ -419,17 +410,18 @@ int* getSymbolTableEntry(int* string, int class);
 int isUndefinedProcedure(int* entry);
 int reportUndefinedProcedures();
 
-struct symbolTable {
-  // struct* next;
-  int* string;
-  int line;
-  int class;
-  int type;
-  int value;
-  int address;
-  int scope;
-  int size;
-};
+//PROLOG
+// struct symbolTable {
+//   // struct* next;
+//   int* string;
+//   int line;
+//   int class;
+//   int type;
+//   int value;
+//   int address;
+//   int scope;
+//   int size;
+// };
 
 // symbol table entry:
 // +----+---------+
@@ -566,27 +558,30 @@ int* getVariable(int* variable);
 int  load_variable(int* variable);
 void load_integer(int value);
 void load_string(int* string);
+void load_constantVal(int* constantVal);
 
 int  help_call_codegen(int* entry, int* procedure);
 void help_procedure_prologue(int localVariables);
 void help_procedure_epilogue(int parameters);
 
 int  gr_call(int* procedure, int* constantVal);
-int  gr_factor(int* constantVal, int* branches, int* level);
-int  gr_term(int* constantVal, int* branches, int* level);
-int  gr_simpleExpression(int* constantVal, int* branches, int* level);
-int  gr_shiftExpression(int* constantVal, int* branches, int* level);
-int  gr_expression(int* constantVal, int* branches, int* level);
-int  gr_boolAndExpression(int* constantVal, int* branches, int* level);
-int  gr_boolOrExpression(int* constantVal, int* branches, int* level);
+void gr_arrayFactor(int* constantVal);
+int  gr_factor(int* constantVal, int* branches);
+int  gr_term(int* constantVal, int* branches);
+int  gr_simpleExpression(int* constantVal, int* branches);
+int  gr_shiftExpression(int* constantVal, int* branches);
+int  gr_expression(int* constantVal, int* branches);
+int  gr_boolAndExpression(int* constantVal, int* branches);
+int  gr_boolOrExpression(int* constantVal, int* branches);
 void gr_while(int* constantVal);
 void gr_if(int* constantVal);
 void gr_return(int returnType, int* constantVal);
+void gr_arrayStatement(int* constantVal);
 void gr_statement(int* constantVal);
 int  gr_type();
+int  gr_struct(int whichTable, int* structName);
 int  gr_parameter(int offset);
 int  gr_variable(int offset);
-int  gr_struct(int whichTable, int* structName);
 void gr_initialization(int* name, int offset, int type);
 void gr_procedure(int* procedure, int returnType, int* constantVal);
 void gr_cstar();
@@ -598,6 +593,8 @@ int allocatedTemporaries = 0; // number of allocated temporaries
 int allocatedMemory = 0; // number of bytes for global variables and strings
 
 int returnBranches  = 0; // fixup chain for return statements
+
+int  bLevel = 0;  // level for branches fixup chain
 
 int* currentProcedureName = (int*) 0; // name of currently parsed procedure
 
@@ -829,7 +826,7 @@ void fixup_relativeToAddr(int fromAddress, int toAddress);
 void fixup_absolute(int fromAddress, int toAddress);
 void fixlink_absolute(int fromAddress, int toAddress);
 void fixup_boolExprLevelZero(int* branches, int conditionalAddress);
-void fixup_boolExpr(int* branches, int* forwardBranchPt);
+void fixup_boolExpr(int* branches, int* forwardBranchPt1, int* forwardBranchPt2);
 
 int copyStringToBinary(int* s, int a);
 
@@ -900,8 +897,9 @@ int SYSCALL_WRITE  = 4004;
 int SYSCALL_OPEN   = 4005;
 
 int SYSCALL_MALLOC = 4045;
-
 int SYSCALL_FREE   = 4046;
+
+int* freeList = (int*) 0;
 
 // -----------------------------------------------------------------
 // ----------------------- HYPSTER SYSCALLS ------------------------
@@ -1668,7 +1666,7 @@ void printLineNumber(int* message, int line) {
 }
 
 void syntaxErrorMessage(int* message) {
-  printLineNumber((int*) "error", lineNumber / 2);
+  printLineNumber((int*) "error", lineNumber);
 
   print(message);
 
@@ -1676,7 +1674,7 @@ void syntaxErrorMessage(int* message) {
 }
 
 void syntaxErrorCharacter(int expected) {
-  printLineNumber((int*) "error", lineNumber / 2);
+  printLineNumber((int*) "error", lineNumber);
 
   printCharacter(expected);
   print((int*) " expected but ");
@@ -1975,7 +1973,12 @@ int getSymbol() {
   } else if (character == CHAR_PLUS) {
     getCharacter();
 
-    symbol = SYM_PLUS;
+    if (character == CHAR_PLUS) {
+      getCharacter();
+
+      symbol = SYM_INC;
+    } else
+      symbol = SYM_PLUS;
 
   } else if (character == CHAR_DASH) {
     getCharacter();
@@ -1984,6 +1987,10 @@ int getSymbol() {
       getCharacter();
 
       symbol = SYM_RARROW;
+    } else if (character == CHAR_DASH) {
+      getCharacter();
+
+      symbol = SYM_DEC;
     } else
       symbol = SYM_MINUS;
 
@@ -2112,7 +2119,7 @@ int getSymbol() {
     exit(-1);
   }
 
-  if (prologDebug) {
+  if (debug) {
     if (symbol == SYM_IDENTIFIER)
       SYMBOLS[SYM_IDENTIFIER][1] = SYMBOLS[SYM_IDENTIFIER][1] + 1;
     else if (symbol == SYM_INTEGER)
@@ -2191,6 +2198,10 @@ int getSymbol() {
       SYMBOLS[SYM_OR][1] = SYMBOLS[SYM_OR][1] + 1;
     else if (symbol == SYM_NOT)
       SYMBOLS[SYM_NOT][1] = SYMBOLS[SYM_NOT][1] + 1;
+    else if (symbol == SYM_INC)
+      SYMBOLS[SYM_INC][1] = SYMBOLS[SYM_INC][1] + 1;
+    else if (symbol == SYM_DEC)
+      SYMBOLS[SYM_DEC][1] = SYMBOLS[SYM_DEC][1] + 1;
   }
 
   return symbol;
@@ -2754,6 +2765,18 @@ void load_string(int* string) {
   emitIFormat(OP_ADDIU, REG_GP, currentTemporary(), -allocatedMemory);
 }
 
+void load_constantVal(int* constantVal) {
+  // assert : allocated temporaries == n
+
+  if (constantVal[1] == 1) {
+    talloc();
+    emitIFormat(OP_ADDIU, REG_ZR, currentTemporary(), *constantVal);
+    constantVal[1] = 0;
+  }
+
+  // assert : allocated temporaries == n + 1
+}
+
 int help_call_codegen(int* entry, int* procedure) {
   int type;
 
@@ -2858,7 +2881,8 @@ int gr_call(int* procedure, int* constantVal) {
   // assert: allocatedTemporaries == 0
 
   if (isExpression()) {
-    gr_expression(constantVal, (int*) 0, (int*) 0);
+    gr_expression(constantVal, (int*) 0);
+    load_constantVal(constantVal);
 
     // TODO: check if types/number of parameters is correct
 
@@ -2871,7 +2895,8 @@ int gr_call(int* procedure, int* constantVal) {
     while (symbol == SYM_COMMA) {
       getSymbol();
 
-      gr_expression(constantVal, (int*) 0, (int*) 0);
+      gr_expression(constantVal, (int*) 0);
+      load_constantVal(constantVal);
 
       // push more parameters onto stack
       emitIFormat(OP_ADDIU, REG_SP, REG_SP, -WORDSIZE);
@@ -2907,14 +2932,177 @@ int gr_call(int* procedure, int* constantVal) {
   return type;
 }
 
-int gr_factor(int* constantVal, int* branches, int* level) {
+void gr_arrayFactor(int* constantVal) {
+  int  type;
+  int  typeSize;
+  int* constVal2nd;
+  int* entry;
+  int* arrName;
+
+  constVal2nd = malloc(2 * WORDSIZE);
+
+  // assert: allocatedTemporaries == n
+
+  arrName = identifier;
+
+  getSymbol();
+
+  type = gr_shiftExpression(constantVal, (int*) 0);
+
+  if (type != INT_T)
+    typeWarning(INT_T, type);
+
+  if (symbol == SYM_RBRACKET) {
+    getSymbol();
+
+    entry = searchSymbolTable(local_symbol_table, arrName, ARRAY);
+    if (entry == (int*) 0)
+      entry = searchSymbolTable(global_symbol_table, arrName, ARRAY);
+    if (entry == (int*) 0)
+      entry = searchSymbolTable(local_symbol_table, arrName, VARIABLE);
+    if (entry == (int*) 0)
+      entry = searchSymbolTable(global_symbol_table, arrName, VARIABLE);
+
+    talloc();
+    if (getClass(entry) == VARIABLE)
+      emitIFormat(OP_LW, getScope(entry), currentTemporary(), getAddress(entry));
+    else
+      emitIFormat(OP_ADDIU, REG_ZR, currentTemporary(), getAddress(entry));
+
+    // assert: allocatedTemporaries == n(+1) + 1
+
+    if (getType(entry) == INT_T)
+      typeSize = SIZEOFINT;
+    else
+      typeSize = SIZEOFINTSTAR;
+
+    // identifier "[" shiftExpression "]" "[" shiftExpression "]"
+    if (symbol == SYM_LBRACKET) {
+      getSymbol();
+
+      type = gr_shiftExpression(constVal2nd, (int*) 0);
+
+      if (type != INT_T)
+        typeWarning(INT_T, type);
+
+      // assert: allocatedTemporaries == n(+1)(+1) + 1
+
+      if (symbol == SYM_RBRACKET) {
+        getSymbol();
+
+        if (constantVal[1] == 1) {
+          if (constVal2nd[1] == 1) {
+            // assert: allocatedTemporaries == n + 1
+
+            talloc();
+            emitIFormat(OP_ADDIU, REG_ZR, currentTemporary(), (*constantVal * getValue(entry) + *constVal2nd)  * typeSize);
+
+            // assert: allocatedTemporaries == n + 2
+          } else {
+            // assert: allocatedTemporaries == n + 2
+
+            talloc();
+            emitIFormat(OP_ADDIU, REG_ZR, currentTemporary(), (*constantVal * getValue(entry)));
+            emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary(), previousTemporary(), FCT_ADDU);
+            tfree(1);
+
+            emitIFormat(OP_ADDIU, REG_ZR, nextTemporary(), typeSize);
+            emitRFormat(OP_SPECIAL, currentTemporary(), nextTemporary(), 0, FCT_MULTU);
+            emitRFormat(OP_SPECIAL, 0, 0, currentTemporary(), FCT_MFLO);
+
+            // assert: allocatedTemporaries == n + 2
+          }
+          emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), FCT_SUBU);
+          tfree(1);
+
+          // assert: allocatedTemporaries == n + 1
+        } else {
+          emitIFormat(OP_ADDIU, REG_ZR, nextTemporary(), getValue(entry));
+          if (constVal2nd[1] == 1) {
+            // assert: allocatedTemporaries == n + 2
+
+            emitRFormat(OP_SPECIAL, previousTemporary(), nextTemporary(), 0, FCT_MULTU);
+            emitRFormat(OP_SPECIAL, 0, 0, previousTemporary(), FCT_MFLO);
+
+            emitIFormat(OP_ADDIU, REG_ZR, nextTemporary(), *constVal2nd);
+            emitRFormat(OP_SPECIAL, previousTemporary(), nextTemporary(), previousTemporary(), FCT_ADDU);
+            talloc();
+            // assert: allocatedTemporaries == n + 3
+          } else {
+            // assert: allocatedTemporaries == n + 3
+
+            emitRFormat(OP_SPECIAL, previousTemporary() - 1, nextTemporary(), 0, FCT_MULTU);
+            emitRFormat(OP_SPECIAL, 0, 0, previousTemporary() - 1, FCT_MFLO);
+
+            emitRFormat(OP_SPECIAL, previousTemporary() - 1, currentTemporary(), previousTemporary() - 1, FCT_ADDU);
+          }
+          emitIFormat(OP_ADDIU, REG_ZR, currentTemporary(), typeSize);
+          emitRFormat(OP_SPECIAL, previousTemporary() - 1, currentTemporary(), 0, FCT_MULTU);
+          emitRFormat(OP_SPECIAL, 0, 0, previousTemporary() - 1, FCT_MFLO);
+          tfree(1);
+          emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary(), previousTemporary(), FCT_SUBU);
+          tfree(1);
+
+          // assert: allocatedTemporaries == n + 1
+        }
+        // assert: allocatedTemporaries == n + 1
+
+        emitRFormat(OP_SPECIAL, getScope(entry), currentTemporary(), currentTemporary(), FCT_ADDU);
+      } else
+        syntaxErrorSymbol(SYM_RBRACKET);
+    } else {
+      // identifier "[" shiftExpression "]"
+
+      if (constantVal[1] == 1) {
+        // assert: allocatedTemporaries == n + 1
+
+        if (*constantVal < 0)
+          syntaxErrorMessage((int*) "only positive integers as array selector allowed");
+        else
+          // assert: allocatedTemporaries == n + 1
+
+          emitIFormat(OP_ADDIU, REG_ZR, nextTemporary(), *constantVal * typeSize);
+          if (getClass(entry) == ARRAY) {
+            if (*constantVal >= getSize(entry))
+              syntaxErrorMessage((int*) "array selector exceeds array size");
+            else {
+              emitRFormat(OP_SPECIAL, currentTemporary(), nextTemporary(), currentTemporary(), FCT_SUBU);
+
+              emitRFormat(OP_SPECIAL, getScope(entry), currentTemporary(), currentTemporary(), FCT_ADDU);
+            }
+          } else {
+            emitRFormat(OP_SPECIAL, currentTemporary(), nextTemporary(), currentTemporary(), FCT_ADDU);
+          }
+      } else {
+        // assert: allocatedTemporaries == n + 2
+
+        emitIFormat(OP_ADDIU, REG_ZR, nextTemporary(), 2);
+        emitRFormat(OP_SPECIAL, nextTemporary(), previousTemporary(), previousTemporary(), FCT_SLLV);
+
+        if (getClass(entry) == ARRAY) {
+          emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary(), previousTemporary(), FCT_SUBU);
+          tfree(1);
+
+          emitRFormat(OP_SPECIAL, getScope(entry), currentTemporary(), currentTemporary(), FCT_ADDU);
+        } else {
+          emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary(), previousTemporary(), FCT_ADDU);
+          tfree(1);
+        }
+      }
+      // assert: allocatedTemporaries == n + 1
+    }
+    emitIFormat(OP_LW, currentTemporary(), currentTemporary(), 0);
+
+  } else
+    syntaxErrorSymbol(SYM_RBRACKET);
+  *(constantVal + 1) = 0;
+}
+
+int gr_factor(int* constantVal, int* branches) {
   int hasCast;
   int cast;
   int type;
-  int typeSize;
-  int constantValLeft;
   int* entry;
-  int* strct_entry;
   int* variableOrProcedureName;
 
   // assert: n = allocatedTemporaries
@@ -2966,11 +3154,11 @@ int gr_factor(int* constantVal, int* branches, int* level) {
             syntaxErrorSymbol(SYM_RPARENTHESIS);
         }
       }
-      // not a cast: "(" expression ")"
+    // not a cast: "(" expression ")"
     } else {
-      if (level != (int*) 0)
-        *level = *level + 1;
-      type = gr_boolOrExpression(constantVal, branches, level);
+      bLevel = bLevel + 1;
+      type = gr_boolOrExpression(constantVal, branches);
+      bLevel = bLevel - 1;
 
       if (symbol == SYM_RPARENTHESIS)
         getSymbol();
@@ -2997,7 +3185,8 @@ int gr_factor(int* constantVal, int* branches, int* level) {
     } else if (symbol == SYM_LPARENTHESIS) {
       getSymbol();
 
-      type = gr_expression(constantVal, branches, level);
+      type = gr_expression(constantVal, (int*) 0);
+      load_constantVal(constantVal);
 
       if (symbol == SYM_RPARENTHESIS)
         getSymbol();
@@ -3009,14 +3198,12 @@ int gr_factor(int* constantVal, int* branches, int* level) {
     if (type != INTSTAR_T)
       typeWarning(INTSTAR_T, type);
 
-    if (constantVal[1] == 1)
-      load_integer(*constantVal);
     // dereference
     emitIFormat(OP_LW, currentTemporary(), currentTemporary(), 0);
 
     type = INT_T;
 
-    // identifier?
+  // identifier?
   } else if (symbol == SYM_IDENTIFIER) {
     variableOrProcedureName = identifier;
 
@@ -3036,193 +3223,28 @@ int gr_factor(int* constantVal, int* branches, int* level) {
       // reset return register
       emitIFormat(OP_ADDIU, REG_ZR, REG_V0, 0);
 
-      // identifier "[" expression "]"
+    // identifier "[" shiftExpression "]"
     } else if (symbol == SYM_LBRACKET) {
-      getSymbol();
+      gr_arrayFactor(constantVal);
 
-      // assert: allocatedTemporaries == n
+      // assert: allocatedTemporaries == n + 1
 
-      type = gr_shiftExpression(constantVal, (int*) 0, (int*) 0);
-
-      if (type != INT_T)
-        typeWarning(INT_T, type);
-
-      if (symbol == SYM_RBRACKET) {
-        getSymbol();
-
-        entry = searchSymbolTable(local_symbol_table, variableOrProcedureName, ARRAY);
-        if (entry == (int*) 0)
-          entry = searchSymbolTable(global_symbol_table, variableOrProcedureName, ARRAY);
-        if (entry == (int*) 0)
-          entry = searchSymbolTable(local_symbol_table, variableOrProcedureName, VARIABLE);
-        if (entry == (int*) 0)
-          entry = searchSymbolTable(global_symbol_table, variableOrProcedureName, VARIABLE);
-
-        talloc();
-        if (getClass(entry) == VARIABLE)
-          emitIFormat(OP_LW, getScope(entry), currentTemporary(), getAddress(entry));
-        else
-          emitIFormat(OP_ADDIU, REG_ZR, currentTemporary(), getAddress(entry));
-
-        // assert: allocatedTemporaries == n(+1) + 1
-
-        if (getType(entry) == INT_T)
-          typeSize = SIZEOFINT;
-        else
-          typeSize = SIZEOFINTSTAR;
-
-        // identifier "[" expression "]" "[" expression "]"
-        if (symbol == SYM_LBRACKET) {
-          getSymbol();
-
-          if (constantVal[1] == 1)
-            constantValLeft = *constantVal;
-          else
-            constantValLeft = -1;
-
-          type = gr_shiftExpression(constantVal, (int*) 0, (int*) 0);
-
-          if (type != INT_T)
-            typeWarning(INT_T, type);
-
-          // assert: allocatedTemporaries == n(+1)(+1) + 1
-
-          if (symbol == SYM_RBRACKET) {
-            getSymbol();
-
-            if (constantValLeft > -1) {
-              if (constantVal[1] == 1) {
-                // assert: allocatedTemporaries == n + 1
-
-                emitIFormat(OP_ADDIU, REG_ZR, nextTemporary(), (constantValLeft * getValue(entry) + *constantVal)  * typeSize);
-                emitRFormat(OP_SPECIAL, currentTemporary(), nextTemporary(), currentTemporary(), FCT_SUBU);
-              } else {
-                // assert: allocatedTemporaries == n + 2
-
-                talloc();
-                emitIFormat(OP_ADDIU, REG_ZR, currentTemporary(), constantValLeft);
-                emitIFormat(OP_ADDIU, REG_ZR, nextTemporary(), getValue(entry));
-                emitRFormat(OP_SPECIAL, currentTemporary(), nextTemporary(), 0, FCT_MULTU);
-                emitRFormat(OP_SPECIAL, 0, 0, currentTemporary(), FCT_MFLO);
-
-                emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary(), previousTemporary(), FCT_ADDU);
-                tfree(1);
-
-                emitIFormat(OP_ADDIU, REG_ZR, nextTemporary(), typeSize);
-                emitRFormat(OP_SPECIAL, currentTemporary(), nextTemporary(), 0, FCT_MULTU);
-                emitRFormat(OP_SPECIAL, 0, 0, currentTemporary(), FCT_MFLO);
-
-                emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), FCT_SUBU);
-                tfree(1);
-
-                // assert: allocatedTemporaries == n + 1
-              }
-            } else {
-              if (constantVal[1] == 1) {
-                // assert: allocatedTemporaries == n + 2
-
-                emitIFormat(OP_ADDIU, REG_ZR, nextTemporary(), getValue(entry));
-                emitRFormat(OP_SPECIAL, previousTemporary(), nextTemporary(), 0, FCT_MULTU);
-                emitRFormat(OP_SPECIAL, 0, 0, previousTemporary(), FCT_MFLO);
-
-                emitIFormat(OP_ADDIU, REG_ZR, nextTemporary(), *constantVal);
-                emitRFormat(OP_SPECIAL, previousTemporary(), nextTemporary(), previousTemporary(), FCT_ADDU);
-
-                emitIFormat(OP_ADDIU, REG_ZR, nextTemporary(), typeSize);
-                emitRFormat(OP_SPECIAL, previousTemporary(), nextTemporary(), 0, FCT_MULTU);
-                emitRFormat(OP_SPECIAL, 0, 0, previousTemporary(), FCT_MFLO);
-
-                emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary(), previousTemporary(), FCT_SUBU);
-                tfree(1);
-
-                // assert: allocatedTemporaries == n + 1
-              } else {
-                // assert: allocatedTemporaries == n + 3
-
-                emitIFormat(OP_ADDIU, REG_ZR, nextTemporary(), getValue(entry));
-                emitRFormat(OP_SPECIAL, previousTemporary() - 1, nextTemporary(), 0, FCT_MULTU);
-                emitRFormat(OP_SPECIAL, 0, 0, previousTemporary() - 1, FCT_MFLO);
-
-                emitRFormat(OP_SPECIAL, previousTemporary() - 1, currentTemporary(), previousTemporary() - 1, FCT_ADDU);
-
-                emitIFormat(OP_ADDIU, REG_ZR, currentTemporary(), typeSize);
-                emitRFormat(OP_SPECIAL, previousTemporary() - 1, currentTemporary(), 0, FCT_MULTU);
-                emitRFormat(OP_SPECIAL, 0, 0, previousTemporary() - 1, FCT_MFLO);
-                tfree(1);
-
-                emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary(), previousTemporary(), FCT_SUBU);
-                tfree(1);
-
-                // assert: allocatedTemporaries == n + 1
-              }
-            }
-            // assert: allocatedTemporaries == n + 1
-
-            emitRFormat(OP_SPECIAL, getScope(entry), currentTemporary(), currentTemporary(), FCT_ADDU);
-            emitIFormat(OP_LW, currentTemporary(), currentTemporary(), 0);
-          } else
-            syntaxErrorSymbol(SYM_RBRACKET);
-        } else {
-          // identifier "[" expression "]"
-
-          if (constantVal[1] == 1) {
-            // assert: allocatedTemporaries == n + 1
-
-            if (*constantVal < 0)
-              syntaxErrorMessage((int*) "only positive integers as array selector allowed");
-            else
-              // assert: allocatedTemporaries == n + 1
-
-              emitIFormat(OP_ADDIU, REG_ZR, nextTemporary(), *constantVal * typeSize);
-              if (getClass(entry) == ARRAY) {
-                if (*constantVal >= getSize(entry))
-                  syntaxErrorMessage((int*) "array selector exceeds array size");
-                else {
-                  emitRFormat(OP_SPECIAL, currentTemporary(), nextTemporary(), currentTemporary(), FCT_SUBU);
-
-                  emitRFormat(OP_SPECIAL, getScope(entry), currentTemporary(), currentTemporary(), FCT_ADDU);
-                }
-              } else {
-                emitRFormat(OP_SPECIAL, currentTemporary(), nextTemporary(), currentTemporary(), FCT_ADDU);
-              }
-              emitIFormat(OP_LW, currentTemporary(), currentTemporary(), 0);
-          } else {
-
-            // assert: allocatedTemporaries == n + 2
-
-            emitIFormat(OP_ADDIU, REG_ZR, nextTemporary(), 2);
-            emitRFormat(OP_SPECIAL, nextTemporary(), previousTemporary(), previousTemporary(), FCT_SLLV);
-
-            if (getClass(entry) == ARRAY) {
-              emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary(), previousTemporary(), FCT_SUBU);
-              tfree(1);
-
-              emitRFormat(OP_SPECIAL, getScope(entry), currentTemporary(), currentTemporary(), FCT_ADDU);
-            } else {
-              emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary(), previousTemporary(), FCT_ADDU);
-              tfree(1);
-            }
-            emitIFormat(OP_LW, currentTemporary(), currentTemporary(), 0);
-          }
-          // assert: allocatedTemporaries == n + 1
-        }
-      } else
-        syntaxErrorSymbol(SYM_RBRACKET);
-      *(constantVal + 1) = 0;
-    } else if (symbol == SYM_DOT) {
+    } else if ((symbol == SYM_DOT) || (symbol == SYM_RARROW)) {
       getSymbol();
 
       entry = searchSymbolTable(local_symbol_table, variableOrProcedureName, VARIABLE);
       if (entry == (int*) 0)
         entry = searchSymbolTable(global_symbol_table, variableOrProcedureName, VARIABLE);
-      if (getType(entry) == STRUCT_T) {
+      if ((getType(entry) == STRUCT_T) || (getType(entry) == STRUCT_PT_T)) {
         if (symbol == SYM_IDENTIFIER) {
           getSymbol();
 
-          strct_entry = (int*) getValue(entry);
+          // misued variableOrProcedureName for struct_entry
+          variableOrProcedureName = (int*) getValue(entry);
+          type = getMemberType(variableOrProcedureName,identifier);
 
           talloc();
-          emitIFormat(OP_ADDIU, REG_ZR, currentTemporary(), getAddress(entry) - getMemberOffset(strct_entry, identifier) * WORDSIZE);
+          emitIFormat(OP_ADDIU, REG_ZR, currentTemporary(), getAddress(entry) - getMemberOffset(variableOrProcedureName, identifier) * WORDSIZE);
           emitRFormat(OP_SPECIAL, getScope(entry), currentTemporary(), currentTemporary(), FCT_ADDU);
           emitIFormat(OP_LW, currentTemporary(), currentTemporary(), 0);
 
@@ -3230,32 +3252,10 @@ int gr_factor(int* constantVal, int* branches, int* level) {
         } else
           syntaxErrorSymbol(SYM_IDENTIFIER);
       } else
-        syntaxErrorMessage((int*) "expected struct for arrow usage");
-    } else if (symbol == SYM_RARROW) {
-      getSymbol();
-
-      entry = searchSymbolTable(local_symbol_table, variableOrProcedureName, VARIABLE);
-      if (entry == (int*) 0)
-        entry = searchSymbolTable(global_symbol_table, variableOrProcedureName, VARIABLE);
-      if (getType(entry) == STRUCT_PT_T) {
-        if (symbol == SYM_IDENTIFIER) {
-          getSymbol();
-
-          strct_entry = (int*) getValue(entry);
-
-          talloc();
-          emitIFormat(OP_ADDIU, REG_ZR, currentTemporary(), getAddress(entry) - getMemberOffset(strct_entry, identifier) * WORDSIZE);
-          emitRFormat(OP_SPECIAL, getScope(entry), currentTemporary(), currentTemporary(), FCT_ADDU);
-          emitIFormat(OP_LW, currentTemporary(), currentTemporary(), 0);
-
-          // assert: allocatedTemporaries == n + 1
-        } else
-          syntaxErrorSymbol(SYM_IDENTIFIER);
-      } else
-        syntaxErrorMessage((int*) "expected struct for arrow usage");
+        syntaxErrorMessage((int*) "struct expected!");
     } else {
-        // variable access: identifier
-        type = load_variable(variableOrProcedureName);
+      // variable access: identifier
+      type = load_variable(variableOrProcedureName);
     }
 
   // integer?
@@ -3269,44 +3269,46 @@ int gr_factor(int* constantVal, int* branches, int* level) {
 
   // character?
   } else if (symbol == SYM_CHARACTER) {
-  talloc();
+    talloc();
 
-  emitIFormat(OP_ADDIU, REG_ZR, currentTemporary(), literal);
+    emitIFormat(OP_ADDIU, REG_ZR, currentTemporary(), literal);
 
-  getSymbol();
+    getSymbol();
 
-  type = INT_T;
+    type = INT_T;
 
   // string?
   } else if (symbol == SYM_STRING) {
-  load_string(string);
+    load_string(string);
 
-  getSymbol();
-
-  type = INTSTAR_T;
-
-  //  "(" expression ")"
-  } else if (symbol == SYM_LPARENTHESIS) {
-  getSymbol();
-
-  type = gr_boolOrExpression(constantVal, branches, level);
-
-  if (symbol == SYM_RPARENTHESIS)
     getSymbol();
-  else
-    syntaxErrorSymbol(SYM_RPARENTHESIS);
+
+    type = INTSTAR_T;
+
+  // "(" expression ")"
+  } else if (symbol == SYM_LPARENTHESIS) {
+    getSymbol();
+
+    bLevel = bLevel + 1;
+    type = gr_boolOrExpression(constantVal, branches);
+    bLevel = bLevel - 1;
+
+    if (symbol == SYM_RPARENTHESIS)
+      getSymbol();
+    else
+      syntaxErrorSymbol(SYM_RPARENTHESIS);
   } else
-  syntaxErrorUnexpected();
+    syntaxErrorUnexpected();
 
   // assert: allocatedTemporaries == n + 1
 
   if (hasCast)
-  return cast;
+    return cast;
   else
-  return type;
+    return type;
 }
 
-int gr_term(int* constantVal, int* branches, int* level) {
+int gr_term(int* constantVal, int* branches) {
   int ltype;
   int leftFoldable;
   int leftVal;
@@ -3315,7 +3317,7 @@ int gr_term(int* constantVal, int* branches, int* level) {
 
   // assert: n = allocatedTemporaries
 
-  ltype = gr_factor(constantVal, branches, level);
+  ltype = gr_factor(constantVal, branches);
 
   // assert: allocatedTemporaries == n + 1
 
@@ -3332,7 +3334,7 @@ int gr_term(int* constantVal, int* branches, int* level) {
 
     getSymbol();
 
-    rtype = gr_factor(constantVal, branches, level);
+    rtype = gr_factor(constantVal, branches);
 
     // assert: allocatedTemporaries == n + 2
 
@@ -3350,7 +3352,8 @@ int gr_term(int* constantVal, int* branches, int* level) {
             if (operatorSymbol == SYM_MOD)
               *constantVal = leftVal % *constantVal;
       } else {
-        load_integer(leftVal);
+        talloc();
+        emitIFormat(OP_ADDIU, REG_ZR, currentTemporary(), leftVal);
 
         if (operatorSymbol == SYM_ASTERISK) {
           emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), 0, FCT_MULTU);
@@ -3371,9 +3374,7 @@ int gr_term(int* constantVal, int* branches, int* level) {
         tfree(1);
       }
     } else {
-      if (constantVal[1] == 1)
-        load_integer(*constantVal);
-      constantVal[1] = 0;
+      load_constantVal(constantVal);
 
       if (operatorSymbol == SYM_ASTERISK) {
         emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), 0, FCT_MULTU);
@@ -3400,7 +3401,7 @@ int gr_term(int* constantVal, int* branches, int* level) {
   return ltype;
 }
 
-int gr_simpleExpression(int* constantVal, int* branches, int* level) {
+int gr_simpleExpression(int* constantVal, int* branches) {
   int sign;
   int ltype;
   int leftFoldable;
@@ -3431,15 +3432,9 @@ int gr_simpleExpression(int* constantVal, int* branches, int* level) {
   } else
     sign = 0;
 
-  ltype = gr_term(constantVal, branches, level);
+  ltype = gr_term(constantVal, branches);
 
   // assert: allocatedTemporaries == n + 1
-
-  if(constantVal[1] == 1){
-    leftFoldable = 1;
-    leftVal = *constantVal;
-  } else
-    leftFoldable = 0;
 
   if (sign) {
     if (ltype != INT_T) {
@@ -3448,10 +3443,13 @@ int gr_simpleExpression(int* constantVal, int* branches, int* level) {
       ltype = INT_T;
     }
 
-    if(leftFoldable == 0)
+    if(constantVal[1] == 1) {
+      constantVal[1] = 0;
+      talloc();
+      emitIFormat(OP_ADDIU, REG_ZR, currentTemporary(), *constantVal);
       emitRFormat(OP_SPECIAL, REG_ZR, currentTemporary(), currentTemporary(), FCT_SUBU);
-    else
-      leftVal = 0 - leftVal;
+    } else
+      emitRFormat(OP_SPECIAL, REG_ZR, currentTemporary(), currentTemporary(), FCT_SUBU);
   }
 
   // + or -?
@@ -3466,7 +3464,7 @@ int gr_simpleExpression(int* constantVal, int* branches, int* level) {
 
     getSymbol();
 
-    rtype = gr_term(constantVal, branches, level);
+    rtype = gr_term(constantVal, branches);
 
     // assert: allocatedTemporaries == n + 2
 
@@ -3478,7 +3476,8 @@ int gr_simpleExpression(int* constantVal, int* branches, int* level) {
           *constantVal = leftVal - *constantVal;
         }
       } else {
-        load_integer(leftVal);
+        talloc();
+        emitIFormat(OP_ADDIU, REG_ZR, currentTemporary(), leftVal);
         if (operatorSymbol == SYM_PLUS) {
           if (ltype == INTSTAR_T) {
             if (rtype == INT_T)
@@ -3489,7 +3488,6 @@ int gr_simpleExpression(int* constantVal, int* branches, int* level) {
               typeWarning(ltype, rtype);
             }
           }
-
           emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), FCT_ADDU);
 
         } else {
@@ -3502,9 +3500,7 @@ int gr_simpleExpression(int* constantVal, int* branches, int* level) {
         }
       }
     } else {
-      if (constantVal[1] == 1)
-        load_integer(*constantVal);
-      constantVal[1] = 0;
+      load_constantVal(constantVal);
 
       if (operatorSymbol == SYM_PLUS) {
         if (ltype == INTSTAR_T) {
@@ -3516,7 +3512,6 @@ int gr_simpleExpression(int* constantVal, int* branches, int* level) {
             typeWarning(ltype, rtype);
           }
         }
-
         emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), FCT_ADDU);
 
       } else {
@@ -3536,14 +3531,14 @@ int gr_simpleExpression(int* constantVal, int* branches, int* level) {
   return ltype;
 }
 
-int gr_shiftExpression(int* constantVal, int* branches, int* level) {
+int gr_shiftExpression(int* constantVal, int* branches) {
   int ltype;
   int leftFoldable;
   int leftVal;
   int rtype;
   int operatorSymbol;
 
-  ltype = gr_simpleExpression(constantVal, branches, level);
+  ltype = gr_simpleExpression(constantVal, branches);
 
   //assert: allocatedTemporaries == n + 1
 
@@ -3559,7 +3554,7 @@ int gr_shiftExpression(int* constantVal, int* branches, int* level) {
 
     getSymbol();
 
-    rtype = gr_simpleExpression(constantVal, branches, level);
+    rtype = gr_simpleExpression(constantVal, branches);
 
     if (ltype != rtype)
       typeWarning(ltype, rtype);
@@ -3572,7 +3567,8 @@ int gr_shiftExpression(int* constantVal, int* branches, int* level) {
           *constantVal = leftVal >> *constantVal;
         }
       } else {
-        load_integer(leftVal);
+        talloc();
+        emitIFormat(OP_ADDIU, REG_ZR, currentTemporary(), leftVal);
         if (operatorSymbol == SYM_SLLV) {
           emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), FCT_SLLV);
         } else {
@@ -3582,9 +3578,7 @@ int gr_shiftExpression(int* constantVal, int* branches, int* level) {
         }
       }
     } else {
-      if(constantVal[1] == 1)
-        load_integer(*constantVal);
-      constantVal[1] = 0;
+      load_constantVal(constantVal);
 
       if (operatorSymbol == SYM_SLLV) {
         emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary(), previousTemporary(), FCT_SLLV);
@@ -3602,7 +3596,7 @@ int gr_shiftExpression(int* constantVal, int* branches, int* level) {
   return ltype;
 }
 
-int gr_expression(int* constantVal, int* branches, int* level) {
+int gr_expression(int* constantVal, int* branches) {
   int ltype;
   int leftFoldable;
   int leftVal;
@@ -3611,7 +3605,7 @@ int gr_expression(int* constantVal, int* branches, int* level) {
 
   // assert: n = allocatedTemporaries
 
-  ltype = gr_shiftExpression(constantVal, branches, level);
+  ltype = gr_shiftExpression(constantVal, branches);
 
   // assert: allocatedTemporaries == n + 1
 
@@ -3626,7 +3620,7 @@ int gr_expression(int* constantVal, int* branches, int* level) {
       leftFoldable = 0;
 
     getSymbol();
-    rtype = gr_shiftExpression(constantVal, branches, level);
+    rtype = gr_shiftExpression(constantVal, branches);
 
     // assert: allocatedTemporaries == n + 2
 
@@ -3649,7 +3643,8 @@ int gr_expression(int* constantVal, int* branches, int* level) {
           *constantVal = (leftVal >= *constantVal);
         }
       } else {
-        load_integer(leftVal);
+        talloc();
+        emitIFormat(OP_ADDIU, REG_ZR, currentTemporary(), leftVal);
         if (operatorSymbol == SYM_EQUALITY) {
           // subtract, if result = 0 then 1, else 0
           emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary(), previousTemporary(), FCT_SUBU);
@@ -3708,9 +3703,7 @@ int gr_expression(int* constantVal, int* branches, int* level) {
         }
       }
     } else {
-      if (constantVal[1] == 1)
-        load_integer(*constantVal);
-      constantVal[1] = 0;
+      load_constantVal(constantVal);
 
       if (operatorSymbol == SYM_EQUALITY) {
         // subtract, if result = 0 then 1, else 0
@@ -3770,25 +3763,24 @@ int gr_expression(int* constantVal, int* branches, int* level) {
       }
     }
   }
-  if (constantVal[1] == 1)
-    load_integer(*constantVal);
-  constantVal[1] = 0;
-
-  // assert: allocatedTemporaries == n + 1
+  // assert: allocatedTemporaries == n (+ 1
 
   return ltype;
 }
 
-int gr_boolAndExpression(int* constantVal, int* branches, int* level) {
-  int* tempBrPt;
+int gr_boolAndExpression(int* constantVal, int* branches) {
   int  type;
+  int* tempBrPt1;
+  int* tempBrPt2;
 
-  type = gr_expression(constantVal, branches, level);
+  type = gr_expression(constantVal, branches);
 
-  // assert: allocated Temporaries == n + 1
+  // assert: allocated Temporaries == n (+ 1)
 
   while (symbol == SYM_AND) {
     getSymbol();
+
+    load_constantVal(constantVal);
 
     // assert: allocated Temporaries = m
 
@@ -3798,7 +3790,8 @@ int gr_boolAndExpression(int* constantVal, int* branches, int* level) {
       if (symbol == SYM_LPARENTHESIS) {
         getSymbol();
 
-        type = gr_boolOrExpression(constantVal, branches, level);
+        type = gr_boolOrExpression(constantVal, branches);
+        load_constantVal(constantVal);
 
         // assert: allocated Temporaries == m + 1
 
@@ -3814,28 +3807,34 @@ int gr_boolAndExpression(int* constantVal, int* branches, int* level) {
       } else
         syntaxErrorSymbol(SYM_LPARENTHESIS);
     } else {
-      type = gr_expression(constantVal, branches, level);
-
-      // assert: allocated Temporaries == m + 1
+      type = gr_expression(constantVal, branches);
+      load_constantVal(constantVal);
     }
-    tempBrPt = malloc(4 * WORDSIZE);
-    *tempBrPt = (int) branches;
-    tempBrPt[1] = binaryLength;
-    tempBrPt[2] = 0;
-    tempBrPt[3] = *level;
-    branches = tempBrPt;
+    // assert: allocated Temporaries == m + 1
 
+    // PROLOG : replace with struct (pointer) when boolean finished
+    // branches[4]: fixup chain for conditional (boolean) expression for if/while
+    //    branches[0] = pointer to next to-be-fixed branch instruction
+    //    branches[1] = binary address for to-be-fixed instruction
+    //    branches[2] = flag for AND or OR: 0 = AND; 1 = OR
+    //    branches[3] = level
+    tempBrPt1 = malloc(4 * WORDSIZE);
+    tempBrPt2 = malloc(4 * WORDSIZE);
+    tempBrPt1[2] = 0;
+    tempBrPt1[3] = bLevel;
+    tempBrPt2[2] = 0;
+    tempBrPt2[3] = bLevel;
+
+    tempBrPt1[1] = binaryLength;
     emitIFormat(OP_BEQ, REG_ZR, previousTemporary(), 0);
 
-    tempBrPt = malloc(4 * WORDSIZE);
-    *tempBrPt = (int) branches;
-    tempBrPt[1] = binaryLength;
-    tempBrPt[2] = 0;
-    tempBrPt[3] = *level;
-    branches = tempBrPt;
-
+    tempBrPt2[1] = binaryLength;
     emitIFormat(OP_BEQ, REG_ZR, currentTemporary(), 0);
     tfree(1);
+
+    *tempBrPt1 = *branches;
+    *tempBrPt2 = (int) tempBrPt1;
+    *branches  = (int) tempBrPt2;
 
     // assert: allocated Temporaries == m
   }
@@ -3843,11 +3842,10 @@ int gr_boolAndExpression(int* constantVal, int* branches, int* level) {
   return type;
 }
 
-int gr_boolOrExpression(int* constantVal, int* branches, int* level) {
-  int* tempBrPt;
+int gr_boolOrExpression(int* constantVal, int* branches) {
   int  type;
-
-  type = 0;
+  int* tempBrPt1;
+  int* tempBrPt2;
 
   if (symbol == SYM_NOT) {
     getSymbol();
@@ -3855,7 +3853,8 @@ int gr_boolOrExpression(int* constantVal, int* branches, int* level) {
     if (symbol == SYM_LPARENTHESIS) {
       getSymbol();
 
-      type = gr_boolOrExpression(constantVal, branches, level);
+      type = gr_boolOrExpression(constantVal, branches);
+      load_constantVal(constantVal);
 
       // assert: allocated Temporaries == n + 1
 
@@ -3871,13 +3870,15 @@ int gr_boolOrExpression(int* constantVal, int* branches, int* level) {
     } else
       syntaxErrorSymbol(SYM_LPARENTHESIS);
   } else {
-    type = gr_boolAndExpression(constantVal, branches, level);
+    type = gr_boolAndExpression(constantVal, branches);
 
     // assert: allocated Temporaries == n + 1
   }
 
   while (symbol == SYM_OR) {
     getSymbol();
+
+    load_constantVal(constantVal);
 
     // assert: allocated Temporaries == m
 
@@ -3887,9 +3888,10 @@ int gr_boolOrExpression(int* constantVal, int* branches, int* level) {
       if (symbol == SYM_LPARENTHESIS) {
         getSymbol();
 
-        type = gr_boolOrExpression(constantVal, branches, level);
+        type = gr_boolOrExpression(constantVal, branches);
+        load_constantVal(constantVal);
 
-        // assert: allocated Temporaries == n + 1
+        // assert: allocated Temporaries == m + 1
 
         if (symbol == SYM_RPARENTHESIS) {
           getSymbol();
@@ -3903,32 +3905,30 @@ int gr_boolOrExpression(int* constantVal, int* branches, int* level) {
       } else
         syntaxErrorSymbol(SYM_LPARENTHESIS);
     } else {
-      type = gr_boolAndExpression(constantVal, branches, level);
-
-      // assert: allocated Temporaries == m + 1
+      type = gr_boolAndExpression(constantVal, branches);
+      load_constantVal(constantVal);
     }
-    emitIFormat(OP_BEQ, REG_ZR, previousTemporary(), 4);
+    // assert: allocated Temporaries == m + 1
 
-    tempBrPt = malloc(4 * WORDSIZE);
-    *tempBrPt = (int) branches;
-    tempBrPt[1] = binaryLength;
-    tempBrPt[2] = 1;
-    tempBrPt[3] = *level;
-    branches = tempBrPt;
+    tempBrPt1 = malloc(4 * WORDSIZE); // look gr_boolAndExpression for info
+    tempBrPt2 = malloc(4 * WORDSIZE);
+    tempBrPt1[2] = 1;
+    tempBrPt1[3] = bLevel;
+    tempBrPt2[2] = 1;
+    tempBrPt2[3] = bLevel;
 
+    emitIFormat(OP_BEQ, REG_ZR, previousTemporary(), 3);
+
+    tempBrPt1[1] = binaryLength;
     emitIFormat(OP_BEQ, REG_ZR, REG_ZR, 0);
 
-    tempBrPt = malloc(4 * WORDSIZE);
-    *tempBrPt = (int) branches;
-    tempBrPt[1] = binaryLength;
-    tempBrPt[2] = 1;
-    tempBrPt[3] = *level;
-    branches = tempBrPt;
-
+    tempBrPt2[1] = binaryLength;
     emitIFormat(OP_BEQ, REG_ZR, currentTemporary(), 0);
     tfree(1);
 
-    emitIFormat(OP_ADDIU, REG_ZR, currentTemporary(), 1);
+    *tempBrPt1 = *branches;
+    *tempBrPt2 = (int) tempBrPt1;
+    *branches  = (int) tempBrPt2;
 
     // assert: allocated Temporaries == m
   }
@@ -3940,21 +3940,13 @@ void gr_while(int* constantVal) {
   int  conditionalAddress;
   int  brBackToWhile;
   int* branches;
-  int* level;
 
   // assert: allocatedTemporaries == 0
 
-  // PROLOG : replace with struct when completed
-  // branches[4]:
-  //    branches[0] = pointer to next to-be-fixed branch instruction
-  //    branches[1] = binary address for to-be-fixed instruction
-  //    branches[2] = flag for AND or OR: 0 = AND; 1 = OR
-  //    branches[3] = level
-  // terminal entry (doesn't need more space than this)
-  branches = malloc(WORDSIZE);
+  // pointer to head of branches chain
+  branches = malloc(WORDSIZE); // branches[4]: look gr_boolAndExpression for info
   *branches = 0;
-  level = malloc(WORDSIZE);
-  *level = 0;
+  bLevel = 0;
 
   brBackToWhile = binaryLength;
 
@@ -3965,14 +3957,13 @@ void gr_while(int* constantVal) {
     if (symbol == SYM_LPARENTHESIS) {
       getSymbol();
 
-      gr_boolOrExpression(constantVal, branches, level);
+      gr_boolOrExpression(constantVal, branches);
+      load_constantVal(constantVal);
 
       conditionalAddress = binaryLength;
-
-      if (*branches == 0) {
-        // misused conditionalAddress to fixup expression without boolean logic
+      // misused conditionalAddress to fixup expression without boolean logic
+      if (*branches == 0)
         emitIFormat(OP_BEQ, REG_ZR, currentTemporary(), 0);
-      }
 
       tfree(1);
 
@@ -4008,8 +3999,10 @@ void gr_while(int* constantVal) {
   emitIFormat(OP_BEQ, REG_ZR, REG_ZR, (brBackToWhile - binaryLength - WORDSIZE) / WORDSIZE);
 
   // first instruction after loop comes here
-  // now we have our address for the conditional jump from above
-  fixup_boolExprLevelZero(branches, conditionalAddress);
+  if (*branches == 0)
+    fixup_relative(conditionalAddress);
+  else
+    fixup_boolExprLevelZero(branches, conditionalAddress);
 
   // assert: allocatedTemporaries == 0
 }
@@ -4018,21 +4011,13 @@ void gr_if(int* constantVal) {
   int  conditionalAddress;
   int  brForwardToEnd;
   int* branches;
-  int* level;
 
   // assert: allocatedTemporaries == 0
 
-  // PROLOG : use struct instead when completed
-  // branches[4]:
-  //    branches[0] = pointer to next to-be-fixed branch instruction
-  //    branches[1] = binary address for to-be-fixed instruction
-  //    branches[2] = flag for AND or OR: 0 = AND; 1 = OR
-  //    branches[3] = level
-  // terminal entry (doesn't need more space than this)
-  branches = malloc(WORDSIZE);
+  // pointer to head of branches chain
+  branches = malloc(WORDSIZE); // branches[4]: look gr_boolAndExpression for info
   *branches = 0;
-  level = malloc(WORDSIZE);
-  *level = 0;
+  bLevel = 0;
 
   // if ( expression )
   if (symbol == SYM_IF) {
@@ -4041,17 +4026,15 @@ void gr_if(int* constantVal) {
     if (symbol == SYM_LPARENTHESIS) {
       getSymbol();
 
-      gr_boolOrExpression(constantVal, branches, level);
+      gr_boolOrExpression(constantVal, branches);
+      load_constantVal(constantVal);
 
       conditionalAddress = binaryLength;
-
-      if (*branches == 0) {
-        // misused conditionalAddress to fixup expression without boolean logic
+      // misused conditionalAddress to fixup expression without boolean logic
+      if (*branches == 0)
         emitIFormat(OP_BEQ, REG_ZR, currentTemporary(), 0);
-      }
 
       tfree(1);
-
 
       if (symbol == SYM_RPARENTHESIS) {
         getSymbol();
@@ -4084,7 +4067,10 @@ void gr_if(int* constantVal) {
           emitIFormat(OP_BEQ, REG_ZR, REG_ZR, 0);
 
           // if the "if" case was not true, we jump here
-          fixup_boolExprLevelZero(branches, conditionalAddress);
+          if (*branches == 0)
+            fixup_relative(conditionalAddress);
+          else
+            fixup_boolExprLevelZero(branches, conditionalAddress);
 
           // zero or more statements: { statement }
           if (symbol == SYM_LBRACE) {
@@ -4109,7 +4095,10 @@ void gr_if(int* constantVal) {
           fixup_relative(brForwardToEnd);
         } else
           // if the "if" case was not true, we jump here
-          fixup_boolExprLevelZero(branches, conditionalAddress);
+          if (*branches == 0)
+            fixup_relative(conditionalAddress);
+          else
+            fixup_boolExprLevelZero(branches, conditionalAddress);
       } else
         syntaxErrorSymbol(SYM_RPARENTHESIS);
     } else
@@ -4132,7 +4121,8 @@ void gr_return(int returnType, int* constantVal) {
 
   // optional: expression
   if (symbol != SYM_SEMICOLON) {
-    type = gr_expression(constantVal, (int*) 0, (int*) 0);
+    type = gr_expression(constantVal, (int*) 0);
+    load_constantVal(constantVal);
 
     if (returnType == VOID_T)
       typeWarning(type, returnType);
@@ -4156,19 +4146,220 @@ void gr_return(int returnType, int* constantVal) {
   // assert: allocatedTemporaries == 0
 }
 
+void gr_arrayStatement(int* constantVal) {
+  int ltype;
+  int rtype;
+  int* arrName;
+  int* entry;
+  int* constantValLeft;
+  int* constantValRight;
+
+  constantValLeft = malloc(2 * SIZEOFINT);
+  constantValRight = malloc(2 * SIZEOFINT);
+  constantValLeft[1] = 0;
+  constantValRight[1] = 0;
+
+  arrName = identifier;
+
+  getSymbol();
+
+  gr_shiftExpression(constantValLeft, (int*) 0);
+
+  // assert: allocatedTemporaries = 0 || 1
+
+  if (symbol == SYM_RBRACKET) {
+    getSymbol();
+
+    entry = searchSymbolTable(local_symbol_table, arrName, ARRAY);
+    if (entry == (int*) 0)
+      entry = searchSymbolTable(global_symbol_table, arrName, ARRAY);
+    if (entry == (int*) 0)
+        entry = searchSymbolTable(local_symbol_table, arrName, VARIABLE);
+    if (entry == (int*) 0)
+        entry = searchSymbolTable(global_symbol_table, arrName, VARIABLE);
+
+    talloc();
+    if (getClass(entry) == VARIABLE)
+      emitIFormat(OP_LW, getScope(entry), currentTemporary(), getAddress(entry));
+    else
+      emitIFormat(OP_ADDIU, REG_ZR, currentTemporary(), getAddress(entry));
+
+    // assert: allocatedTemporaries = 1 || 2
+
+    ltype = getType(entry);
+
+    // identifier "[" shiftExpression "]" "=" expression;
+    if (symbol == SYM_ASSIGN) {
+      getSymbol();
+
+      rtype = gr_expression(constantVal, (int*) 0);
+      load_constantVal(constantVal);
+
+      // assert: allocatedTemporaries = 2 || 3
+
+      if (getClass(entry) == ARRAY) {
+        if (ltype != rtype)
+          typeWarning(ltype, rtype);
+      } else if (ltype != INTSTAR_T)
+          typeWarning(ltype,INTSTAR_T);
+
+      if (ltype == INT_T)
+        ltype = SIZEOFINT;
+      else
+        ltype = SIZEOFINTSTAR;
+
+
+      if (constantValLeft[1] == 1) {
+        // assert: allocatedTemporaries = 2
+
+        emitIFormat(OP_ADDIU, REG_ZR, nextTemporary(), (*constantValLeft * ltype));
+        if (getClass(entry) == ARRAY) {
+          emitRFormat(OP_SPECIAL, previousTemporary(), nextTemporary(), previousTemporary(), FCT_SUBU);
+          emitRFormat(OP_SPECIAL, getScope(entry), previousTemporary(), previousTemporary(), FCT_ADDU);
+        } else
+          emitRFormat(OP_SPECIAL, previousTemporary(), nextTemporary(), previousTemporary(), FCT_ADDU);
+
+        emitIFormat(OP_SW, previousTemporary(), currentTemporary(), 0);
+
+        // assert: allocatedTemporaries = 2
+      } else {
+        // assert: allocatedTemporaries = 3
+
+        emitIFormat(OP_ADDIU, REG_ZR, nextTemporary(), 2);
+        emitRFormat(OP_SPECIAL, nextTemporary(), previousTemporary() - 1, previousTemporary() - 1, FCT_SLLV);
+
+        if (getClass(entry) == ARRAY) {
+          emitRFormat(OP_SPECIAL, previousTemporary(), previousTemporary() - 1, previousTemporary() - 1, FCT_SUBU);
+          emitRFormat(OP_SPECIAL, getScope(entry), previousTemporary() - 1, previousTemporary(), FCT_ADDU);
+        } else {
+          emitRFormat(OP_SPECIAL, previousTemporary(), previousTemporary() - 1, previousTemporary(), FCT_ADDU);
+        }
+        emitIFormat(OP_SW, previousTemporary(), currentTemporary(), 0);
+        tfree(1);
+      }
+      tfree(2);
+
+      // assert: allocatedTemporaries = 0;
+
+      if (symbol == SYM_SEMICOLON)
+        getSymbol();
+      else
+        syntaxErrorSymbol(SYM_SEMICOLON);
+    } else
+    // identifier "[" shiftExpression "]" "[" shiftExpression "]" "=" expression;
+    if (symbol == SYM_LBRACKET) {
+      getSymbol();
+
+      gr_shiftExpression(constantValRight, (int*) 0);
+
+      // assert: allocatedTemporaries = 0 || 1 || 2
+
+      if (symbol == SYM_RBRACKET) {
+        getSymbol();
+
+        if (symbol == SYM_ASSIGN) {
+          getSymbol();
+
+          rtype = gr_expression(constantVal, (int*) 0);
+          load_constantVal(constantVal);
+
+          // assert: allocatedTemporaries = 1 || 2 || 3
+
+          if (ltype != rtype)
+            typeWarning(ltype, rtype);
+
+          if (ltype == INT_T)
+            ltype = SIZEOFINT;
+          else
+            ltype = SIZEOFINTSTAR;
+
+          if (constantValLeft[1] == 1) {
+            if (constantValRight[1] == 1) {
+              // assert: allocatedTemporaries == 2
+
+              emitIFormat(OP_ADDIU, REG_ZR, nextTemporary(), ((*constantValLeft * getValue(entry) + *constantValRight)  * ltype));
+              emitRFormat(OP_SPECIAL, previousTemporary(), nextTemporary(), previousTemporary(), FCT_SUBU);
+            } else {
+              // assert: allocatedTemporaries == 3
+
+              talloc();
+              emitIFormat(OP_ADDIU, REG_ZR, currentTemporary(), (*constantValLeft * getValue(entry)));
+
+              emitRFormat(OP_SPECIAL, nextTemporary(), previousTemporary(), previousTemporary(), FCT_ADDU);
+              emitIFormat(OP_ADDIU, REG_ZR, nextTemporary(), ltype);
+              emitRFormat(OP_SPECIAL, previousTemporary(), nextTemporary(), 0, FCT_MULTU);
+              emitRFormat(OP_SPECIAL, 0, 0, previousTemporary(), FCT_MFLO);
+
+              emitRFormat(OP_SPECIAL, previousTemporary() - 1, previousTemporary(), previousTemporary(), FCT_SUBU);
+            }
+            emitRFormat(OP_SPECIAL, getScope(entry), previousTemporary(), previousTemporary(), FCT_ADDU);
+            emitIFormat(OP_SW, previousTemporary(), currentTemporary(), 0);
+            tfree(2);
+          } else {
+            if (constantValRight[1] == 1) {
+              // assert: allocatedTemporaries == 3
+
+              emitIFormat(OP_ADDIU, REG_ZR, nextTemporary(), getValue(entry));
+              emitRFormat(OP_SPECIAL, previousTemporary() - 1, nextTemporary(), 0, FCT_MULTU);
+              emitRFormat(OP_SPECIAL, 0, 0, previousTemporary() - 1, FCT_MFLO);
+
+              emitIFormat(OP_ADDIU, REG_ZR, nextTemporary(), *constantValRight);
+              emitRFormat(OP_SPECIAL, previousTemporary() - 1, nextTemporary(), previousTemporary() - 1, FCT_ADDU);
+
+
+              emitIFormat(OP_ADDIU, REG_ZR, nextTemporary(), ltype);
+              emitRFormat(OP_SPECIAL, previousTemporary() - 1, nextTemporary(), 0, FCT_MULTU);
+              emitRFormat(OP_SPECIAL, 0, 0, previousTemporary() - 1, FCT_MFLO);
+
+              emitRFormat(OP_SPECIAL, previousTemporary(), previousTemporary() - 1, previousTemporary(), FCT_SUBU);
+
+              emitRFormat(OP_SPECIAL, getScope(entry), previousTemporary(), previousTemporary(), FCT_ADDU);
+              emitIFormat(OP_SW, previousTemporary(), currentTemporary(), 0);
+
+              tfree(3);
+            } else {
+              // assert: allocatedTemporaries == 4
+              emitIFormat(OP_ADDIU, REG_ZR, nextTemporary(), getValue(entry));
+              emitRFormat(OP_SPECIAL, previousTemporary() - 2, nextTemporary(), 0, FCT_MULTU);
+              emitRFormat(OP_SPECIAL, 0, 0, previousTemporary() - 2, FCT_MFLO);
+
+              emitRFormat(OP_SPECIAL, previousTemporary() - 2, previousTemporary(), previousTemporary() - 2, FCT_ADDU);
+
+
+              emitIFormat(OP_ADDIU, REG_ZR, previousTemporary(), ltype);
+              emitRFormat(OP_SPECIAL, previousTemporary() - 2, previousTemporary(), 0, FCT_MULTU);
+              emitRFormat(OP_SPECIAL, 0, 0, previousTemporary() - 2, FCT_MFLO);
+
+              emitRFormat(OP_SPECIAL, previousTemporary() - 1, previousTemporary() - 2, previousTemporary(), FCT_SUBU);
+
+              emitRFormat(OP_SPECIAL, getScope(entry), previousTemporary(), previousTemporary(), FCT_ADDU);
+              emitIFormat(OP_SW, previousTemporary(), currentTemporary(), 0);
+
+              tfree(4);
+            }
+          }
+          // assert: allocatedTemporaries = 0;
+
+          if (symbol == SYM_SEMICOLON)
+            getSymbol();
+          else
+            syntaxErrorSymbol(SYM_SEMICOLON);
+        } else
+          syntaxErrorSymbol(SYM_ASSIGN);
+      } else
+        syntaxErrorSymbol(SYM_RBRACKET);
+    } else
+      syntaxErrorUnexpected();
+  } else
+    syntaxErrorSymbol(SYM_RBRACKET);
+}
+
 void gr_statement(int* constantVal) {
   int ltype;
   int rtype;
   int* variableOrProcedureName;
   int* entry;
-  int* strct_entry;
-
-  int* constantValLeft;
-  int* constantValRight;
-  constantValLeft = malloc(2 * SIZEOFINT);
-  constantValRight = malloc(2 * SIZEOFINT);
-  constantValLeft[1] = 0;
-  constantValRight[1] = 0;
+  int* struct_entry;
 
   // assert: allocatedTemporaries == 0;
 
@@ -4198,7 +4389,8 @@ void gr_statement(int* constantVal) {
       if (symbol == SYM_ASSIGN) {
         getSymbol();
 
-        rtype = gr_expression(constantVal, (int*) 0, (int*) 0);
+        rtype = gr_expression(constantVal, (int*) 0);
+        load_constantVal(constantVal);
 
         if (rtype != INT_T)
           typeWarning(INT_T, rtype);
@@ -4218,7 +4410,8 @@ void gr_statement(int* constantVal) {
     } else if (symbol == SYM_LPARENTHESIS) {
       getSymbol();
 
-      ltype = gr_expression(constantVal, (int*) 0, (int*) 0);
+      ltype = gr_expression(constantVal, (int*) 0);
+      load_constantVal(constantVal);
 
       if (ltype != INTSTAR_T)
         typeWarning(INTSTAR_T, ltype);
@@ -4230,7 +4423,8 @@ void gr_statement(int* constantVal) {
         if (symbol == SYM_ASSIGN) {
           getSymbol();
 
-          rtype = gr_expression(constantVal, (int*) 0, (int*) 0);
+          rtype = gr_expression(constantVal, (int*) 0);
+          load_constantVal(constantVal);
 
           if (rtype != INT_T)
             typeWarning(INT_T, rtype);
@@ -4249,9 +4443,8 @@ void gr_statement(int* constantVal) {
         syntaxErrorSymbol(SYM_RPARENTHESIS);
     } else
       syntaxErrorSymbol(SYM_LPARENTHESIS);
-  }
   // identifier "=" expression | call
-  else if (symbol == SYM_IDENTIFIER) {
+  } else if (symbol == SYM_IDENTIFIER) {
     variableOrProcedureName = identifier;
 
     getSymbol();
@@ -4271,14 +4464,15 @@ void gr_statement(int* constantVal) {
         syntaxErrorSymbol(SYM_SEMICOLON);
 
     // identifier = expression
-    } else if (symbol == SYM_ASSIGN) {
+  } else if (symbol == SYM_ASSIGN) {
       entry = getVariable(variableOrProcedureName);
 
       ltype = getType(entry);
 
       getSymbol();
 
-      rtype = gr_expression(constantVal, (int*) 0, (int*) 0);
+      rtype = gr_expression(constantVal, (int*) 0);
+      load_constantVal(constantVal);
 
       if (ltype != rtype)
         typeWarning(ltype, rtype);
@@ -4291,296 +4485,90 @@ void gr_statement(int* constantVal) {
         getSymbol();
       else
         syntaxErrorSymbol(SYM_SEMICOLON);
-    } else
-    // identifier "[" expression "]" ...
-    if (symbol == SYM_LBRACKET) {
+    // identifier "[" shiftExpression "]" ...
+    } else if (symbol == SYM_LBRACKET) {
+      gr_arrayStatement(constantVal);
+
+    } else if ((symbol == SYM_DOT) || (symbol == SYM_RARROW)) {
       getSymbol();
 
-      gr_shiftExpression(constantValLeft, (int*) 0, (int*) 0);
+      entry = searchSymbolTable(local_symbol_table, variableOrProcedureName, VARIABLE);
+      if (entry == (int*) 0)
+        entry = searchSymbolTable(global_symbol_table, variableOrProcedureName, VARIABLE);
+      if ((getType(entry) == STRUCT_T) || (getType(entry) == STRUCT_PT_T)) {
+        if (symbol == SYM_IDENTIFIER) {
+          getSymbol();
 
-      // assert: allocatedTemporaries = 0 || 1
+          struct_entry = (int*) getValue(entry);
 
-      if (symbol == SYM_RBRACKET) {
-        getSymbol();
+          ltype = getMemberType(struct_entry, identifier);
 
-        entry = searchSymbolTable(local_symbol_table, variableOrProcedureName, ARRAY);
-        if (entry == (int*) 0)
-          entry = searchSymbolTable(global_symbol_table, variableOrProcedureName, ARRAY);
-        if (entry == (int*) 0)
-            entry = searchSymbolTable(local_symbol_table, variableOrProcedureName, VARIABLE);
-        if (entry == (int*) 0)
-            entry = searchSymbolTable(global_symbol_table, variableOrProcedureName, VARIABLE);
+          if (symbol == SYM_ASSIGN) {
+            getSymbol();
+
+            rtype = gr_expression(constantVal, (int*) 0);
+            load_constantVal(constantVal);
+
+            if (ltype != rtype)
+              typeWarning(ltype, rtype);
+
+            if (symbol == SYM_SEMICOLON) {
+              getSymbol();
+
+              talloc();
+              emitIFormat(OP_ADDIU, REG_ZR, currentTemporary(), getAddress(entry) - getMemberOffset(struct_entry, identifier) * WORDSIZE);
+              emitRFormat(OP_SPECIAL, getScope(entry), currentTemporary(), currentTemporary(), FCT_ADDU);
+              emitIFormat(OP_SW, currentTemporary(), previousTemporary(), 0);
+              tfree(2);
+
+              // assert: allocated temporaries = 0
+            } else
+              syntaxErrorSymbol(SYM_SEMICOLON);
+          }
+        } else
+          syntaxErrorSymbol(SYM_IDENTIFIER);
+      } else
+        syntaxErrorMessage((int*) "struct expected!");
+    } else if ((symbol == SYM_INC) || (symbol == SYM_DEC)) {
+      entry = getVariable(variableOrProcedureName);
+
+      ltype = getType(entry);
+
+        if (ltype != INT_T)
+          typeWarning(ltype, INT_T);
 
         talloc();
-        if (getClass(entry) == VARIABLE)
-          emitIFormat(OP_LW, getScope(entry), currentTemporary(), getAddress(entry));
+        emitIFormat(OP_LW, getScope(entry), currentTemporary(), getAddress(entry));
+        emitIFormat(OP_ADDIU, REG_ZR, nextTemporary(), 1);
+
+        if (symbol == SYM_INC)
+          emitRFormat(OP_SPECIAL, currentTemporary(), nextTemporary(), currentTemporary(), FCT_ADDU);
         else
-          emitIFormat(OP_ADDIU, REG_ZR, currentTemporary(), getAddress(entry));
+          emitRFormat(OP_SPECIAL, currentTemporary(), nextTemporary(), currentTemporary(), FCT_SUBU);
 
-        // assert: allocatedTemporaries = 1 || 2
+        emitIFormat(OP_SW, getScope(entry), currentTemporary(), getAddress(entry));
 
-        ltype = getType(entry);
+        tfree(1);
 
-        // identifier "[" expression "]" "=" expression;
-        if (symbol == SYM_ASSIGN) {
+        getSymbol();
+
+        if (symbol == SYM_SEMICOLON)
           getSymbol();
-
-          rtype = gr_expression(constantVal, (int*) 0, (int*) 0);
-
-          // assert: allocatedTemporaries = 2 || 3
-
-          if (getClass(entry) == ARRAY) {
-            if (ltype != rtype)
-              typeWarning(ltype, rtype);
-          } else if (ltype != INTSTAR_T)
-              typeWarning(ltype,INTSTAR_T);
-
-          if (ltype == INT_T)
-            ltype = SIZEOFINT;
-          else
-            ltype = SIZEOFINTSTAR;
-
-
-          if (constantValLeft[1] == 1) {
-            // assert: allocatedTemporaries = 2
-
-            emitIFormat(OP_ADDIU, REG_ZR, nextTemporary(), (*constantValLeft * ltype));
-            if (getClass(entry) == ARRAY) {
-              emitRFormat(OP_SPECIAL, previousTemporary(), nextTemporary(), previousTemporary(), FCT_SUBU);
-              emitRFormat(OP_SPECIAL, getScope(entry), previousTemporary(), previousTemporary(), FCT_ADDU);
-            } else
-              emitRFormat(OP_SPECIAL, previousTemporary(), nextTemporary(), previousTemporary(), FCT_ADDU);
-
-            emitIFormat(OP_SW, previousTemporary(), currentTemporary(), 0);
-
-            // assert: allocatedTemporaries = 2
-
-          } else {
-
-            // assert: allocatedTemporaries = 3
-
-            emitIFormat(OP_ADDIU, REG_ZR, nextTemporary(), 2);
-            emitRFormat(OP_SPECIAL, nextTemporary(), previousTemporary() - 1, previousTemporary() - 1, FCT_SLLV);
-
-            if (getClass(entry) == ARRAY) {
-              emitRFormat(OP_SPECIAL, previousTemporary(), previousTemporary() - 1, previousTemporary() - 1, FCT_SUBU);
-
-              emitRFormat(OP_SPECIAL, getScope(entry), previousTemporary() - 1, previousTemporary(), FCT_ADDU);
-            } else {
-              emitRFormat(OP_SPECIAL, previousTemporary(), previousTemporary() - 1, previousTemporary(), FCT_ADDU);
-            }
-            emitIFormat(OP_SW, previousTemporary(), currentTemporary(), 0);
-            tfree(1);
-          }
-          tfree(2);
-
-          // assert: allocatedTemporaries = 0;
-
-          if (symbol == SYM_SEMICOLON)
-            getSymbol();
-          else
-            syntaxErrorSymbol(SYM_SEMICOLON);
-        } else
-        // identifier "[" expression "]" "[" expression "]" "=" expression;
-        if (symbol == SYM_LBRACKET) {
-          getSymbol();
-
-          gr_shiftExpression(constantValRight, (int*) 0, (int*) 0);
-
-          // assert: allocatedTemporaries = 0 || 1 || 2
-
-          if (symbol == SYM_RBRACKET) {
-            getSymbol();
-
-            if (symbol == SYM_ASSIGN) {
-              getSymbol();
-
-              rtype = gr_expression(constantVal, (int*) 0, (int*) 0);
-
-              // assert: allocatedTemporaries = 1 || 2 || 3
-
-              if (ltype != rtype)
-                typeWarning(ltype, rtype);
-
-              if (ltype == INT_T)
-                ltype = SIZEOFINT;
-              else
-                ltype = SIZEOFINTSTAR;
-
-              if (constantValLeft[1] == 1) {
-                if (constantValRight[1] == 1) {
-                  // assert: allocatedTemporaries == 2
-
-                  emitIFormat(OP_ADDIU, REG_ZR, nextTemporary(), ((*constantValLeft * getValue(entry) + *constantValRight)  * ltype));
-                  emitRFormat(OP_SPECIAL, previousTemporary(), nextTemporary(), previousTemporary(), FCT_SUBU);
-                } else {
-                  // assert: allocatedTemporaries == 3
-
-                  talloc();
-                  emitIFormat(OP_ADDIU, REG_ZR, currentTemporary(), *constantValLeft);
-                  emitIFormat(OP_ADDIU, REG_ZR, nextTemporary(), getValue(entry));
-                  emitRFormat(OP_SPECIAL, currentTemporary(), nextTemporary(), 0, FCT_MULTU);
-                  emitRFormat(OP_SPECIAL, 0, 0, currentTemporary(), FCT_MFLO);
-                  tfree(1);
-
-                  emitRFormat(OP_SPECIAL, nextTemporary(), previousTemporary(), previousTemporary(), FCT_ADDU);
-                  emitIFormat(OP_ADDIU, REG_ZR, nextTemporary(), ltype);
-                  emitRFormat(OP_SPECIAL, previousTemporary(), nextTemporary(), 0, FCT_MULTU);
-                  emitRFormat(OP_SPECIAL, 0, 0, previousTemporary(), FCT_MFLO);
-
-                  emitRFormat(OP_SPECIAL, previousTemporary() - 1, previousTemporary(), previousTemporary(), FCT_SUBU);
-                }
-                emitRFormat(OP_SPECIAL, getScope(entry), previousTemporary(), previousTemporary(), FCT_ADDU);
-                emitIFormat(OP_SW, previousTemporary(), currentTemporary(), 0);
-                tfree(2);
-              } else {
-                if (constantValRight[1] == 1) {
-                  // assert: allocatedTemporaries == 3
-
-                  emitIFormat(OP_ADDIU, REG_ZR, nextTemporary(), getValue(entry));
-                  emitRFormat(OP_SPECIAL, previousTemporary() - 1, nextTemporary(), 0, FCT_MULTU);
-                  emitRFormat(OP_SPECIAL, 0, 0, previousTemporary() - 1, FCT_MFLO);
-
-                  emitIFormat(OP_ADDIU, REG_ZR, nextTemporary(), *constantValRight);
-                  emitRFormat(OP_SPECIAL, previousTemporary() - 1, nextTemporary(), previousTemporary() - 1, FCT_ADDU);
-
-
-                  emitIFormat(OP_ADDIU, REG_ZR, nextTemporary(), ltype);
-                  emitRFormat(OP_SPECIAL, previousTemporary() - 1, nextTemporary(), 0, FCT_MULTU);
-                  emitRFormat(OP_SPECIAL, 0, 0, previousTemporary() - 1, FCT_MFLO);
-
-                  emitRFormat(OP_SPECIAL, previousTemporary(), previousTemporary() - 1, previousTemporary(), FCT_SUBU);
-
-                  emitRFormat(OP_SPECIAL, getScope(entry), previousTemporary(), previousTemporary(), FCT_ADDU);
-                  emitIFormat(OP_SW, previousTemporary(), currentTemporary(), 0);
-
-                  tfree(3);
-                } else {
-                  // assert: allocatedTemporaries == 4
-                  emitIFormat(OP_ADDIU, REG_ZR, nextTemporary(), getValue(entry));
-                  emitRFormat(OP_SPECIAL, previousTemporary() - 2, nextTemporary(), 0, FCT_MULTU);
-                  emitRFormat(OP_SPECIAL, 0, 0, previousTemporary() - 2, FCT_MFLO);
-
-                  emitRFormat(OP_SPECIAL, previousTemporary() - 2, previousTemporary(), previousTemporary() - 2, FCT_ADDU);
-
-
-                  emitIFormat(OP_ADDIU, REG_ZR, previousTemporary(), ltype);
-                  emitRFormat(OP_SPECIAL, previousTemporary() - 2, previousTemporary(), 0, FCT_MULTU);
-                  emitRFormat(OP_SPECIAL, 0, 0, previousTemporary() - 2, FCT_MFLO);
-
-                  emitRFormat(OP_SPECIAL, previousTemporary() - 1, previousTemporary() - 2, previousTemporary(), FCT_SUBU);
-
-                  emitRFormat(OP_SPECIAL, getScope(entry), previousTemporary(), previousTemporary(), FCT_ADDU);
-                  emitIFormat(OP_SW, previousTemporary(), currentTemporary(), 0);
-
-                  tfree(4);
-                }
-              }
-              // assert: allocatedTemporaries = 0;
-
-              if (symbol == SYM_SEMICOLON)
-                getSymbol();
-              else
-                syntaxErrorSymbol(SYM_SEMICOLON);
-            } else
-              syntaxErrorSymbol(SYM_ASSIGN);
-          } else
-            syntaxErrorSymbol(SYM_RBRACKET);
-        } else
-          syntaxErrorUnexpected();
-      } else
-        syntaxErrorSymbol(SYM_RBRACKET);
-    } else if (symbol == SYM_DOT) {
-      getSymbol();
-
-      entry = searchSymbolTable(local_symbol_table, variableOrProcedureName, VARIABLE);
-      if (entry == (int*) 0)
-        entry = searchSymbolTable(global_symbol_table, variableOrProcedureName, VARIABLE);
-      if (getType(entry) == STRUCT_T) {
-        if (symbol == SYM_IDENTIFIER) {
-          getSymbol();
-
-          strct_entry = (int*) getValue(entry);
-
-          ltype = getMemberType(strct_entry, identifier);
-
-          if (symbol == SYM_ASSIGN) {
-            getSymbol();
-
-            rtype = gr_expression(constantVal, (int*) 0, (int*) 0);
-
-            if (ltype != rtype)
-              typeWarning(ltype, rtype);
-
-            if (symbol == SYM_SEMICOLON) {
-              getSymbol();
-
-              talloc();
-              emitIFormat(OP_ADDIU, REG_ZR, currentTemporary(), getAddress(entry) - getMemberOffset(strct_entry, identifier) * WORDSIZE);
-              emitRFormat(OP_SPECIAL, getScope(entry), currentTemporary(), currentTemporary(), FCT_ADDU);
-              emitIFormat(OP_SW, currentTemporary(), previousTemporary(), 0);
-              tfree(2);
-
-              // assert: allocated temporaries = 0
-            } else
-              syntaxErrorSymbol(SYM_SEMICOLON);
-          }
-        } else
-          syntaxErrorSymbol(SYM_IDENTIFIER);
-      } else
-        syntaxErrorMessage((int*) "expected struct for arrow usage");
-    } else if (symbol == SYM_RARROW) {
-      getSymbol();
-
-      entry = searchSymbolTable(local_symbol_table, variableOrProcedureName, VARIABLE);
-      if (entry == (int*) 0)
-        entry = searchSymbolTable(global_symbol_table, variableOrProcedureName, VARIABLE);
-      if (getType(entry) == STRUCT_PT_T) {
-        if (symbol == SYM_IDENTIFIER) {
-          getSymbol();
-
-          strct_entry = (int*) getValue(entry);
-
-          ltype = getMemberType(strct_entry, identifier);
-
-          if (symbol == SYM_ASSIGN) {
-            getSymbol();
-
-            rtype = gr_expression(constantVal, (int*) 0, (int*) 0);
-
-            if (ltype != rtype)
-              typeWarning(ltype, rtype);
-
-            if (symbol == SYM_SEMICOLON) {
-              getSymbol();
-
-              talloc();
-              emitIFormat(OP_ADDIU, REG_ZR, currentTemporary(), getAddress(entry) - getMemberOffset(strct_entry, identifier) * WORDSIZE);
-              emitRFormat(OP_SPECIAL, getScope(entry), currentTemporary(), currentTemporary(), FCT_ADDU);
-              emitIFormat(OP_SW, currentTemporary(), previousTemporary(), 0);
-              tfree(2);
-
-              // assert: allocated temporaries = 0
-            } else
-              syntaxErrorSymbol(SYM_SEMICOLON);
-          }
-        } else
-          syntaxErrorSymbol(SYM_IDENTIFIER);
-      } else
-        syntaxErrorMessage((int*) "expected struct for arrow usage");
+        else
+          syntaxErrorSymbol(SYM_SEMICOLON);
     } else
         syntaxErrorUnexpected();
-  }
+
   // while statement?
-  else if (symbol == SYM_WHILE) {
+  } else if (symbol == SYM_WHILE) {
     gr_while(constantVal);
-  }
+
   // if statement?
-  else if (symbol == SYM_IF) {
+  } else if (symbol == SYM_IF) {
     gr_if(constantVal);
-  }
+
   // return statement?
-  else if (symbol == SYM_RETURN) {
+  } else if (symbol == SYM_RETURN) {
     entry = getSymbolTableEntry(currentProcedureName, PROCEDURE);
 
     gr_return(getType(entry), constantVal);
@@ -4623,17 +4611,15 @@ int gr_struct(int whichTable, int* structName){
   int type;
   int size;
   int* fields;
-  int* entry;
-  int* strct_entry;
+  int* struct_entry;
 
   size = 0;
-  entry = (int*) 0;
-  strct_entry = getStructTableEntry(structName);
+  struct_entry = getStructTableEntry(structName);
 
-  if (strct_entry == (int*) 0) {
+  if (struct_entry == (int*) 0) {
     //define new struct type;
     createStructTableEntry(whichTable, structName);
-    strct_entry = getStructTableEntry(structName);
+    struct_entry = getStructTableEntry(structName);
 
     if (symbol == SYM_LBRACE) {
       getSymbol();
@@ -4665,11 +4651,11 @@ int gr_struct(int whichTable, int* structName){
       }
       getSymbol();
 
-      setStructSize(strct_entry, size);
+      setStructSize(struct_entry, size);
       // members-array[max:50][3]
       fields = malloc(size * 3 * WORDSIZE);
-      setStructFields(strct_entry, fields);
-      setStructMembers(strct_entry, size);
+      setStructFields(struct_entry, fields);
+      setStructMembers(struct_entry, size);
     }
   } else if (symbol == SYM_ASTERISK) {
       getSymbol();
@@ -4677,55 +4663,253 @@ int gr_struct(int whichTable, int* structName){
       if (symbol == SYM_IDENTIFIER) {
         getSymbol();
 
-        createSymbolTableEntry(whichTable, identifier, lineNumber, VARIABLE, STRUCT_PT_T, (int) strct_entry, 0);
+        createSymbolTableEntry(whichTable, identifier, lineNumber, VARIABLE, STRUCT_PT_T, (int) struct_entry, 0);
 
         if (whichTable == LOCAL_TABLE)
           return 1;
         else {
-          entry = searchSymbolTable(global_symbol_table, identifier, VARIABLE);
+          struct_entry = searchSymbolTable(global_symbol_table, identifier, VARIABLE);
           allocatedMemory = allocatedMemory + WORDSIZE;
-          setAddress(entry,-allocatedMemory);
+          setAddress(struct_entry,-allocatedMemory);
         }
       } else
         syntaxErrorSymbol(SYM_IDENTIFIER);
     } else if (symbol == SYM_IDENTIFIER) {
       getSymbol();
 
-      createSymbolTableEntry(whichTable, identifier, lineNumber, VARIABLE, STRUCT_T, (int) strct_entry, 0);
+      createSymbolTableEntry(whichTable, identifier, lineNumber, VARIABLE, STRUCT_T, (int) struct_entry, 0);
 
-      size = getStructSize(strct_entry);
+      size = getStructSize(struct_entry);
 
       if (whichTable == LOCAL_TABLE)
-        entry = searchSymbolTable(local_symbol_table, identifier, VARIABLE);
+        struct_entry = searchSymbolTable(local_symbol_table, identifier, VARIABLE);
       else {
-        entry = searchSymbolTable(global_symbol_table, identifier, VARIABLE);
-        setAddress(entry,-(allocatedMemory + WORDSIZE));
+        struct_entry = searchSymbolTable(global_symbol_table, identifier, VARIABLE);
+        setAddress(struct_entry,-(allocatedMemory + WORDSIZE));
         allocatedMemory = (size * WORDSIZE) - WORDSIZE;
       }
-      setSize(entry, size);
+      setSize(struct_entry, size);
     } else
       syntaxErrorSymbol(SYM_IDENTIFIER);
 
   return size;
 }
 
+int gr_arrayDeclaration(int* constantVal, int whichTable) {
+  int  i;
+  int  size;
+  int  type;
+  int* arrName;
+  int* constantValRight;
+  int* entry;
+
+  constantValRight = malloc(2 * SIZEOFINT);
+  constantValRight[1] = 0;
+  type = *constantVal;
+  size = 0;
+
+  arrName = identifier;
+
+  getSymbol();
+
+  // type identifier "[" "]" "=" "{" integer [ "," integer ] "}""
+  if (symbol == SYM_RBRACKET){
+    getSymbol();
+
+    if (symbol == SYM_ASSIGN){
+      getSymbol();
+
+      if (symbol == SYM_LBRACE) {
+        getSymbol();
+
+        while (isIntegerList()){
+          if (symbol == SYM_INTEGER) {
+            getSymbol();
+            if (whichTable == GLOBAL_TABLE) {
+              if (globalArrayInitBuffer_Top < 100) {
+                globalArrayInit_buffer[globalArrayInitBuffer_Top] = literal;
+                globalArrayInitBuffer_Top++;
+              } else {
+                printLineNumber((int*) "reached max amount of direct initializeable integers for array", lineNumber);
+                print((int*) "discarding remaining values and fill in zeros instead");
+                println();
+              }
+            } else {
+              // PROLOG implement direct init for local arrays
+              print((int*) "no direct init for local arrays!");
+            }
+            size++;
+
+            if (symbol == SYM_COMMA)
+               getSymbol();
+          } else
+            syntaxErrorSymbol(SYM_INTEGER);
+        }
+
+        if (symbol == SYM_RBRACE) {
+          getSymbol();
+
+          createSymbolTableEntry(whichTable, arrName, lineNumber, ARRAY, type, 1, 0);
+          if (whichTable == LOCAL_TABLE) {
+            // PROLOG implement direct init for local arrays
+            entry = searchSymbolTable(local_symbol_table, arrName, ARRAY);
+            setSize(entry, size);
+            return size;
+          }
+
+          entry = searchSymbolTable(global_symbol_table, arrName, ARRAY);
+          setSize(entry, size);
+
+          if (type == INT_T) {
+            setAddress(entry, - (allocatedMemory + SIZEOFINT));
+            allocatedMemory = allocatedMemory + size * SIZEOFINT;
+          } else {
+            setAddress(entry, - (allocatedMemory + SIZEOFINTSTAR));
+            allocatedMemory = allocatedMemory  + size * SIZEOFINTSTAR;
+          }
+
+          // revert/correct order in init array
+          i = globalArrayInitBuffer_Top;
+          while (i > globalArrayInitBuffer_Top - size) {
+            *constantVal = globalArrayInit_buffer[globalArrayInitBuffer_Top - size];
+            globalArrayInit_buffer[globalArrayInitBuffer_Top - size] = globalArrayInit_buffer[i - 1];
+            globalArrayInit_buffer[i - 1] = *constantVal;
+            size = size - 1;
+            i = i - 1;
+            // size--;
+            // i--;
+          }
+          i = 0;
+          size = 0;
+
+          if (symbol != SYM_SEMICOLON)
+            syntaxErrorSymbol(SYM_SEMICOLON);
+          getSymbol();
+        } else
+          syntaxErrorSymbol(SYM_LBRACE);
+      } else
+        syntaxErrorSymbol(SYM_LBRACKET);
+    } else
+      syntaxErrorSymbol(SYM_ASSIGN);
+  } else {
+    gr_shiftExpression(constantVal, (int*) 0);
+
+    if (symbol == SYM_RBRACKET) {
+      getSymbol();
+
+      // type identifier "[" integer "]" "[" integer "]" ";"
+      if (symbol == SYM_LBRACKET){
+        getSymbol();
+
+        gr_shiftExpression(constantValRight, (int*) 0);
+
+        if (symbol == SYM_RBRACKET) {
+          getSymbol();
+
+          if (constantVal[1] == 1) {
+            if (constantValRight[1] == 1) {
+              if(*constantVal > 0) {
+                if (*constantValRight > 0) {
+                  createSymbolTableEntry(whichTable, arrName, lineNumber, ARRAY, type, *constantValRight, 0);
+                  if (whichTable == LOCAL_TABLE) {
+                    entry = searchSymbolTable(local_symbol_table, arrName, ARRAY);
+                    setSize(entry, *constantVal * *constantValRight);
+                    return *constantVal * *constantValRight;
+                  }
+
+                  entry = searchSymbolTable(global_symbol_table, arrName, ARRAY);
+                  setSize(entry, *constantVal * *constantValRight);
+
+                  if (type == INT_T) {
+                    setAddress(entry, - (allocatedMemory + SIZEOFINT));
+                    allocatedMemory = allocatedMemory + *constantVal * *constantValRight * SIZEOFINT;
+                  } else {
+                    setAddress(entry, - (allocatedMemory + SIZEOFINTSTAR));
+                    allocatedMemory = allocatedMemory  + *constantVal * *constantValRight * SIZEOFINTSTAR;
+                  }
+
+                  if (symbol != SYM_SEMICOLON)
+                    syntaxErrorSymbol(SYM_SEMICOLON);
+
+                  getSymbol();
+                } else
+                  syntaxErrorMessage((int*) "arraysize must be greater than 0");
+              } else
+                syntaxErrorMessage((int*) "arraysize must be greater than 0");
+            } else
+              syntaxErrorMessage((int*) "expected integer as array selector");
+          } else
+            syntaxErrorMessage((int*) "expected integer as array selector");
+        } else
+          syntaxErrorSymbol(SYM_RBRACKET);
+      } else if (symbol == SYM_SEMICOLON){
+        // type identifier "[" integer "]" ";"
+        getSymbol();
+
+        if (constantVal[1] == 1) {
+          if (*constantVal > 0) {
+            createSymbolTableEntry(whichTable, arrName, lineNumber, ARRAY, type, 0, 0);
+            if (whichTable == LOCAL_TABLE) {
+              entry = searchSymbolTable(global_symbol_table, arrName, ARRAY);
+              setSize(entry, *constantVal);
+              return *constantVal;
+            } else
+              entry = searchSymbolTable(global_symbol_table, arrName, ARRAY);
+            setSize(entry, *constantVal);
+
+            if (type == INT_T) {
+              setAddress(entry, - (allocatedMemory + SIZEOFINT));
+              allocatedMemory = allocatedMemory + *constantVal * SIZEOFINT;
+            } else {
+              setAddress(entry, - (allocatedMemory + SIZEOFINTSTAR));
+              allocatedMemory = allocatedMemory  + *constantVal * SIZEOFINTSTAR;
+            }
+          } else
+            syntaxErrorMessage((int*) "arraysize must be greater than 0");
+        } else
+          syntaxErrorMessage((int*) "expected integer as array selector");
+      } else
+        syntaxErrorSymbol(SYM_SEMICOLON);
+    } else
+      syntaxErrorSymbol(SYM_RBRACKET);
+  }
+  return size;
+}
+
 int gr_parameter(int offset) {
-  int type;
+  int  type;
+  int* structEntry;
+  int* structName;
+
+  structEntry = (int*) 0;
+  structName = (int*) 0;
 
   type = gr_type();
 
   if (symbol == SYM_IDENTIFIER) {
+    if (type == STRUCT_T)
+      structName = identifier;
+
     getSymbol();
 
     if (symbol == SYM_LBRACKET)
-      syntaxErrorMessage((int*) "no array declaration as method parameter; use pointer to array instead!");
-    else if (symbol == SYM_STRUCT) {
-      // PROLOG adjust error msg
-      syntaxErrorMessage((int*) "no struct declaration as method parameter; use pointer to struct? given global struct?");
-    } else {
+      syntaxErrorMessage((int*) "no array declaration as method parameter; declare pointer (int*) (to) array instead! (Then use as array)");
+    else {
       createSymbolTableEntry(LOCAL_TABLE, identifier, lineNumber, VARIABLE, type, 0, offset);
       return 1;
     }
+  } else if (symbol == SYM_ASTERISK) {
+    getSymbol();
+
+    if (symbol == SYM_IDENTIFIER) {
+      getSymbol();
+
+      structEntry = getStructTableEntry(structName);
+
+      createSymbolTableEntry(LOCAL_TABLE, identifier, lineNumber, VARIABLE, STRUCT_PT_T, (int) structEntry, 0);
+      return 1;
+    } else
+      syntaxErrorSymbol(SYM_IDENTIFIER);
   } else {
     syntaxErrorSymbol(SYM_IDENTIFIER);
 
@@ -4736,18 +4920,12 @@ int gr_parameter(int offset) {
 }
 
 int gr_variable(int offset) {
-  int type;
-  int size;
-
-  int* variableOrProcedureName;
-  int* entry;
-  int* constantValLeft;
-  int* constantValRight;
+  int  type;
+  int* constantVal;
   int* structName;
-  constantValLeft = malloc(2 * SIZEOFINT);
-  constantValRight = malloc(2 * SIZEOFINT);
-  constantValLeft[1] = 0;
-  constantValRight[1] = 0;
+
+  constantVal = malloc(2 * SIZEOFINT);
+  constantVal[1] = 0;
 
   type = gr_type();
 
@@ -4758,98 +4936,10 @@ int gr_variable(int offset) {
     getSymbol();
 
     if (symbol == SYM_LBRACKET) {
-      getSymbol();
-
-      variableOrProcedureName = identifier;
-
-      // type identifier "[" "]" "=" "{" integer [ "," integer ] "}""
-      if (symbol == SYM_RBRACKET){
-        getSymbol();
-
-        if (symbol == SYM_ASSIGN){
-          getSymbol();
-
-          if (symbol == SYM_LBRACE) {
-            getSymbol();
-            while (isIntegerList()){
-              if (symbol == SYM_INTEGER) {
-                getSymbol();
-
-                size = size + 1;
-                if (symbol == SYM_COMMA)
-                   getSymbol();
-              }
-            }
-
-            //PROLOG
-            printLineNumber((int*) "direct array initialization not implemented right now (local)", lineNumber);
-            println();
-
-            if (symbol == SYM_RBRACE)
-              getSymbol();
-            else
-              syntaxErrorSymbol(SYM_RBRACE);
-          } else
-            syntaxErrorSymbol(SYM_LBRACE);
-        } else
-          syntaxErrorSymbol(SYM_ASSIGN);
-      } else {
-        // type identifier "[" integer "]"
-        gr_shiftExpression(constantValLeft, (int*) 0, (int*) 0);
-
-        if (symbol == SYM_RBRACKET) {
-          getSymbol();
-
-          // type identifier "[" integer "]" "[" integer "]"
-          if (symbol == SYM_LBRACKET) {
-            getSymbol();
-
-            gr_shiftExpression(constantValRight, (int*) 0, (int*) 0);
-
-            if (symbol == SYM_RBRACKET) {
-              getSymbol();
-
-              if (constantValLeft[1] == 1) {
-                if (constantValRight[1] == 1) {
-                  if (*constantValLeft > 0) {
-                    if (*constantValRight > 0) {
-                      createSymbolTableEntry(LOCAL_TABLE, variableOrProcedureName, lineNumber, ARRAY, type, *constantValRight, offset);
-                      entry = searchSymbolTable(local_symbol_table, variableOrProcedureName, ARRAY);
-                      setSize(entry, *constantValLeft * *constantValRight);
-                      offset = *constantValLeft * *constantValRight;
-                    } else
-                      syntaxErrorMessage((int*) "arraysize must be greater than 0");
-                  } else
-                    syntaxErrorMessage((int*) "arraysize must be greater than 0");
-                } else
-                  syntaxErrorMessage((int*) "expected integer as array size");
-              } else
-                syntaxErrorMessage((int*) "expected integer as array size");
-              return offset;
-            } else
-              syntaxErrorSymbol(SYM_RBRACKET);
-          } else {
-            // type identifier "[" integer "]"
-            if (constantValLeft[1] == 1) {
-              if (*constantValLeft > 0) {
-                createSymbolTableEntry(LOCAL_TABLE, variableOrProcedureName, lineNumber, ARRAY, type, 0, offset);
-                entry = searchSymbolTable(local_symbol_table, variableOrProcedureName, ARRAY);
-                setSize(entry, *constantValLeft);
-                offset = *constantValLeft;
-              } else
-                syntaxErrorMessage((int*) "arraysize must be greater than 0");
-            } else
-              syntaxErrorMessage((int*) "expected integer as array size");
-
-            return offset;
-          }
-        } else
-          syntaxErrorSymbol(SYM_RBRACKET);
-      }
+      *constantVal = type;
+      return gr_arrayDeclaration(constantVal, LOCAL_TABLE);
     } else if (type == STRUCT_T) {
-      offset = gr_struct(LOCAL_TABLE, structName);
-
-      return offset;
+      return gr_struct(LOCAL_TABLE, structName);
     } else {
       createSymbolTableEntry(LOCAL_TABLE, identifier, lineNumber, VARIABLE, type, 0, offset);
       return 1;
@@ -4946,9 +5036,6 @@ void gr_procedure(int* procedure, int returnType, int* constantVal) {
   int functionStart;
   int* entry;
   int offset;
-  // PROLOG remove whileFlag when boolean logic is implemented
-  int whileFlag;
-  whileFlag = 0;
   // direct array init not yet implemented for local variables
   // int* initArray;
   // *initArray= malloc(50 * WORDSIZE);
@@ -4969,8 +5056,6 @@ void gr_procedure(int* procedure, int returnType, int* constantVal) {
       while (symbol == SYM_COMMA) {
         getSymbol();
 
-        // PROLOG
-        // implement new procedure gr_parameter
         offset = gr_parameter(0);
 
         numberOfParameters = numberOfParameters + offset;
@@ -4990,7 +5075,7 @@ void gr_procedure(int* procedure, int returnType, int* constantVal) {
         else
           parameters = parameters + 1;
 
-        entry      = getNextEntry(entry);
+        entry = getNextEntry(entry);
       }
 
       if (symbol == SYM_RPARENTHESIS)
@@ -5044,16 +5129,8 @@ void gr_procedure(int* procedure, int returnType, int* constantVal) {
     offset = 0;
     localVariables = 0;
 
-    // PROLOG remove whileFlag when boolean logic is implemented
-    // while ((symbol == SYM_INT) || (symbol == SYM_STRUCT))
-    if (symbol == SYM_INT)
-      whileFlag = 1;
-    else if (symbol == SYM_STRUCT)
-      whileFlag = 1;
-    else
-      whileFlag = 0;
-    while (whileFlag) {
-      localVariables = localVariables + 1;
+    while ((symbol == SYM_INT) || (symbol == SYM_STRUCT)) {
+      localVariables++;
 
       offset = gr_variable(-localVariables * WORDSIZE);
       localVariables = localVariables + offset - 1;
@@ -5062,14 +5139,6 @@ void gr_procedure(int* procedure, int returnType, int* constantVal) {
         getSymbol();
       else
         syntaxErrorSymbol(SYM_SEMICOLON);
-
-      // PROLOG remove whileFlag when boolean logic is implemented
-      if (symbol == SYM_INT)
-        whileFlag = 1;
-      else if (symbol == SYM_STRUCT)
-        whileFlag = 1;
-      else
-        whileFlag = 0;
     }
 
     help_procedure_prologue(localVariables);
@@ -5104,22 +5173,14 @@ void gr_procedure(int* procedure, int returnType, int* constantVal) {
 
 void gr_cstar() {
   int type;
-  int size;
   int* variableOrProcedureName;
-  int* entry;
-  int temp;
-  int i;
 
   // constantVal: 2 Byte field for constant folding
   //1st is for value
   //2nd is the constant folding flag
   int* constantVal;
-  int* constantValRight;
   constantVal = malloc(2 * SIZEOFINT);
-  constantValRight = malloc(2 * SIZEOFINT);
   constantVal[1] = 0;
-  constantValRight[1] = 0;
-  size = 0;
 
   while (symbol != SYM_EOF) {
     while (lookForType()) {
@@ -5158,147 +5219,11 @@ void gr_cstar() {
           gr_procedure(variableOrProcedureName, type, constantVal);
         // type identifier "[" ...
         else if (symbol == SYM_LBRACKET) {
-          getSymbol();
-
-          // type identifier "[" "]" "=" "{" integer [ "," integer ] "}""
-          if (symbol == SYM_RBRACKET){
-            getSymbol();
-
-            if (symbol == SYM_ASSIGN){
-              getSymbol();
-
-              if (symbol == SYM_LBRACE) {
-                getSymbol();
-
-                while (isIntegerList()){
-                  if (symbol == SYM_INTEGER) {
-                    getSymbol();
-
-                    if (globalArrayInitBuffer_Top < 100) {
-                      globalArrayInit_buffer[globalArrayInitBuffer_Top] = literal;
-
-                      size = size + 1;
-                      globalArrayInitBuffer_Top = globalArrayInitBuffer_Top + 1;
-                    } else {
-                      printLineNumber((int*) "reached max amount of direct initializeable integers for array", lineNumber);
-                      print((int*) "discarding remaining values and fill in zeros instead");
-                      println();
-                      size = size + 1;
-                    }
-                    if (symbol == SYM_COMMA)
-                       getSymbol();
-                  } else
-                    syntaxErrorSymbol(SYM_INTEGER);
-                }
-
-                createSymbolTableEntry(GLOBAL_TABLE, variableOrProcedureName, lineNumber, ARRAY, type, 1, 0);
-                entry = searchSymbolTable(global_symbol_table, variableOrProcedureName, ARRAY);
-                setSize(entry, size);
-
-                if (type == INT_T) {
-                  setAddress(entry, - (allocatedMemory + SIZEOFINT));
-                  allocatedMemory = allocatedMemory + size * SIZEOFINT;
-                } else {
-                  setAddress(entry, - (allocatedMemory + SIZEOFINTSTAR));
-                  allocatedMemory = allocatedMemory  + size * SIZEOFINTSTAR;
-                }
-
-                // revert/correct order in init array
-                i = globalArrayInitBuffer_Top;
-                while (i > globalArrayInitBuffer_Top - size) {
-                  temp = globalArrayInit_buffer[globalArrayInitBuffer_Top - size];
-                  globalArrayInit_buffer[globalArrayInitBuffer_Top - size] = globalArrayInit_buffer[i - 1];
-                  globalArrayInit_buffer[i - 1] = temp;
-                  size = size - 1;
-                  i = i - 1;
-                }
-                i = 0;
-                size = 0;
-
-                if (symbol == SYM_RBRACE) {
-                  getSymbol();
-
-                  if (symbol != SYM_SEMICOLON)
-                    syntaxErrorSymbol(SYM_SEMICOLON);
-                  getSymbol();
-                }
-              } else
-                syntaxErrorSymbol(SYM_LBRACKET);
-            } else
-              syntaxErrorSymbol(SYM_ASSIGN);
-          } else {
-            gr_shiftExpression(constantVal, (int*) 0, (int*) 0);
-
-            if (symbol == SYM_RBRACKET) {
-              getSymbol();
-
-              // type identifier "[" integer "]" "[" integer "]" ";"
-              if (symbol == SYM_LBRACKET){
-                getSymbol();
-
-                gr_shiftExpression(constantValRight, (int*) 0, (int*) 0);
-
-                if (symbol == SYM_RBRACKET) {
-                  getSymbol();
-
-                  if (constantVal[1] == 1){
-                    if (constantValRight[1] == 1) {
-                      if(*constantVal > 0) {
-                        if (*constantValRight > 0) {
-                          createSymbolTableEntry(GLOBAL_TABLE, variableOrProcedureName, lineNumber, ARRAY, type, *constantValRight, 0);
-                          entry = searchSymbolTable(global_symbol_table, variableOrProcedureName, ARRAY);
-                          setSize(entry, *constantVal * *constantValRight);
-
-                          if (type == INT_T) {
-                            setAddress(entry, - (allocatedMemory + SIZEOFINT));
-                            allocatedMemory = allocatedMemory + *constantVal * *constantValRight * SIZEOFINT;
-                          } else {
-                            setAddress(entry, - (allocatedMemory + SIZEOFINTSTAR));
-                            allocatedMemory = allocatedMemory  + *constantVal * *constantValRight * SIZEOFINTSTAR;
-                          }
-
-                          if (symbol != SYM_SEMICOLON)
-                            syntaxErrorSymbol(SYM_SEMICOLON);
-
-                          getSymbol();
-                        } else
-                          syntaxErrorMessage((int*) "arraysize must be greater than 0");
-                      } else
-                        syntaxErrorMessage((int*) "arraysize must be greater than 0");
-                    } else
-                      syntaxErrorMessage((int*) "expected integer as array selector");
-                  } else
-                    syntaxErrorMessage((int*) "expected integer as array selector");
-                } else
-                  syntaxErrorSymbol(SYM_RBRACKET);
-              } else if (symbol == SYM_SEMICOLON){
-                // type identifier "[" integer "]" ";"
-                getSymbol();
-
-                if (constantVal[1] == 1) {
-                  if (*constantVal > 0) {
-                    createSymbolTableEntry(GLOBAL_TABLE, variableOrProcedureName, lineNumber, ARRAY, type, 0, 0);
-                    entry = searchSymbolTable(global_symbol_table, variableOrProcedureName, ARRAY);
-                    setSize(entry, *constantVal);
-
-                    if (type == INT_T) {
-                      setAddress(entry, - (allocatedMemory + SIZEOFINT));
-                      allocatedMemory = allocatedMemory + *constantVal * SIZEOFINT;
-                    } else {
-                      setAddress(entry, - (allocatedMemory + SIZEOFINTSTAR));
-                      allocatedMemory = allocatedMemory  + *constantVal * SIZEOFINTSTAR;
-                    }
-                  } else
-                    syntaxErrorMessage((int*) "arraysize must be greater than 0");
-                } else
-                  syntaxErrorMessage((int*) "expected integer as array selector");
-              } else
-                syntaxErrorSymbol(SYM_SEMICOLON);
-            } else
-              syntaxErrorSymbol(SYM_RBRACKET);
-          }
+          *constantVal = type;
+          gr_arrayDeclaration(constantVal, GLOBAL_TABLE);
+        // struct identifier
         } else if (type == STRUCT_T) {
-          size = gr_struct(GLOBAL_TABLE, variableOrProcedureName);
+          gr_struct(GLOBAL_TABLE, variableOrProcedureName);
 
           if (symbol == SYM_SEMICOLON)
             getSymbol();
@@ -5321,7 +5246,6 @@ void gr_cstar() {
         syntaxErrorSymbol(SYM_IDENTIFIER);
     }
     constantVal[1] = 0;
-    constantValRight[1] = 0;
   }
 }
 
@@ -5456,6 +5380,7 @@ void selfie_compile() {
   emitWrite();
   emitOpen();
   emitMalloc();
+  emitFree();
 
   emitID();
   emitCreate();
@@ -5761,77 +5686,138 @@ void fixlink_absolute(int fromAddress, int toAddress) {
   }
 }
 
-// branches[5]:
-//    branches[0] = pointer to next to-be-fixed branch instruction
-//    branches[1] = binary address for to-be-fixed instruction
-//    branches[2] = flag for AND or OR: 0 = AND; 1 = OR
-//    branches[3] = level
-//    branches[4] = pointer to previous to-be-fixed branch instruction
 // level == 0
 void fixup_boolExprLevelZero(int* branches, int conditionalAddress) {
-  int  opFlag;
-  int  tempLevel;
-  int* tempPt;
+  int* currBranch; // branches[4]: look gr_boolAndExpression for info
+  int* forwardPt1Local;
+  int* forwardPt2Local;
 
-  opFlag = branches[2];
-  tempLevel = branches[3];
+  currBranch = (int*) *branches;
+  forwardPt1Local = currBranch;
 
-  if (*branches == 0)
-    fixup_relative(conditionalAddress);
+  // print(itoa(currBranch[2],string_buffer,10,0,0));
+  // print((int*)"  ");
+  // print(itoa((int) currBranch,string_buffer,10,0,0));
+  // print((int*)"  ");
+  // print(itoa(lineNumber / 2,string_buffer,10,0,0));
+  // print((int*)"  ");
+  // print(itoa(currBranch[3],string_buffer,10,0,0));
+  // println();
 
-  while (*branches != 0) {
-    print((int*)"HALLLLLLO");
-    if (branches[2] != opFlag)
-      syntaxErrorMessage((int*) "No mixing of boolean AND or OR allowed!");
-    if (opFlag == 0) {
-      // AND
-      fixup_relative(branches[1]);
-      branches = (int*) *branches;
-      fixup_relative(branches[1]);
-    } else {
-      // OR
-      fixup_relative(branches[1]);
-      branches = (int*) *branches;
-      fixup_relativeToAddr(branches[1], conditionalAddress);
-    }
-    tempPt = branches;
-    branches = (int*) *branches;
-    if (branches[3] > tempLevel)
-      fixup_boolExpr(branches, tempPt);
+  if (currBranch[2] == 0) {
+    // AND
+    fixup_relative(currBranch[1]);
+    currBranch = (int*) *currBranch;
+    fixup_relative(currBranch[1]);
+  } else {
+    // OR
+    fixup_relative(currBranch[1]);
+    currBranch = (int*) *currBranch;
+    fixup_relativeToAddr(currBranch[1], conditionalAddress);
   }
+  forwardPt2Local = currBranch;
+  *branches = *currBranch;
+  if (*branches != 0)
+    fixup_boolExpr(branches, forwardPt1Local, forwardPt2Local);
+  else
+    return;
 }
 
 // level > 0
-void fixup_boolExpr(int* branches, int* forwardBranchPt) {
-  int  opFlag;
-  int  tempLevel;
-  int* tempPt;
+void fixup_boolExpr(int* currBranch, int* forwardBranchPt1, int* forwardBranchPt2) {
+  int  flag;
+  int* currBranchLocal;
+  int* forwardPt1Local; // branches[4]: look gr_boolAndExpression for info
+  int* forwardPt2Local;
 
-  opFlag = branches[2];
-  tempLevel = branches[3];
-
-  while (*branches != 0) {
-    if (branches[3] < tempLevel)
+  currBranchLocal = (int*) *currBranch;
+  // print((int*) "REC");
+  // println();
+  while (currBranchLocal != (int*) 0) {
+    if ((currBranchLocal[3] == forwardBranchPt1[3]) && (currBranchLocal[2] != forwardBranchPt1[2])) {
+      syntaxErrorMessage((int*) "No mixing of boolean AND or OR allowed! Could lead to undefined behavior.");
+      print((int*)"Use parentheses!");
       return;
-    if (branches[2] != opFlag)
-      syntaxErrorMessage((int*) "No mixing of boolean AND or OR allowed!");
-    if (opFlag == 0) {
+    }
+    forwardPt1Local = currBranchLocal;
+    // print(itoa((int) currBranchLocal,string_buffer,10,0,0));
+    // print((int*)"  ");
+    // if (currBranchLocal[2] == 1)
+    //   print((int*)"OR  ");
+    // else
+    //   print((int*)"AND  ");
+    // print(itoa(currBranchLocal[3],string_buffer,10,0,0));
+    // print((int*)"  ");
+    if (currBranchLocal[2] == 0) {
       // AND
-      fixup_relativeToAddr(branches[1], forwardBranchPt[1]);
-      branches = (int*) *branches;
-      fixup_relativeToAddr(branches[1], forwardBranchPt[1]);
+      if (forwardBranchPt1[2] == 0) {
+        // AND forwarch branch
+        fixup_relativeToAddr(currBranchLocal[1], forwardBranchPt1[1]);
+        currBranchLocal = (int*) *currBranchLocal;
+        fixup_relativeToAddr(currBranchLocal[1], forwardBranchPt1[1]);
+      } else {
+        // OR forwarch branch
+        if (flag == 0) {
+          flag = flag + 1;
+          fixup_relativeToAddr(currBranchLocal[1], forwardBranchPt1[1]);
+          currBranchLocal = (int*) *currBranchLocal;
+          fixup_relativeToAddr(currBranchLocal[1], forwardBranchPt1[1]);
+        } else {
+          fixup_relativeToAddr(currBranchLocal[1], currBranchLocal[1] + 2 * WORDSIZE);
+          currBranchLocal = (int*) *currBranchLocal;
+          fixup_relativeToAddr(currBranchLocal[1], forwardPt1Local[1] + 2 * WORDSIZE);
+        }
+      }
+      // print((int*)"AND  ");
     } else {
       // OR
-      fixup_relativeToAddr(branches[1], forwardBranchPt[1]);
-      branches = (int*) *branches;
-      fixup_relativeToAddr(branches[1], forwardBranchPt[1]);
+      if (forwardBranchPt1[2] == 0) {
+        // AND forwarch branch
+        if (flag == 0) {
+          flag = 1;
+          fixup_relativeToAddr(currBranchLocal[1], forwardBranchPt1[1]);
+          currBranchLocal = (int*) *currBranchLocal;
+          fixup_relativeToAddr(currBranchLocal[1], forwardBranchPt1[1]);
+        } else {
+          fixup_relativeToAddr(currBranchLocal[1], forwardBranchPt1[1]);
+          currBranchLocal = (int*) *currBranchLocal;
+          fixup_relativeToAddr(currBranchLocal[1], forwardPt1Local[1] + 2 * WORDSIZE);
+        }
+      } else {
+        // OR forwarch branch
+        if (flag == 0) {
+          flag = 1;
+          fixup_relativeToAddr(currBranchLocal[1], forwardBranchPt1[1]);
+          currBranchLocal = (int*) *currBranchLocal;
+          fixup_relativeToAddr(currBranchLocal[1], forwardBranchPt2[1]);
+        } else {
+          currBranchLocal = (int*) *currBranchLocal;
+          fixup_relativeToAddr(currBranchLocal[1], forwardBranchPt2[1]);
+        }
+      }
+      // print((int*)"OR  ");
     }
-    tempPt = branches;
-    branches = (int*) *branches;
-    if (branches[3] > tempLevel) {
-      fixup_boolExpr(branches, tempPt);
-    } else if (branches[3] < tempLevel)
-     return;
+    // print(itoa(currBranchLocal[3],string_buffer,10,0,0));
+    // print((int*)"  ");
+    // print(itoa((int) currBranchLocal,string_buffer,10,0,0));
+    forwardPt2Local = currBranchLocal;
+    *currBranch = *currBranchLocal;
+    currBranchLocal = (int*) *currBranchLocal;
+    // print((int*)"  ");
+    // print(itoa(currBranchLocal[3],string_buffer,10,0,0));
+    // print((int*)"  ");
+    // print(itoa((int) currBranchLocal,string_buffer,10,0,0));
+    // println();
+    if (*currBranch != 0) {
+      if (currBranchLocal[3] > forwardPt1Local[3]) {
+        fixup_boolExpr(currBranch, forwardPt1Local, forwardPt2Local);
+        flag = 0;
+        // print((int*)"RET");
+      } else if (currBranchLocal[3] < forwardPt1Local[3])
+        return;
+      // else
+      //   print((int*)"   ");
+    }
   }
 }
 
@@ -6468,7 +6454,7 @@ void implementMalloc() {
 }
 
 void emitFree() {
-  createSymbolTableEntry(LIBRARY_TABLE, (int*) "free", 0, PROCEDURE, INTSTAR_T, 0, binaryLength);
+  createSymbolTableEntry(LIBRARY_TABLE, (int*) "free", 0, PROCEDURE, VOID_T, 0, binaryLength);
 
   emitIFormat(OP_LW, REG_SP, REG_A0, 0); // size
   emitIFormat(OP_ADDIU, REG_SP, REG_SP, -WORDSIZE);
@@ -8386,6 +8372,13 @@ int* palloc() {
 }
 
 void pfree(int* frame) {
+  frame = (int*) 0;
+  frame = (int*) 0;
+  if(frame == (int*) 0) {
+    return;
+  } else {
+    return;
+  }
   // TODO: implement free list of page frames
 }
 
@@ -8454,7 +8447,7 @@ int selfie(int argc, int* argv) {
 
         selfie_compile();
 
-        if (prologDebug) {
+        if (debug) {
           i = 0;
           while (i < 39){
               print((int*) "SYMBOL ");
@@ -8582,22 +8575,54 @@ int selfie(int argc, int* argv) {
   return 0;
 }
 
+// ###########################################################
+//                    GLOBAL TESTING AREA
+// ###########################################################
+int globalDirectInit[] = {2,3,5,7,11,13,17,19,23,29,31,37};
+struct globalStruct {
+  int  a;
+  int  b;
+  int* c;
+  // int  d[10];
+  // struct globalStruct* next;
+};
+
+// void testFunction1 (int* arrayPointer, struct globalStruct* structPt) {
+void testFunction1 (int* arrayPointer) {
+  int i;
+
+  i = 0;
+  while (i < 4) {
+    // arrayPointer[i] = structPt->a;
+    arrayPointer[i] = 31;
+    i = i + 1;
+  }
+}
+
+// ###########################################################
+//                  END OF TEST ENVIRONMENT
+// ###########################################################
+
 int main(int argc, int* argv) {
-  int abc;
-  // int localArr[] = {1,2,3,4,5,6,7,8};
+  int    i;
+  int*   ptArr;
+  int    testVar;
   struct localStruct {
-    int a;
-    int b;
-    int* c;
+    int    a;
+    int    b;
+    int*   c;
+    // struct localStruct* next;
   };
+  struct localStruct   myStruct;
+  struct globalStruct  secondStruct;
+  struct localStruct*  structPtLocal;
+  struct globalStruct* structPtGlobal;
 
-  struct localStruct myStruct;
-  struct localStruct secondStruct;
-
-  struct localStruct* pt;
-
-  pt = (struct localStruct*) malloc(3 * WORDSIZE);
-  // pt = (struct localStruct*) myStruct;
+  structPtLocal  = (struct localStruct*)  malloc(4 * WORDSIZE);
+  structPtGlobal = (struct globalStruct*) malloc(4 * WORDSIZE);
+  // pt = (struct localStruct*) &myStruct;
+  ptArr   = malloc(4 * WORDSIZE);
+  testVar = 42;
 
   initLibrary();
 
@@ -8620,42 +8645,49 @@ int main(int argc, int* argv) {
   println(); println();
   print((int*)"Executing Test");
   println();
-  print((int*) "Var: prolog_Test: ");
-  print(itoa(prolog_Test,string_buffer,10,0,0));
-  println();
+  print((int*) "Var: testVar = ");
+  print(itoa(testVar,string_buffer,10,0,0));
+  println(); println();
   //------------------
 
-  println();
-  print((int*) "Test for struct usage:");
-  println();
-  print((int*) "global struct: globalStruct{int a, int b, int* c}");
-  println();
-  print((int*) "local struct: localStruct{int a, int b, int* c}");
-  println();
-
-  abc = 77;
-  myStruct.a = abc;
+  myStruct.a = testVar;
   secondStruct.b = myStruct.a;
   secondStruct.a = secondStruct.b / myStruct.a;
   print((int*) "secondStruct.a (1): ");
   print(itoa(secondStruct.a,string_buffer,10,0,0));
   println();
-  pt->a = 123;
-  abc = pt->a;
+  structPtLocal->a = 123;
+  structPtGlobal->a = 123;
+  testVar = structPtLocal->a;
   print((int*) "structPointer.a (123): ");
-  print(itoa(pt->a,string_buffer,10,0,0));
+  print(itoa(structPtLocal->a,string_buffer,10,0,0));
   println();
 
-  if ( (1 == 1) || ((3 != 2) && (1 == 1))) {
+  // testFunction1(ptArr, structPtGlobal);
+  testFunction1(ptArr);
+
+  println();
+  // i = 0;
+  // while (i < 12) {
+  //   print(itoa(globalDirectInit[i],string_buffer,10,0,0));
+  //   println();
+  //   i++;
+  // }
+  // println();
+  // i = 11;
+  // while (i > -1) {
+  //   print(itoa(i,string_buffer,10,0,0));
+  //   print((int*)"  ");
+  //   print(itoa(globalDirectInit[i],string_buffer,10,0,0));
+  //   println();
+  //   i--;
+  // }
+
+  if ((((1 == 1) && (1 == 1)) || ((1 == 1) && (1 == 1)) || ((1 == 1) && (1 == 1))) && ((!(1 != 0) || (1 == 1)) &&
+    ((1 == 1) && (3 == 3)) && (((1 > 0) || (18 > 3)) && ((1 > 0) || (18 > 3)))) && 1) {
     print((int*)"boolean test");
   } else {
     print((int*)"boolean test_else");
-  }
-  println();
-  if ( (0 == 1) || ((3 != 2) && (0 == 1))) {
-    print((int*)"2boolean test2");
-  } else {
-    print((int*)"2boolean test2_else");
   }
 
   //------------------
